@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react'
 import {
   StyleSheet,
   View,
@@ -9,12 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useTextGeneration } from '@fastshot/ai';
+} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Ionicons } from '@expo/vector-icons'
+import { useTextGeneration } from '@fastshot/ai'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -23,13 +23,19 @@ import Animated, {
   withTiming,
   FadeIn,
   FadeInUp,
-} from 'react-native-reanimated';
-import { colors, typography, spacing, borderRadius } from '@/src/constants/theme';
-import { ChatMessage } from '@/src/types';
-import * as Haptics from 'expo-haptics';
+} from 'react-native-reanimated'
+import {
+  COLORS,
+  SPACING,
+  TYPOGRAPHY,
+  FONTS,
+  RADIUS,
+} from '@/src/constants/theme'
+import { ChatMessage } from '@/src/types'
+import * as Haptics from 'expo-haptics'
 
 // System prompt for the AI Dream Coach
-const SYSTEM_PROMPT = `You are DreamDo AI Coach, an enthusiastic and supportive AI assistant that helps users achieve their dreams and goals. Your personality is:
+const SYSTEM_PROMPT = `You are a Momentum AI Coach, an enthusiastic and supportive AI assistant that helps users achieve their dreams and goals. Your personality is:
 
 - Encouraging and motivational
 - Practical and action-oriented
@@ -43,14 +49,14 @@ When users share their dreams or goals:
 4. Provide encouragement and motivation
 
 Keep responses concise (2-3 paragraphs max) and use emojis sparingly to add warmth.
-Format action items as numbered lists for clarity.`;
+Format action items as numbered lists for clarity.`
 
 interface MessageBubbleProps {
-  message: ChatMessage;
+  message: ChatMessage
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
-  const isUser = message.role === 'user';
+  const isUser = message.role === 'user'
 
   return (
     <Animated.View
@@ -76,52 +82,52 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         </Text>
       </View>
     </Animated.View>
-  );
-};
+  )
+}
 
 // Typing indicator component
 const TypingIndicator: React.FC = () => {
-  const dot1 = useSharedValue(0);
-  const dot2 = useSharedValue(0);
-  const dot3 = useSharedValue(0);
+  const dot1 = useSharedValue(0)
+  const dot2 = useSharedValue(0)
+  const dot3 = useSharedValue(0)
 
   useEffect(() => {
     dot1.value = withRepeat(
       withSequence(
         withTiming(-5, { duration: 300 }),
-        withTiming(0, { duration: 300 })
+        withTiming(0, { duration: 300 }),
       ),
-      -1
-    );
+      -1,
+    )
     setTimeout(() => {
       dot2.value = withRepeat(
         withSequence(
           withTiming(-5, { duration: 300 }),
-          withTiming(0, { duration: 300 })
+          withTiming(0, { duration: 300 }),
         ),
-        -1
-      );
-    }, 100);
+        -1,
+      )
+    }, 100)
     setTimeout(() => {
       dot3.value = withRepeat(
         withSequence(
           withTiming(-5, { duration: 300 }),
-          withTiming(0, { duration: 300 })
+          withTiming(0, { duration: 300 }),
         ),
-        -1
-      );
-    }, 200);
-  }, []);
+        -1,
+      )
+    }, 200)
+  }, [])
 
   const dot1Style = useAnimatedStyle(() => ({
     transform: [{ translateY: dot1.value }],
-  }));
+  }))
   const dot2Style = useAnimatedStyle(() => ({
     transform: [{ translateY: dot2.value }],
-  }));
+  }))
   const dot3Style = useAnimatedStyle(() => ({
     transform: [{ translateY: dot3.value }],
-  }));
+  }))
 
   return (
     <View style={styles.typingContainer}>
@@ -134,15 +140,20 @@ const TypingIndicator: React.FC = () => {
         <Animated.View style={[styles.typingDot, dot3Style]} />
       </View>
     </View>
-  );
-};
+  )
+}
 
 // Quick action buttons
-const QuickActions: React.FC<{ onSelect: (text: string) => void }> = ({ onSelect }) => {
+const QuickActions: React.FC<{ onSelect: (text: string) => void }> = ({
+  onSelect,
+}) => {
   const actions = [
     { label: 'Generate Vision Board', text: 'Help me visualize my dream' },
-    { label: 'Suggest Micro-Actions', text: 'Suggest daily micro-actions for my goal' },
-  ];
+    {
+      label: 'Suggest Micro-Actions',
+      text: 'Suggest daily micro-actions for my goal',
+    },
+  ]
 
   return (
     <View style={styles.quickActions}>
@@ -162,57 +173,61 @@ const QuickActions: React.FC<{ onSelect: (text: string) => void }> = ({ onSelect
         </TouchableOpacity>
       ))}
     </View>
-  );
-};
+  )
+}
 
 export default function AICoachScreen() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [inputText, setInputText] = useState('');
+  const insets = useSafeAreaInsets()
+  const router = useRouter()
+  const scrollViewRef = useRef<ScrollView>(null)
+  const [inputText, setInputText] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       role: 'assistant',
-      content: "That's an amazing dream! Let's break it down into micro-actions:\n\n1. Outline your plot (1 week).\n2. Develop character profiles (3 days).\n3. Write 500 words daily (ongoing).",
+      content:
+        "That's an amazing dream! Let's break it down into micro-actions:\n\n1. Outline your plot (1 week).\n2. Develop character profiles (3 days).\n3. Write 500 words daily (ongoing).",
       timestamp: new Date(),
     },
-  ]);
+  ])
 
   const { generateText, isLoading, error, reset } = useTextGeneration({
     onSuccess: (response) => {
       const assistantMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: response || "I'm here to help you achieve your dreams! What would you like to work on today?",
+        content:
+          response ||
+          "I'm here to help you achieve your dreams! What would you like to work on today?",
         timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      scrollToBottom();
+      }
+      setMessages((prev) => [...prev, assistantMessage])
+      scrollToBottom()
     },
     onError: (err) => {
-      console.error('AI generation error:', err);
+      console.error('AI generation error:', err)
       // Add error message as assistant response
       const errorMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: "I'm having trouble connecting right now. Please try again in a moment! 🙏",
+        content:
+          "I'm having trouble connecting right now. Please try again in a moment! 🙏",
         timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      }
+      setMessages((prev) => [...prev, errorMessage])
     },
-  });
+  })
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  };
+      scrollViewRef.current?.scrollToEnd({ animated: true })
+    }, 100)
+  }
 
   const handleSend = async () => {
-    if (!inputText.trim() || isLoading) return;
+    if (!inputText.trim() || isLoading) return
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
 
     // Add user message
     const userMessage: ChatMessage = {
@@ -220,27 +235,28 @@ export default function AICoachScreen() {
       role: 'user',
       content: inputText.trim(),
       timestamp: new Date(),
-    };
+    }
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInputText('');
-    scrollToBottom();
+    setMessages((prev) => [...prev, userMessage])
+    setInputText('')
+    scrollToBottom()
 
     // Build context from recent messages
-    const recentMessages = messages.slice(-4).map((m) =>
-      `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`
-    ).join('\n');
+    const recentMessages = messages
+      .slice(-4)
+      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n')
 
-    const prompt = `${SYSTEM_PROMPT}\n\nConversation history:\n${recentMessages}\n\nUser: ${userMessage.content}\n\nAssistant:`;
+    const prompt = `${SYSTEM_PROMPT}\n\nConversation history:\n${recentMessages}\n\nUser: ${userMessage.content}\n\nAssistant:`
 
     // Generate AI response
-    reset();
-    await generateText(prompt);
-  };
+    reset()
+    await generateText(prompt)
+  }
 
   const handleQuickAction = (text: string) => {
-    setInputText(text);
-  };
+    setInputText(text)
+  }
 
   return (
     <KeyboardAvoidingView
@@ -251,8 +267,15 @@ export default function AICoachScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color={colors.text.primary} />
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons
+              name='chevron-back'
+              size={28}
+              color={COLORS.primary[500]}
+            />
           </TouchableOpacity>
           <View style={styles.headerTitle}>
             <Text style={styles.title}>AI Dream Coach</Text>
@@ -266,21 +289,21 @@ export default function AICoachScreen() {
           style={styles.messagesContainer}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps='handled'
         >
           {/* Welcome message */}
           {messages.length === 1 && (
             <View style={styles.welcomeSection}>
               <LinearGradient
-                colors={colors.gradients.primary as [string, string]}
+                colors={COLORS.gradients.primary as [string, string]}
                 style={styles.welcomeAvatar}
               >
                 <Text style={styles.welcomeEmoji}>🤖</Text>
               </LinearGradient>
               <Text style={styles.welcomeTitle}>Hi! I'm your Dream Coach</Text>
               <Text style={styles.welcomeText}>
-                I can help you break down big dreams into achievable daily actions.
-                What dream would you like to work on?
+                I can help you break down big dreams into achievable daily
+                actions. What dream would you like to work on?
               </Text>
             </View>
           )}
@@ -302,12 +325,17 @@ export default function AICoachScreen() {
         </ScrollView>
 
         {/* Input area */}
-        <View style={[styles.inputContainer, { paddingBottom: insets.bottom + spacing.sm }]}>
+        <View
+          style={[
+            styles.inputContainer,
+            { paddingBottom: insets.bottom + SPACING.sm },
+          ]}
+        >
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
-              placeholder="Ask me anything about your dreams..."
-              placeholderTextColor={colors.text.muted}
+              placeholder='Ask me anything about your dreams...'
+              placeholderTextColor={COLORS.neutral[500]}
               value={inputText}
               onChangeText={setInputText}
               multiline
@@ -323,12 +351,12 @@ export default function AICoachScreen() {
               ]}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color={colors.text.primary} />
+                <ActivityIndicator size='small' color={COLORS.neutral[900]} />
               ) : (
                 <LinearGradient
                   colors={
                     inputText.trim()
-                      ? (colors.gradients.primary as [string, string])
+                      ? (COLORS.gradients.primary as [string, string])
                       : ['#4A4A5A', '#3A3A4A']
                   }
                   style={styles.sendButtonGradient}
@@ -341,22 +369,22 @@ export default function AICoachScreen() {
         </View>
       </View>
     </KeyboardAvoidingView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.primary,
+    backgroundColor: COLORS.background.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    borderBottomColor: COLORS.neutral[200],
   },
   backButton: {
     width: 40,
@@ -368,20 +396,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.semiBold,
-    fontSize: typography.sizes.lg,
+    color: COLORS.primary[500],
+    fontFamily: FONTS.semiBold,
+    fontSize: TYPOGRAPHY.h2.fontSize,
   },
   messagesContainer: {
     flex: 1,
   },
   messagesContent: {
-    padding: spacing.md,
+    padding: SPACING.md,
   },
   welcomeSection: {
     alignItems: 'center',
-    padding: spacing.xl,
-    marginBottom: spacing.lg,
+    padding: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   welcomeAvatar: {
     width: 80,
@@ -389,27 +417,27 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    marginBottom: SPACING.md,
   },
   welcomeEmoji: {
     fontSize: 40,
   },
   welcomeTitle: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.bold,
-    fontSize: typography.sizes.xl,
-    marginBottom: spacing.sm,
+    color: COLORS.primary[500],
+    fontFamily: FONTS.bold,
+    fontSize: TYPOGRAPHY.h2.fontSize,
+    marginBottom: SPACING.sm,
   },
   welcomeText: {
-    color: colors.text.secondary,
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.md,
+    color: COLORS.secondary[500],
+    fontFamily: FONTS.regular,
+    fontSize: TYPOGRAPHY.body.fontSize,
     textAlign: 'center',
     lineHeight: 22,
   },
   messageBubble: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
+    marginBottom: SPACING.md,
     alignItems: 'flex-end',
   },
   userBubble: {
@@ -422,32 +450,32 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.background.card,
+    backgroundColor: COLORS.primary[100],
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    marginRight: SPACING.sm,
   },
   avatarEmoji: {
     fontSize: 18,
   },
   messageContent: {
     maxWidth: '80%',
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
   },
   userContent: {
-    backgroundColor: colors.accent.purple,
+    backgroundColor: COLORS.accent[500],
     borderBottomRightRadius: 4,
     marginLeft: 'auto',
   },
   assistantContent: {
-    backgroundColor: colors.background.card,
+    backgroundColor: COLORS.primary[50],
     borderBottomLeftRadius: 4,
   },
   messageText: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.md,
+    color: COLORS.primary[900],
+    fontFamily: FONTS.regular,
+    fontSize: TYPOGRAPHY.body.fontSize,
     lineHeight: 22,
   },
   userText: {
@@ -456,85 +484,85 @@ const styles = StyleSheet.create({
   typingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: SPACING.md,
   },
   typingBubble: {
     flexDirection: 'row',
-    backgroundColor: colors.background.card,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
+    backgroundColor: COLORS.primary[50],
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
     borderBottomLeftRadius: 4,
   },
   typingDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.text.muted,
+    backgroundColor: COLORS.primary[300],
     marginHorizontal: 2,
   },
   quickActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
     justifyContent: 'center',
   },
   quickActionButton: {
-    borderRadius: borderRadius.full,
+    borderRadius: RADIUS.full,
     overflow: 'hidden',
   },
   quickActionGradient: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderWidth: 1,
     borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: borderRadius.full,
+    borderRadius: RADIUS.full,
   },
   quickActionText: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.sm,
+    color: COLORS.primary[900],
+    fontFamily: FONTS.medium,
+    fontSize: TYPOGRAPHY.body.fontSize,
   },
   inputContainer: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border.light,
-    backgroundColor: colors.background.primary,
+    borderTopColor: COLORS.neutral[200],
+    backgroundColor: COLORS.background.primary,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: colors.background.card,
-    borderRadius: borderRadius.lg,
+    backgroundColor: COLORS.primary[50],
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: colors.border.light,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.xs,
-    paddingVertical: spacing.xs,
+    borderColor: COLORS.neutral[200],
+    paddingLeft: SPACING.md,
+    paddingRight: SPACING.xs,
+    paddingVertical: SPACING.xs,
   },
   input: {
     flex: 1,
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.md,
+    color: COLORS.primary[900],
+    fontFamily: FONTS.regular,
+    fontSize: TYPOGRAPHY.body.fontSize,
     maxHeight: 100,
-    paddingVertical: spacing.sm,
+    paddingVertical: SPACING.sm,
   },
   sendButton: {
-    marginLeft: spacing.sm,
+    marginLeft: SPACING.sm,
   },
   sendButtonDisabled: {
     opacity: 0.5,
   },
   sendButtonGradient: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
   },
   sendText: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.semiBold,
-    fontSize: typography.sizes.sm,
+    color: COLORS.primary[900],
+    fontFamily: FONTS.semiBold,
+    fontSize: TYPOGRAPHY.body.fontSize,
   },
-});
+})

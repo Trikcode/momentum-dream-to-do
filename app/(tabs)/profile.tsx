@@ -1,76 +1,46 @@
-import React from 'react';
+// app/(tabs)/profile.tsx
+import React, { useState } from 'react'
 import {
-  StyleSheet,
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  StyleSheet,
+  Pressable,
+  Switch,
   Alert,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '@/src/constants/theme';
-import { useStore } from '@/src/store/useStore';
-
-interface MenuItemProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  showBadge?: boolean;
-  badgeText?: string;
-}
-
-const MenuItem: React.FC<MenuItemProps> = ({ icon, label, onPress, showBadge, badgeText }) => (
-  <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
-    <View style={styles.menuItemLeft}>
-      <View style={styles.menuIconContainer}>
-        <Ionicons name={icon} size={22} color={colors.accent.purple} />
-      </View>
-      <Text style={styles.menuLabel}>{label}</Text>
-    </View>
-    <View style={styles.menuItemRight}>
-      {showBadge && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badgeText}</Text>
-        </View>
-      )}
-      <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
-    </View>
-  </TouchableOpacity>
-);
+} from 'react-native'
+import { router } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Ionicons } from '@expo/vector-icons'
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
+import { useAuthStore } from '@/src/store/authStore'
+import { MomentumFlame } from '@/src/components/celebrations/MomentumFlame'
+import { GlassCard } from '@/src/components/shared/GlassCard'
+import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '@/src/constants/theme'
+import { LANGUAGE } from '@/src/constants/language'
 
 export default function ProfileScreen() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { user, isPremium, dreams, currentStreak, setHasCompletedOnboarding } = useStore();
+  const insets = useSafeAreaInsets()
+  const { profile, signOut } = useAuthStore()
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
 
-  const userName = user?.name || 'Alex';
-  const userEmail = user?.email || 'alex@example.com';
-  const totalTasks = dreams.reduce((acc, d) => acc + d.micro_actions.length, 0);
-  const completedTasks = dreams.reduce(
-    (acc, d) => acc + d.micro_actions.filter((a) => a.is_completed).length,
-    0
-  );
-
-  const handleResetOnboarding = () => {
-    Alert.alert(
-      'Reset App',
-      'This will reset the onboarding flow. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: () => {
-            setHasCompletedOnboarding(false);
-            router.replace('/onboarding');
-          },
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut()
+          router.replace('/(auth)/welcome')
         },
-      ]
-    );
-  };
+      },
+    ])
+  }
+
+  const firstName = profile?.full_name?.split(' ')[0] || 'Dreamer'
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -80,270 +50,436 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <LinearGradient
-            colors={colors.gradients.primary as [string, string]}
-            style={styles.avatar}
-          >
-            <Text style={styles.avatarText}>{userName.charAt(0).toUpperCase()}</Text>
-          </LinearGradient>
-          <Text style={styles.userName}>{userName}</Text>
-          <Text style={styles.userEmail}>{userEmail}</Text>
-
-          {/* Premium badge */}
-          {isPremium ? (
-            <View style={styles.premiumBadge}>
-              <Text style={styles.premiumBadgeText}>👑 Pro Member</Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={() => router.push('/paywall')}
-              style={styles.upgradeBadge}
+        <Animated.View
+          entering={FadeInDown.duration(500)}
+          style={styles.profileHeader}
+        >
+          {/* Avatar */}
+          <View style={styles.avatarContainer}>
+            <LinearGradient
+              colors={COLORS.gradients.dream as [string, string]}
+              style={styles.avatar}
             >
+              <Text style={styles.avatarText}>
+                {firstName.charAt(0).toUpperCase()}
+              </Text>
+            </LinearGradient>
+
+            {/* Momentum badge */}
+            <View style={styles.momentumBadge}>
+              <MomentumFlame
+                days={profile?.current_streak || 0}
+                size='sm'
+                showLabel={false}
+              />
+            </View>
+          </View>
+
+          <Text style={styles.userName}>{profile?.full_name || 'Dreamer'}</Text>
+          <Text style={styles.userEmail}>{profile?.email}</Text>
+
+          {/* Quick stats */}
+          <View style={styles.quickStats}>
+            <QuickStat
+              value={profile?.current_streak || 0}
+              label='Momentum'
+              icon='flame'
+            />
+            <View style={styles.statDivider} />
+            <QuickStat
+              value={profile?.total_xp || 0}
+              label={LANGUAGE.spark.name}
+              icon='sparkles'
+            />
+            <View style={styles.statDivider} />
+            <QuickStat
+              value={profile?.current_level || 1}
+              label={LANGUAGE.chapter.name}
+              icon='book'
+            />
+          </View>
+        </Animated.View>
+
+        {/* Settings Sections */}
+        <Animated.View entering={FadeInUp.delay(200).duration(500)}>
+          {/* Account Section */}
+          <SettingsSection title='Account'>
+            <SettingsRow
+              icon='person'
+              label='Edit Profile'
+              onPress={() => console.log('Edit profile')}
+            />
+            <SettingsRow
+              icon='notifications'
+              label='Notifications'
+              rightElement={
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={(value) => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    setNotificationsEnabled(value)
+                  }}
+                  trackColor={{
+                    false: COLORS.neutral[200],
+                    true: COLORS.primary[400],
+                  }}
+                  thumbColor='#FFF'
+                />
+              }
+            />
+            <SettingsRow
+              icon='time'
+              label='Daily Reminder'
+              value='9:00 AM'
+              onPress={() => console.log('Set reminder')}
+            />
+          </SettingsSection>
+
+          {/* Premium Section */}
+          <SettingsSection title='Premium'>
+            <Pressable style={styles.premiumCard}>
               <LinearGradient
-                colors={['#F59E0B', '#FB923C']}
-                style={styles.upgradeGradient}
+                colors={COLORS.gradients.dream as [string, string]}
+                style={styles.premiumGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                <Text style={styles.upgradeText}>⭐ Upgrade to Pro</Text>
+                <View style={styles.premiumContent}>
+                  <View style={styles.premiumIcon}>
+                    <Ionicons name='diamond' size={24} color='#FFF' />
+                  </View>
+                  <View style={styles.premiumText}>
+                    <Text style={styles.premiumTitle}>Upgrade to Premium</Text>
+                    <Text style={styles.premiumSubtitle}>
+                      Unlock unlimited dreams, AI coaching & more
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name='chevron-forward'
+                    size={20}
+                    color='rgba(255,255,255,0.7)'
+                  />
+                </View>
               </LinearGradient>
-            </TouchableOpacity>
-          )}
-        </View>
+            </Pressable>
+          </SettingsSection>
 
-        {/* Stats Summary */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{dreams.length}</Text>
-            <Text style={styles.statLabel}>Dreams</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{completedTasks}</Text>
-            <Text style={styles.statLabel}>Tasks</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{currentStreak || 0}</Text>
-            <Text style={styles.statLabel}>Streak</Text>
-          </View>
-        </View>
+          {/* Support Section */}
+          <SettingsSection title='Support'>
+            <SettingsRow
+              icon='help-circle'
+              label='Help Center'
+              onPress={() => console.log('Help')}
+            />
+            <SettingsRow
+              icon='chatbubble'
+              label='Send Feedback'
+              onPress={() => console.log('Feedback')}
+            />
+            <SettingsRow
+              icon='star'
+              label='Rate Momentum'
+              onPress={() => console.log('Rate')}
+            />
+          </SettingsSection>
 
-        {/* Menu Items */}
-        <View style={styles.menuSection}>
-          <MenuItem
-            icon="notifications-outline"
-            label="Notifications"
-            onPress={() => Alert.alert('Notifications', 'Coming soon!')}
-          />
-          <MenuItem
-            icon="color-palette-outline"
-            label="Appearance"
-            onPress={() => Alert.alert('Appearance', 'Coming soon!')}
-          />
-          <MenuItem
-            icon="shield-checkmark-outline"
-            label="Privacy"
-            onPress={() => Alert.alert('Privacy', 'Coming soon!')}
-          />
-        </View>
+          {/* About Section */}
+          <SettingsSection title='About'>
+            <SettingsRow
+              icon='document-text'
+              label='Privacy Policy'
+              onPress={() => console.log('Privacy')}
+            />
+            <SettingsRow
+              icon='shield-checkmark'
+              label='Terms of Service'
+              onPress={() => console.log('Terms')}
+            />
+            <SettingsRow
+              icon='information-circle'
+              label='Version'
+              value='1.0.0'
+            />
+          </SettingsSection>
 
-        <View style={styles.menuSection}>
-          <MenuItem
-            icon="chatbubble-outline"
-            label="AI Dream Coach"
-            onPress={() => router.push('/ai-coach')}
-            showBadge
-            badgeText="NEW"
-          />
-          <MenuItem
-            icon="diamond-outline"
-            label="DreamDo Pro"
-            onPress={() => router.push('/paywall')}
-          />
-        </View>
+          {/* Sign Out */}
+          <Pressable style={styles.signOutButton} onPress={handleSignOut}>
+            <Ionicons name='log-out-outline' size={20} color={COLORS.error} />
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </Pressable>
+        </Animated.View>
 
-        <View style={styles.menuSection}>
-          <MenuItem
-            icon="help-circle-outline"
-            label="Help & Support"
-            onPress={() => Alert.alert('Help', 'Contact support@dreamdo.app')}
-          />
-          <MenuItem
-            icon="information-circle-outline"
-            label="About"
-            onPress={() => Alert.alert('DreamDo', 'Version 1.0.0\n\nMade with ❤️ for dreamers')}
-          />
-          <MenuItem
-            icon="refresh-outline"
-            label="Reset Onboarding"
-            onPress={handleResetOnboarding}
-          />
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>DreamDo v1.0.0</Text>
-          <Text style={styles.footerSubtext}>Made with ❤️ for dreamers</Text>
-        </View>
-
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
     </View>
-  );
+  )
+}
+
+function QuickStat({
+  value,
+  label,
+  icon,
+}: {
+  value: number
+  label: string
+  icon: string
+}) {
+  return (
+    <View style={styles.quickStat}>
+      <Ionicons name={icon as any} size={16} color={COLORS.primary[500]} />
+      <Text style={styles.quickStatValue}>{value.toLocaleString()}</Text>
+      <Text style={styles.quickStatLabel}>{label}</Text>
+    </View>
+  )
+}
+
+function SettingsSection({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <View style={styles.settingsSection}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionContent}>{children}</View>
+    </View>
+  )
+}
+
+function SettingsRow({
+  icon,
+  label,
+  value,
+  onPress,
+  rightElement,
+}: {
+  icon: string
+  label: string
+  value?: string
+  onPress?: () => void
+  rightElement?: React.ReactNode
+}) {
+  const handlePress = () => {
+    if (onPress) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      onPress()
+    }
+  }
+
+  return (
+    <Pressable
+      style={styles.settingsRow}
+      onPress={handlePress}
+      disabled={!onPress && !rightElement}
+    >
+      <View style={styles.settingsRowLeft}>
+        <View style={styles.settingsIcon}>
+          <Ionicons name={icon as any} size={20} color={COLORS.neutral[600]} />
+        </View>
+        <Text style={styles.settingsLabel}>{label}</Text>
+      </View>
+
+      {rightElement || (
+        <View style={styles.settingsRowRight}>
+          {value && <Text style={styles.settingsValue}>{value}</Text>}
+          {onPress && (
+            <Ionicons
+              name='chevron-forward'
+              size={18}
+              color={COLORS.neutral[300]}
+            />
+          )}
+        </View>
+      )}
+    </Pressable>
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.primary,
+    backgroundColor: COLORS.background.primary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.md,
+    paddingBottom: SPACING.xxl,
   },
   profileHeader: {
     alignItems: 'center',
-    paddingVertical: spacing.xl,
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: SPACING.md,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
+    ...SHADOWS.lg,
   },
   avatarText: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.bold,
-    fontSize: typography.sizes.xxxl,
+    fontFamily: FONTS.bold,
+    fontSize: 40,
+    color: '#FFF',
+  },
+  momentumBadge: {
+    position: 'absolute',
+    bottom: -5,
+    right: -5,
   },
   userName: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.bold,
-    fontSize: typography.sizes.xl,
-    marginTop: spacing.md,
+    fontFamily: FONTS.bold,
+    fontSize: 24,
+    color: COLORS.neutral[900],
   },
   userEmail: {
-    color: colors.text.muted,
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.md,
-    marginTop: spacing.xs,
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    color: COLORS.neutral[500],
+    marginTop: 2,
   },
-  premiumBadge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    marginTop: spacing.md,
-  },
-  premiumBadgeText: {
-    color: colors.accent.gold,
-    fontFamily: typography.fontFamily.semiBold,
-    fontSize: typography.sizes.sm,
-  },
-  upgradeBadge: {
-    marginTop: spacing.md,
-    borderRadius: borderRadius.full,
-    overflow: 'hidden',
-  },
-  upgradeGradient: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  upgradeText: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.semiBold,
-    fontSize: typography.sizes.sm,
-  },
-  statsRow: {
+  quickStats: {
     flexDirection: 'row',
-    backgroundColor: colors.background.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginVertical: spacing.md,
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.md,
+    marginTop: SPACING.lg,
+    ...SHADOWS.sm,
   },
-  statItem: {
+  quickStat: {
     flex: 1,
     alignItems: 'center',
   },
-  statValue: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.bold,
-    fontSize: typography.sizes.xxl,
+  quickStatValue: {
+    fontFamily: FONTS.bold,
+    fontSize: 18,
+    color: COLORS.neutral[900],
+    marginTop: 4,
   },
-  statLabel: {
-    color: colors.text.muted,
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.sm,
-    marginTop: spacing.xs,
+  quickStatLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: COLORS.neutral[500],
   },
   statDivider: {
     width: 1,
-    backgroundColor: colors.border.light,
+    height: 30,
+    backgroundColor: COLORS.neutral[200],
   },
-  menuSection: {
-    backgroundColor: colors.background.card,
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.md,
+  settingsSection: {
+    paddingHorizontal: SPACING.lg,
+    marginTop: SPACING.lg,
+  },
+  sectionTitle: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 14,
+    color: COLORS.neutral[400],
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: SPACING.sm,
+    marginLeft: SPACING.xs,
+  },
+  sectionContent: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
   },
-  menuItem: {
+  settingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.md,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    borderBottomColor: COLORS.neutral[100],
   },
-  menuItemLeft: {
+  settingsRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
-  menuIconContainer: {
+  settingsIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: 10,
+    backgroundColor: COLORS.neutral[100],
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: SPACING.md,
   },
-  menuLabel: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.md,
-    marginLeft: spacing.md,
+  settingsLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: 15,
+    color: COLORS.neutral[900],
   },
-  menuItemRight: {
+  settingsRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  settingsValue: {
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    color: COLORS.neutral[400],
+  },
+  premiumCard: {
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    ...SHADOWS.md,
+  },
+  premiumGradient: {
+    padding: SPACING.md,
+  },
+  premiumContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  badge: {
-    backgroundColor: colors.accent.pink,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.full,
-    marginRight: spacing.sm,
-  },
-  badgeText: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.bold,
-    fontSize: typography.sizes.xs,
-  },
-  footer: {
+  premiumIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
-    marginTop: spacing.xxl,
+    justifyContent: 'center',
+    marginRight: SPACING.md,
   },
-  footerText: {
-    color: colors.text.muted,
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.sm,
+  premiumText: {
+    flex: 1,
   },
-  footerSubtext: {
-    color: colors.text.muted,
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.xs,
-    marginTop: spacing.xs,
+  premiumTitle: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 16,
+    color: '#FFF',
   },
-});
+  premiumSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.xl,
+    marginHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.error + '10',
+    borderRadius: RADIUS.lg,
+  },
+  signOutText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 15,
+    color: COLORS.error,
+  },
+})

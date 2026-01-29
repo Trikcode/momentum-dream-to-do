@@ -1,272 +1,324 @@
-import React, { useState } from 'react';
+// app/(tabs)/dreams.tsx
+import React, { useEffect, useState } from 'react'
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native'
+import { router } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Ionicons } from '@expo/vector-icons'
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
+import { DreamOrb } from '@/src/components/dreams/DreamOrb'
+import { GlassCard } from '@/src/components/shared/GlassCard'
+import { Button } from '@/src/components/ui/Button'
+import { useDreamStore } from '@/src/store/dreamStore'
+import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '@/src/constants/theme'
 import {
-  StyleSheet,
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { DreamCard } from '@/src/components/dreams/DreamCard';
-import { FloatingActionButton, GradientButton } from '@/src/components/common';
-import { colors, typography, spacing, borderRadius } from '@/src/constants/theme';
-import { useStore } from '@/src/store/useStore';
-import { DreamCategory } from '@/src/types';
-import { DREAM_CATEGORIES } from '@/src/constants/categories';
+  DREAM_CATEGORIES,
+  DreamCategory,
+} from '@/src/constants/dreamCategories'
 
-type FilterType = 'all' | DreamCategory;
+const getCategoryById = (
+  categoryId: string | null | undefined,
+): DreamCategory => {
+  if (!categoryId) return DREAM_CATEGORIES[0]
+  return (
+    DREAM_CATEGORIES.find((c) => c.id === categoryId) || DREAM_CATEGORIES[0]
+  )
+}
 
 export default function DreamsScreen() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const insets = useSafeAreaInsets()
+  const { dreams, fetchDreams } = useDreamStore()
 
-  const { dreams, isPremium } = useStore();
-
-  const filteredDreams = activeFilter === 'all'
-    ? dreams
-    : dreams.filter((d) => d.category === activeFilter);
-
-  const filters: { id: FilterType; label: string }[] = [
-    { id: 'all', label: 'All' },
-    ...DREAM_CATEGORIES.map((cat) => ({ id: cat.id as FilterType, label: cat.title })),
-  ];
+  useEffect(() => {
+    fetchDreams()
+  }, [])
 
   const handleDreamPress = (dreamId: string) => {
-    router.push(`/dream/${dreamId}`);
-  };
+    router.push(`/(modals)/dream-detail?id=${dreamId}`)
+  }
+
+  const handleNewDream = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    router.push('/(modals)/new-dream')
+  }
+
+  const activeDreams = dreams.filter((d) => d.status === 'active')
+  const completedDreams = dreams.filter((d) => d.status === 'completed')
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>My Dreams</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/ai-coach')}
-          style={styles.aiButton}
-        >
+      <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
+        <View>
+          <Text style={styles.title}>Your Dreams</Text>
+          <Text style={styles.subtitle}>
+            {activeDreams.length} active · {completedDreams.length} achieved
+          </Text>
+        </View>
+
+        <Pressable onPress={handleNewDream} style={styles.addButton}>
           <LinearGradient
-            colors={['#EC4899', '#8B5CF6']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.aiButtonGradient}
+            colors={COLORS.gradients.primary as [string, string]}
+            style={styles.addButtonGradient}
           >
-            <Text style={styles.aiButtonText}>🤖 AI Coach</Text>
+            <Ionicons name='add' size={24} color='#FFF' />
           </LinearGradient>
-        </TouchableOpacity>
-      </View>
+        </Pressable>
+      </Animated.View>
 
-      {/* Filter tabs */}
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
-        contentContainerStyle={styles.filterContent}
-      >
-        {filters.map((filter) => (
-          <TouchableOpacity
-            key={filter.id}
-            onPress={() => setActiveFilter(filter.id)}
-            activeOpacity={0.8}
-          >
-            {activeFilter === filter.id ? (
-              <LinearGradient
-                colors={colors.gradients.primary as [string, string]}
-                style={styles.filterButton}
-              >
-                <Text style={styles.filterTextActive}>{filter.label}</Text>
-              </LinearGradient>
-            ) : (
-              <View style={[styles.filterButton, styles.filterButtonInactive]}>
-                <Text style={styles.filterText}>{filter.label}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Dreams list */}
-      <ScrollView
-        style={styles.dreamsList}
-        contentContainerStyle={styles.dreamsContent}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {filteredDreams.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🌟</Text>
-            <Text style={styles.emptyTitle}>No dreams yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Create your first dream and start your journey!
-            </Text>
-            <View style={{ marginTop: spacing.lg }}>
-              <GradientButton
-                title="Create Dream"
-                onPress={() => router.push('/create-dream')}
-              />
-            </View>
-          </View>
-        ) : (
+        {activeDreams.length > 0 ? (
           <>
-            {filteredDreams.map((dream) => (
-              <DreamCard
-                key={dream.id}
-                dream={dream}
-                onPress={() => handleDreamPress(dream.id)}
-              />
-            ))}
+            {/* Active Dreams Grid */}
+            <View style={styles.orbsGrid}>
+              {activeDreams.map((dream, index) => {
+                const category = getCategoryById(dream.category_id)
 
-            {/* Premium upsell if not premium and has >= 3 dreams */}
-            {!isPremium && dreams.length >= 3 && (
-              <TouchableOpacity
-                onPress={() => router.push('/paywall')}
-                activeOpacity={0.9}
+                return (
+                  <Animated.View
+                    key={dream.id}
+                    entering={FadeInUp.delay(200 + index * 100).duration(500)}
+                  >
+                    <DreamOrb
+                      id={dream.id}
+                      title={dream.title}
+                      category={category}
+                      progress={dream.progress_percent ?? 0}
+                      completedActions={dream.completed_actions ?? 0}
+                      totalActions={dream.total_actions ?? 0}
+                      isActive={true}
+                      onPress={() => handleDreamPress(dream.id)}
+                      index={index}
+                    />
+                  </Animated.View>
+                )
+              })}
+            </View>
+
+            {/* Completed section */}
+            {completedDreams.length > 0 && (
+              <Animated.View
+                entering={FadeInUp.delay(600).duration(500)}
+                style={styles.completedSection}
               >
-                <LinearGradient
-                  colors={['rgba(139, 92, 246, 0.2)', 'rgba(236, 72, 153, 0.2)']}
-                  style={styles.premiumBanner}
-                >
-                  <Text style={styles.premiumEmoji}>👑</Text>
-                  <View style={styles.premiumText}>
-                    <Text style={styles.premiumTitle}>Unlock Unlimited Dreams</Text>
-                    <Text style={styles.premiumSubtitle}>
-                      Upgrade to Pro for unlimited dreams and AI features
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={24} color={colors.accent.purple} />
-                </LinearGradient>
-              </TouchableOpacity>
+                <Text style={styles.completedTitle}>Achieved Dreams ✨</Text>
+                {completedDreams.map((dream, index) => (
+                  <CompletedDreamCard
+                    key={dream.id}
+                    dream={dream}
+                    onPress={() => handleDreamPress(dream.id)}
+                  />
+                ))}
+              </Animated.View>
             )}
           </>
+        ) : (
+          <EmptyDreams onCreatePress={handleNewDream} />
         )}
 
+        {/* Bottom padding */}
         <View style={{ height: 120 }} />
       </ScrollView>
-
-      <FloatingActionButton
-        onPress={() => router.push('/create-dream')}
-        icon="add"
-      />
     </View>
-  );
+  )
+}
+
+interface CompletedDreamCardProps {
+  dream: {
+    id: string
+    title: string
+    category_id: string | null
+    completed_at: string | null
+  }
+  onPress: () => void
+}
+
+function CompletedDreamCard({ dream, onPress }: CompletedDreamCardProps) {
+  const category = getCategoryById(dream.category_id)
+
+  const completedDate = dream.completed_at
+    ? new Date(dream.completed_at).toLocaleDateString()
+    : 'Recently'
+
+  return (
+    <GlassCard onPress={onPress} style={styles.completedCard}>
+      <View style={styles.completedContent}>
+        <View
+          style={[
+            styles.completedIcon,
+            { backgroundColor: category.color + '20' },
+          ]}
+        >
+          <Ionicons name='trophy' size={20} color={category.color} />
+        </View>
+        <View style={styles.completedInfo}>
+          <Text style={styles.completedDreamTitle}>{dream.title}</Text>
+          <Text style={styles.completedDate}>Achieved on {completedDate}</Text>
+        </View>
+        <Ionicons
+          name='chevron-forward'
+          size={20}
+          color={COLORS.neutral[300]}
+        />
+      </View>
+    </GlassCard>
+  )
+}
+
+// Empty State
+function EmptyDreams({ onCreatePress }: { onCreatePress: () => void }) {
+  return (
+    <View style={styles.emptyContainer}>
+      <Animated.View
+        entering={FadeInUp.delay(300).duration(600)}
+        style={styles.emptyContent}
+      >
+        <View style={styles.emptyIcon}>
+          <LinearGradient
+            colors={COLORS.gradients.dream as [string, string]}
+            style={styles.emptyIconGradient}
+          >
+            <Ionicons name='planet' size={48} color='#FFF' />
+          </LinearGradient>
+        </View>
+
+        <Text style={styles.emptyTitle}>No dreams yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Create your first dream and start turning it into reality with daily
+          power moves.
+        </Text>
+
+        <Button
+          title='Create Your First Dream'
+          onPress={onCreatePress}
+          size='lg'
+          icon={<Ionicons name='sparkles' size={20} color='#FFF' />}
+          iconPosition='left'
+        />
+      </Animated.View>
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.primary,
+    backgroundColor: COLORS.background.primary,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
   },
   title: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.bold,
-    fontSize: typography.sizes.xxl,
+    fontFamily: FONTS.bold,
+    fontSize: 28,
+    color: COLORS.neutral[900],
   },
-  aiButton: {
-    borderRadius: borderRadius.full,
-    overflow: 'hidden',
-  },
-  aiButtonGradient: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  aiButtonText: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.semiBold,
-    fontSize: typography.sizes.sm,
-  },
-  filterContainer: {
-    maxHeight: 50,
-  },
-  filterContent: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-    flexDirection: 'row',
-  },
-  filterButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    marginRight: spacing.sm,
-  },
-  filterButtonInactive: {
-    backgroundColor: colors.background.card,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-  },
-  filterText: {
-    color: colors.text.secondary,
-    fontFamily: typography.fontFamily.medium,
-    fontSize: typography.sizes.sm,
-  },
-  filterTextActive: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.semiBold,
-    fontSize: typography.sizes.sm,
-  },
-  dreamsList: {
-    flex: 1,
-    marginTop: spacing.md,
-  },
-  dreamsContent: {
-    paddingHorizontal: spacing.md,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xxl,
-    marginTop: spacing.xxl,
-  },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.bold,
-    fontSize: typography.sizes.xl,
-  },
-  emptySubtitle: {
-    color: colors.text.muted,
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.md,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.xl,
-  },
-  premiumBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-  },
-  premiumEmoji: {
-    fontSize: 32,
-  },
-  premiumText: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  premiumTitle: {
-    color: colors.text.primary,
-    fontFamily: typography.fontFamily.semiBold,
-    fontSize: typography.sizes.md,
-  },
-  premiumSubtitle: {
-    color: colors.text.muted,
-    fontFamily: typography.fontFamily.regular,
-    fontSize: typography.sizes.sm,
+  subtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    color: COLORS.neutral[500],
     marginTop: 2,
   },
-});
+  addButton: {
+    ...SHADOWS.md,
+  },
+  addButtonGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+  },
+  orbsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  completedSection: {
+    marginTop: SPACING.xl,
+  },
+  completedTitle: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 18,
+    color: COLORS.neutral[700],
+    marginBottom: SPACING.md,
+  },
+  completedCard: {
+    marginBottom: SPACING.sm,
+  },
+  completedContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  completedIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedInfo: {
+    flex: 1,
+  },
+  completedDreamTitle: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 15,
+    color: COLORS.neutral[900],
+  },
+  completedDate: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: COLORS.neutral[400],
+    marginTop: 2,
+  },
+  emptyContainer: {
+    flex: 1,
+    paddingTop: 60,
+  },
+  emptyContent: {
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+  },
+  emptyIcon: {
+    marginBottom: SPACING.lg,
+  },
+  emptyIconGradient: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.lg,
+  },
+  emptyTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 24,
+    color: COLORS.neutral[900],
+    marginBottom: SPACING.sm,
+  },
+  emptySubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 16,
+    color: COLORS.neutral[500],
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: SPACING.xl,
+  },
+})

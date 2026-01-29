@@ -1,12 +1,34 @@
-import { Redirect } from 'expo-router';
-import { useStore } from '@/src/store/useStore';
+import { useEffect } from 'react'
+import { router } from 'expo-router'
+import { View, ActivityIndicator } from 'react-native'
+import { useAuthStore } from '@/src/store/authStore'
+import { COLORS } from '@/src/constants/theme'
 
 export default function Index() {
-  const hasCompletedOnboarding = useStore((state) => state.hasCompletedOnboarding);
+  const { session, isLoading, hasOnboarded } = useAuthStore()
 
-  if (!hasCompletedOnboarding) {
-    return <Redirect href="/onboarding" />;
-  }
+  useEffect(() => {
+    if (isLoading) return
 
-  return <Redirect href="/(tabs)" />;
+    if (!session) {
+      router.replace('/(auth)/welcome')
+    } else if (!hasOnboarded) {
+      router.replace('/(onboarding)/intro')
+    } else {
+      router.replace('/(tabs)')
+    }
+  }, [session, isLoading, hasOnboarded])
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: COLORS.background.primary,
+      }}
+    >
+      <ActivityIndicator size='large' color={COLORS.primary[500]} />
+    </View>
+  )
 }

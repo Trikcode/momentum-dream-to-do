@@ -1,43 +1,49 @@
 {
   "expo": {
-    "name": "Dreamdo",
-    "slug": "dreamdo",
+    "name": "Momentum",
+    "slug": "momentum",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "fastshot",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "scheme": "momentum",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFBFA"
+    },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": true,
+      "bundleIdentifier": "com.trikcode.momentum",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FFFBFA"
       },
-      "edgeToEdgeEnabled": true
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "package": "com.trikcode.momentum"
     },
     "plugins": [
       "expo-router",
+      "expo-font",
       [
-        "expo-splash-screen",
+        "expo-notifications",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "icon": "./assets/images/icon.png",
+          "color": "#F43F5E"
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "baseUrl": ""
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "09c65eaa-6c20-490b-8f6e-be77d869037c"
+      }
     }
   }
 }
