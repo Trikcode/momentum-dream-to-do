@@ -295,7 +295,7 @@ export default function FirstDreamScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     paddingHorizontal: SPACING.lg,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
     borderTopWidth: 1,
     borderTopColor: COLORS.neutral[100],
   },

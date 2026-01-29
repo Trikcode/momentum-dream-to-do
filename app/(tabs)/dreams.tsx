@@ -208,7 +208,7 @@ function EmptyDreams({ onCreatePress }: { onCreatePress: () => void }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 // app/(auth)/welcome.tsx
 import React, { useEffect } from 'react'
-import { View, Text, StyleSheet, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native'
 import { router, Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -16,6 +16,7 @@ import Animated, {
   FadeIn,
   FadeInUp,
   interpolate,
+  SharedValue,
 } from 'react-native-reanimated'
 import Svg, {
   Path,
@@ -23,8 +24,15 @@ import Svg, {
   LinearGradient as SvgGradient,
   Stop,
 } from 'react-native-svg'
-import { Button } from '@/src/components/ui/Button'
-import { COLORS, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import {
+  COLORS,
+  DARK_COLORS,
+  FONTS,
+  SPACING,
+  RADIUS,
+  DARK_SHADOWS,
+} from '@/src/constants/theme'
+import * as Haptics from 'expo-haptics'
 
 const { width, height } = Dimensions.get('window')
 const AnimatedPath = Animated.createAnimatedComponent(Path)
@@ -47,8 +55,8 @@ export default function WelcomeScreen() {
     // Subtle glow pulse
     glowOpacity.value = withRepeat(
       withSequence(
-        withTiming(0.6, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.3, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.5, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.2, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true,
@@ -57,8 +65,8 @@ export default function WelcomeScreen() {
     // Floating orb animation
     orbFloat.value = withRepeat(
       withSequence(
-        withTiming(-8, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(8, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-6, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(6, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true,
@@ -81,18 +89,28 @@ export default function WelcomeScreen() {
     }
   })
 
+  const handleGetStarted = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push('/(auth)/sign-up' as Href)
+  }
+
+  const handleSignIn = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    router.push('/(auth)/sign-in' as Href)
+  }
+
   return (
     <View style={styles.container}>
       {/* Background gradient */}
       <LinearGradient
-        colors={[COLORS.background.primary, COLORS.background.secondary]}
+        colors={[
+          DARK_COLORS.background.primary,
+          DARK_COLORS.background.secondary,
+        ]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       />
-
-      {/* Subtle grid pattern overlay */}
-      <View style={styles.gridOverlay} />
 
       {/* Ambient glow */}
       <Animated.View style={[styles.ambientGlow, glowStyle]} />
@@ -119,17 +137,17 @@ export default function WelcomeScreen() {
                 >
                   <Stop
                     offset='0%'
-                    stopColor={COLORS.accent.primary}
+                    stopColor={DARK_COLORS.accent.primary}
                     stopOpacity={0.2}
                   />
                   <Stop
                     offset='50%'
-                    stopColor={COLORS.accent.primary}
+                    stopColor={DARK_COLORS.accent.primary}
                     stopOpacity={1}
                   />
                   <Stop
                     offset='100%'
-                    stopColor={COLORS.progress.primary}
+                    stopColor={DARK_COLORS.progress.primary}
                     stopOpacity={0.8}
                   />
                 </SvgGradient>
@@ -179,21 +197,29 @@ export default function WelcomeScreen() {
             { paddingBottom: insets.bottom + SPACING.lg },
           ]}
         >
-          <Button
-            title='Get Started'
-            onPress={() => router.push('/(auth)/sign-up' as Href)}
-            variant='primary'
-            size='lg'
-            fullWidth
-          />
+          {/* Primary button */}
+          <Pressable
+            onPress={handleGetStarted}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.primaryButtonText}>Get Started</Text>
+          </Pressable>
 
-          <Button
-            title='I already have an account'
-            onPress={() => router.push('/(auth)/sign-in' as Href)}
-            variant='ghost'
-            size='md'
-            fullWidth
-          />
+          {/* Secondary button */}
+          <Pressable
+            onPress={handleSignIn}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.secondaryButtonText}>
+              I already have an account
+            </Text>
+          </Pressable>
 
           {/* Terms text */}
           <Text style={styles.terms}>
@@ -209,38 +235,32 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
-  },
-  gridOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.02,
-    // This creates a subtle grid effect
-    // You can add a subtle pattern image here if desired
+    backgroundColor: DARK_COLORS.background.primary,
   },
   ambientGlow: {
     position: 'absolute',
-    top: height * 0.15,
-    left: width * 0.3,
-    width: width * 0.4,
-    height: width * 0.4,
-    borderRadius: width * 0.2,
-    backgroundColor: COLORS.accent.primary,
+    top: height * 0.12,
+    left: width * 0.25,
+    width: width * 0.5,
+    height: width * 0.5,
+    borderRadius: width * 0.25,
+    backgroundColor: DARK_COLORS.accent.primary,
     transform: [{ scaleX: 1.5 }],
   },
   content: {
     flex: 1,
-    paddingHorizontal: SPACING['2xl'],
+    paddingHorizontal: SPACING.lg,
   },
   visualContainer: {
     alignItems: 'center',
-    marginTop: SPACING['5xl'],
+    marginTop: SPACING.xxl,
   },
   curveContainer: {
     width: 200,
     height: 120,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING['2xl'],
+    marginBottom: SPACING.lg,
   },
   orb: {
     position: 'absolute',
@@ -255,30 +275,30 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.progress.primary,
+    backgroundColor: DARK_COLORS.progress.primary,
   },
   orbGlow: {
     position: 'absolute',
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: COLORS.progress.primary,
+    backgroundColor: DARK_COLORS.progress.primary,
     opacity: 0.3,
   },
   appName: {
     fontFamily: FONTS.bold,
-    fontSize: 32,
-    color: COLORS.text.primary,
+    fontSize: 28,
+    color: DARK_COLORS.text.primary,
     letterSpacing: -0.5,
   },
   headlineContainer: {
-    marginTop: SPACING['6xl'],
+    marginTop: SPACING.xxl + SPACING.lg,
   },
   headline: {
     fontFamily: FONTS.bold,
-    fontSize: 40,
-    lineHeight: 48,
-    color: COLORS.text.primary,
+    fontSize: 36,
+    lineHeight: 44,
+    color: DARK_COLORS.text.primary,
     letterSpacing: -1,
     textAlign: 'center',
   },
@@ -286,9 +306,9 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 16,
     lineHeight: 24,
-    color: COLORS.text.secondary,
+    color: DARK_COLORS.text.secondary,
     textAlign: 'center',
-    marginTop: SPACING.lg,
+    marginTop: SPACING.md,
   },
   spacer: {
     flex: 1,
@@ -296,11 +316,39 @@ const styles = StyleSheet.create({
   ctaContainer: {
     gap: SPACING.md,
   },
+  primaryButton: {
+    height: 56,
+    backgroundColor: COLORS.neutral[0],
+    borderRadius: RADIUS.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 16,
+    color: DARK_COLORS.background.primary,
+  },
+  secondaryButton: {
+    height: 48,
+    backgroundColor: 'transparent',
+    borderRadius: RADIUS.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    fontFamily: FONTS.medium,
+    fontSize: 15,
+    color: DARK_COLORS.text.secondary,
+  },
+  buttonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
   terms: {
     fontFamily: FONTS.regular,
     fontSize: 12,
     lineHeight: 18,
-    color: COLORS.text.tertiary,
+    color: DARK_COLORS.text.tertiary,
     textAlign: 'center',
     marginTop: SPACING.sm,
   },

@@ -25,7 +25,7 @@ export default function Index() {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: COLORS.background.primary,
+        backgroundColor: COLORS.background,
       }}
     >
       <ActivityIndicator size='large' color={COLORS.primary[500]} />

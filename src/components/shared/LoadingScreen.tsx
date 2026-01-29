@@ -79,11 +79,7 @@ export function LoadingScreen({
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[
-          COLORS.primary[50],
-          COLORS.background.primary,
-          COLORS.secondary[50],
-        ]}
+        colors={[COLORS.primary[50], COLORS.background, COLORS.secondary[50]]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

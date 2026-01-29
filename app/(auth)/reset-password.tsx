@@ -151,7 +151,7 @@ export default function ResetPasswordScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <LinearGradient
-          colors={[COLORS.success[50], COLORS.background.primary]}
+          colors={[COLORS.success[50], COLORS.background]}
           style={StyleSheet.absoluteFill}
         />
 
@@ -199,7 +199,7 @@ export default function ResetPasswordScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <LinearGradient
-          colors={[COLORS.accent[50], COLORS.background.primary]}
+          colors={[COLORS.accent[50], COLORS.background]}
           style={StyleSheet.absoluteFill}
         />
 
@@ -248,7 +248,7 @@ export default function ResetPasswordScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <LinearGradient
-          colors={['#FEE2E2', COLORS.background.primary]}
+          colors={['#FEE2E2', COLORS.background]}
           style={StyleSheet.absoluteFill}
         />
 
@@ -292,7 +292,7 @@ export default function ResetPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <LinearGradient
-        colors={[COLORS.secondary[50], COLORS.background.primary]}
+        colors={[COLORS.secondary[50], COLORS.background]}
         style={StyleSheet.absoluteFill}
       />
 
@@ -449,7 +449,7 @@ function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,

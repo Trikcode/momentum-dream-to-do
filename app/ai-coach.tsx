@@ -375,7 +375,7 @@ export default function AICoachScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.sm,
     borderTopWidth: 1,
     borderTopColor: COLORS.neutral[200],
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
   inputWrapper: {
     flexDirection: 'row',

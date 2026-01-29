@@ -150,7 +150,7 @@ export default function ForgotPasswordScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <LinearGradient
-          colors={[COLORS.success[50], COLORS.background.primary]}
+          colors={[COLORS.success[50], COLORS.background]}
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -232,7 +232,7 @@ export default function ForgotPasswordScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <LinearGradient
-          colors={['#FEE2E2', COLORS.background.primary]}
+          colors={['#FEE2E2', COLORS.background]}
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -297,7 +297,7 @@ export default function ForgotPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <LinearGradient
-        colors={[COLORS.primary[50], COLORS.background.primary]}
+        colors={[COLORS.primary[50], COLORS.background]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -424,7 +424,7 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,

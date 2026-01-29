@@ -123,7 +123,7 @@ export default function PickDreamsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
   header: {
     paddingHorizontal: SPACING.lg,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   bottomSection: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
     borderTopWidth: 1,
     borderTopColor: COLORS.neutral[100],
   },

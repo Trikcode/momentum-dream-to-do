@@ -300,7 +300,7 @@ function SettingsRow({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
   scrollView: {
     flex: 1,

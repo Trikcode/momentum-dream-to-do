@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   View,
   ViewStyle,
+  TextStyle,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import Animated, {
@@ -15,11 +16,30 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '@/src/constants/theme'
+import {
+  COLORS,
+  DARK_COLORS,
+  FONTS,
+  SPACING,
+  RADIUS,
+} from '@/src/constants/theme'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'accent'
+// Button variants
+type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'ghost'
+  | 'danger'
+  | 'accent'
+  // Dark theme variants
+  | 'dark-primary'
+  | 'dark-secondary'
+  | 'dark-ghost'
+  | 'dark-accent'
+
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface ButtonProps {
@@ -33,6 +53,7 @@ interface ButtonProps {
   icon?: React.ReactNode
   iconPosition?: 'left' | 'right'
   style?: ViewStyle
+  textStyle?: TextStyle
 }
 
 export function Button({
@@ -46,23 +67,20 @@ export function Button({
   icon,
   iconPosition = 'left',
   style,
+  textStyle,
 }: ButtonProps) {
   const scale = useSharedValue(1)
-  const opacity = useSharedValue(1)
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    opacity: opacity.value,
   }))
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, { damping: 20, stiffness: 300 })
-    opacity.value = withSpring(0.9)
+    scale.value = withSpring(0.97, { damping: 20, stiffness: 300 })
   }
 
   const handlePressOut = () => {
     scale.value = withSpring(1, { damping: 20, stiffness: 300 })
-    opacity.value = withSpring(1)
   }
 
   const handlePress = () => {
@@ -75,33 +93,42 @@ export function Button({
   const variantConfig = VARIANT_CONFIG[variant]
   const isDisabled = disabled || isLoading
 
-  const content = (
+  const buttonContent = (
     <View style={styles.content}>
       {isLoading ? (
         <ActivityIndicator size='small' color={variantConfig.textColor} />
       ) : (
         <>
           {icon && iconPosition === 'left' && (
-            <View style={{ marginRight: SPACING.sm }}>{icon}</View>
+            <View style={styles.iconLeft}>{icon}</View>
           )}
           <Text
             style={[
               styles.text,
-              { fontSize: sizeConfig.fontSize, color: variantConfig.textColor },
+              {
+                fontSize: sizeConfig.fontSize,
+                color: variantConfig.textColor,
+              },
+              textStyle,
             ]}
           >
             {title}
           </Text>
           {icon && iconPosition === 'right' && (
-            <View style={{ marginLeft: SPACING.sm }}>{icon}</View>
+            <View style={styles.iconRight}>{icon}</View>
           )}
         </>
       )}
     </View>
   )
 
-  // Accent variant uses gradient
-  if (variant === 'accent') {
+  // Gradient variants (accent, dark-accent)
+  if (variant === 'accent' || variant === 'dark-accent') {
+    const gradientColors =
+      variant === 'accent'
+        ? ([COLORS.primary[500], COLORS.primary[600]] as const)
+        : ([DARK_COLORS.accent.primary, DARK_COLORS.accent.secondary] as const)
+
     return (
       <AnimatedPressable
         onPress={handlePress}
@@ -116,7 +143,7 @@ export function Button({
         ]}
       >
         <LinearGradient
-          colors={['#6C7CFF', '#8B98FF']}
+          colors={gradientColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
@@ -125,10 +152,9 @@ export function Button({
               height: sizeConfig.height,
               paddingHorizontal: sizeConfig.paddingX,
             },
-            SHADOWS.glow,
           ]}
         >
-          {content}
+          {buttonContent}
         </LinearGradient>
       </AnimatedPressable>
     )
@@ -155,7 +181,7 @@ export function Button({
         style,
       ]}
     >
-      {content}
+      {buttonContent}
     </AnimatedPressable>
   )
 }
@@ -171,7 +197,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   disabled: {
-    opacity: 0.4,
+    opacity: 0.5,
   },
   content: {
     flexDirection: 'row',
@@ -179,39 +205,99 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: {
-    fontFamily: FONTS.medium,
+    fontFamily: FONTS.semiBold,
     letterSpacing: 0.2,
+  },
+  iconLeft: {
+    marginRight: SPACING.sm,
+  },
+  iconRight: {
+    marginLeft: SPACING.sm,
   },
 })
 
-const SIZE_CONFIG = {
+// Size configurations
+const SIZE_CONFIG: Record<
+  ButtonSize,
+  { height: number; paddingX: number; fontSize: number }
+> = {
   sm: { height: 40, paddingX: 16, fontSize: 14 },
   md: { height: 48, paddingX: 20, fontSize: 15 },
   lg: { height: 56, paddingX: 24, fontSize: 16 },
 }
 
-const VARIANT_CONFIG = {
+// Variant configurations
+const VARIANT_CONFIG: Record<
+  ButtonVariant,
+  {
+    backgroundColor: string
+    textColor: string
+    borderWidth: number
+    borderColor: string
+  }
+> = {
+  // ============ LIGHT THEME VARIANTS ============
   primary: {
-    backgroundColor: COLORS.white,
-    textColor: COLORS.background.primary,
+    backgroundColor: COLORS.primary[500],
+    textColor: COLORS.neutral[0],
     borderWidth: 0,
     borderColor: 'transparent',
   },
   secondary: {
-    backgroundColor: COLORS.overlay.medium,
-    textColor: COLORS.text.primary,
-    borderWidth: 1,
-    borderColor: COLORS.border.primary,
+    backgroundColor: COLORS.neutral[100],
+    textColor: COLORS.neutral[900],
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    textColor: COLORS.neutral[700],
+    borderWidth: 1.5,
+    borderColor: COLORS.neutral[300],
   },
   ghost: {
     backgroundColor: 'transparent',
-    textColor: COLORS.text.secondary,
+    textColor: COLORS.neutral[600],
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  danger: {
+    backgroundColor: COLORS.error,
+    textColor: COLORS.neutral[0],
     borderWidth: 0,
     borderColor: 'transparent',
   },
   accent: {
-    backgroundColor: COLORS.accent.primary,
-    textColor: COLORS.white,
+    // Handled by gradient
+    backgroundColor: COLORS.primary[500],
+    textColor: COLORS.neutral[0],
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+
+  // ============ DARK THEME VARIANTS ============
+  'dark-primary': {
+    backgroundColor: COLORS.neutral[0],
+    textColor: DARK_COLORS.background.primary,
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  'dark-secondary': {
+    backgroundColor: DARK_COLORS.overlay.medium,
+    textColor: DARK_COLORS.text.primary,
+    borderWidth: 1,
+    borderColor: DARK_COLORS.border.primary,
+  },
+  'dark-ghost': {
+    backgroundColor: 'transparent',
+    textColor: DARK_COLORS.text.secondary,
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  'dark-accent': {
+    // Handled by gradient
+    backgroundColor: DARK_COLORS.accent.primary,
+    textColor: COLORS.neutral[0],
     borderWidth: 0,
     borderColor: 'transparent',
   },

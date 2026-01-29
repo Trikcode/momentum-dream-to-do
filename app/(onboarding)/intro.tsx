@@ -170,7 +170,7 @@ export default function IntroScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: COLORS.background,
   },
   bottomSection: {
     paddingHorizontal: SPACING.lg,
