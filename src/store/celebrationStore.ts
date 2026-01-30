@@ -30,6 +30,10 @@ interface CelebrationState {
   completedMoveTitle: string
   sparksEarned: number
 
+  showDreamComplete: boolean
+  completedDreamTitle: string
+  dreamSparksEarned: number
+
   showSparkBurst: boolean
   sparkBurstAmount: number
   sparkBurstPosition: { x: number; y: number }
@@ -44,12 +48,13 @@ interface CelebrationState {
 
   // Queue for multiple celebrations
   celebrationQueue: Array<{
-    type: 'powerMove' | 'spark' | 'victory' | 'levelUp'
+    type: 'powerMove' | 'dreamComplete' | 'spark' | 'victory' | 'levelUp'
     data: any
   }>
 
   // Actions
   triggerPowerMoveComplete: (title: string, sparks: number) => void
+  triggerDreamComplete: (title: string, sparks: number) => void
   triggerSparkBurst: (
     amount: number,
     position?: { x: number; y: number },
@@ -59,6 +64,7 @@ interface CelebrationState {
   triggerConfetti: () => void
 
   dismissPowerMoveComplete: () => void
+  dismissDreamComplete: () => void
   dismissVictory: () => void
   dismissLevelUp: () => void
   dismissConfetti: () => void
@@ -71,6 +77,10 @@ export const useCelebrationStore = create<CelebrationState>((set, get) => ({
   showPowerMoveComplete: false,
   completedMoveTitle: '',
   sparksEarned: 0,
+
+  showDreamComplete: false,
+  completedDreamTitle: '',
+  dreamSparksEarned: 0,
 
   showSparkBurst: false,
   sparkBurstAmount: 0,
@@ -101,6 +111,38 @@ export const useCelebrationStore = create<CelebrationState>((set, get) => ({
     }, 2500)
   },
 
+  triggerDreamComplete: (title, sparks) => {
+    const state = get()
+
+    // If another celebration is showing, queue this one
+    if (
+      state.showPowerMoveComplete ||
+      state.showDreamComplete ||
+      state.showVictory ||
+      state.showLevelUp
+    ) {
+      set({
+        celebrationQueue: [
+          ...state.celebrationQueue,
+          { type: 'dreamComplete', data: { title, sparks } },
+        ],
+      })
+      return
+    }
+
+    set({
+      showDreamComplete: true,
+      completedDreamTitle: title,
+      dreamSparksEarned: sparks,
+      showConfetti: true,
+    })
+
+    // Auto-dismiss after longer animation (bigger celebration)
+    setTimeout(() => {
+      get().dismissDreamComplete()
+    }, 4000)
+  },
+
   triggerSparkBurst: (amount, position = { x: 0, y: 0 }) => {
     set({
       showSparkBurst: true,
@@ -117,7 +159,12 @@ export const useCelebrationStore = create<CelebrationState>((set, get) => ({
     const state = get()
 
     // If another celebration is showing, queue this one
-    if (state.showPowerMoveComplete || state.showVictory || state.showLevelUp) {
+    if (
+      state.showPowerMoveComplete ||
+      state.showDreamComplete ||
+      state.showVictory ||
+      state.showLevelUp
+    ) {
       set({
         celebrationQueue: [
           ...state.celebrationQueue,
@@ -137,7 +184,12 @@ export const useCelebrationStore = create<CelebrationState>((set, get) => ({
   triggerLevelUp: (data) => {
     const state = get()
 
-    if (state.showPowerMoveComplete || state.showVictory || state.showLevelUp) {
+    if (
+      state.showPowerMoveComplete ||
+      state.showDreamComplete ||
+      state.showVictory ||
+      state.showLevelUp
+    ) {
       set({
         celebrationQueue: [
           ...state.celebrationQueue,
@@ -166,6 +218,16 @@ export const useCelebrationStore = create<CelebrationState>((set, get) => ({
   dismissPowerMoveComplete: () => {
     set({
       showPowerMoveComplete: false,
+      showConfetti: false,
+    })
+    get().processNextCelebration()
+  },
+
+  dismissDreamComplete: () => {
+    set({
+      showDreamComplete: false,
+      completedDreamTitle: '',
+      dreamSparksEarned: 0,
       showConfetti: false,
     })
     get().processNextCelebration()
@@ -204,6 +266,9 @@ export const useCelebrationStore = create<CelebrationState>((set, get) => ({
     // Small delay between celebrations
     setTimeout(() => {
       switch (next.type) {
+        case 'dreamComplete':
+          get().triggerDreamComplete(next.data.title, next.data.sparks)
+          break
         case 'victory':
           get().triggerVictory(next.data)
           break

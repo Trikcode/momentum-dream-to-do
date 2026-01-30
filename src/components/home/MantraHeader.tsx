@@ -1,103 +1,52 @@
+// src/components/home/MantraHeader.tsx
 import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated'
+import Animated, { FadeInDown } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS, FONTS, SPACING } from '@/src/constants/theme'
+import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 import { getMantra } from '@/src/constants/language'
 import { format } from 'date-fns'
 
-interface MantraHeaderProps {
+export function MantraHeader({
+  userName,
+  chapter,
+}: {
   userName: string
   chapter: number
-}
-
-export function MantraHeader({ userName, chapter }: MantraHeaderProps) {
+}) {
   const [mantra, setMantra] = useState('')
-  const shimmerPosition = useSharedValue(0)
+  const firstName = userName.split(' ')[0]
+  const today = format(new Date(), 'EEEE, MMM d')
 
   useEffect(() => {
     setMantra(getMantra())
-
-    // Subtle shimmer animation on the mantra
-    shimmerPosition.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      false,
-    )
   }, [])
-
-  const shimmerStyle = useAnimatedStyle(() => ({
-    opacity: 0.7 + shimmerPosition.value * 0.3,
-  }))
-
-  const firstName = userName.split(' ')[0]
-  const today = format(new Date(), 'EEEE, MMMM d')
 
   return (
     <View style={styles.container}>
-      {/* Date */}
-      <Animated.Text
-        entering={FadeInDown.delay(100).duration(500)}
-        style={styles.date}
-      >
-        {today}
-      </Animated.Text>
-
-      {/* Main greeting */}
-      <Animated.View
-        entering={FadeInDown.delay(200).duration(500)}
-        style={styles.greetingRow}
-      >
-        <Text style={styles.greeting}>Hey, </Text>
-        <LinearGradient
-          colors={COLORS.gradients.primary as [string, string]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.nameGradient}
-        >
-          <Text style={styles.nameText}>{firstName}</Text>
-        </LinearGradient>
-      </Animated.View>
-
-      {/* Mantra */}
-      <Animated.View
-        entering={FadeInUp.delay(400).duration(600)}
-        style={styles.mantraContainer}
-      >
-        <Animated.View style={[styles.mantraContent, shimmerStyle]}>
-          <View style={styles.quoteIcon}>
-            <Ionicons name='sparkles' size={16} color={COLORS.secondary[400]} />
-          </View>
-          <Text style={styles.mantraText}>{mantra}</Text>
-        </Animated.View>
-      </Animated.View>
-
-      {/* Chapter indicator */}
-      <Animated.View
-        entering={FadeInUp.delay(500).duration(500)}
-        style={styles.chapterBadge}
-      >
-        <LinearGradient
-          colors={[COLORS.secondary[100], COLORS.secondary[50]]}
-          style={styles.chapterGradient}
-        >
-          <Ionicons name='book' size={12} color={COLORS.secondary[600]} />
+      <Animated.View entering={FadeInDown.delay(100)} style={styles.topRow}>
+        <Text style={styles.date}>{today}</Text>
+        <View style={styles.chapterTag}>
+          <Ionicons name='bookmark' size={10} color={DARK.accent.gold} />
           <Text style={styles.chapterText}>Chapter {chapter}</Text>
-        </LinearGradient>
+        </View>
       </Animated.View>
+
+      <Animated.View
+        entering={FadeInDown.delay(200)}
+        style={styles.greetingWrapper}
+      >
+        <Text style={styles.greeting}>Hello,</Text>
+        {/* Gradient Text Effect using MaskedView is ideal, but for now using a subtle text gradient simulation */}
+        <Text style={[styles.greeting, { color: DARK.accent.rose }]}>
+          {firstName}
+        </Text>
+      </Animated.View>
+
+      <Animated.Text entering={FadeInDown.delay(300)} style={styles.mantra}>
+        "{mantra}"
+      </Animated.Text>
     </View>
   )
 }
@@ -105,73 +54,54 @@ export function MantraHeader({ userName, chapter }: MantraHeaderProps) {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
   },
   date: {
-    fontFamily: FONTS.medium,
-    fontSize: 13,
-    color: COLORS.neutral[400],
+    color: DARK.text.tertiary,
+    fontSize: 12,
+    fontFamily: FONTS.semiBold,
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginBottom: SPACING.xs,
+    letterSpacing: 1,
   },
-  greetingRow: {
+  chapterTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  greeting: {
-    fontFamily: FONTS.bold,
-    fontSize: 32,
-    color: COLORS.neutral[900],
-  },
-  nameGradient: {
-    paddingHorizontal: 2,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  nameText: {
-    fontFamily: FONTS.bold,
-    fontSize: 32,
-    color: COLORS.primary[500],
-  },
-  mantraContainer: {
-    marginBottom: SPACING.sm,
-  },
-  mantraContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  quoteIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.secondary[50],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mantraText: {
-    fontFamily: FONTS.medium,
-    fontSize: 16,
-    color: COLORS.neutral[600],
-    flex: 1,
-    fontStyle: 'italic',
-  },
-  chapterBadge: {
-    alignSelf: 'flex-start',
-  },
-  chapterGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: 12,
+    gap: 4,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
   },
   chapterText: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 12,
-    color: COLORS.secondary[600],
+    color: DARK.accent.gold,
+    fontSize: 10,
+    fontFamily: FONTS.bold,
+    textTransform: 'uppercase',
+  },
+  greetingWrapper: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'baseline',
+  },
+  greeting: {
+    fontSize: 32,
+    fontFamily: FONTS.bold,
+    color: DARK.text.primary,
+    letterSpacing: -1,
+  },
+  mantra: {
+    fontSize: 15,
+    fontFamily: FONTS.regular,
+    color: DARK.text.secondary,
+    marginTop: SPACING.xs,
+    fontStyle: 'italic',
   },
 })

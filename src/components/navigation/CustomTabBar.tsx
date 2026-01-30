@@ -1,6 +1,5 @@
-// src/components/navigation/CustomTabBar.tsx
-import React from 'react'
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native'
+import React, { useEffect } from 'react'
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native'
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -10,20 +9,17 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  interpolate,
+  FadeIn,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
-  COLORS,
+  DARK,
   FONTS,
   SPACING,
   RADIUS,
-  SHADOWS,
   SPRING_CONFIGS,
 } from '@/src/constants/theme'
-
-const { width } = Dimensions.get('window')
 
 interface TabConfig {
   name: string
@@ -32,32 +28,32 @@ interface TabConfig {
   label: string
 }
 
-const TABS: TabConfig[] = [
-  {
+const TAB_CONFIG: Record<string, TabConfig> = {
+  index: {
     name: 'index',
     icon: 'flash-outline',
     iconFocused: 'flash',
     label: 'Today',
   },
-  {
+  dreams: {
     name: 'dreams',
     icon: 'planet-outline',
     iconFocused: 'planet',
     label: 'Dreams',
   },
-  {
+  journey: {
     name: 'journey',
     icon: 'map-outline',
     iconFocused: 'map',
     label: 'Journey',
   },
-  {
+  profile: {
     name: 'profile',
     icon: 'person-outline',
     iconFocused: 'person',
     label: 'You',
   },
-]
+}
 
 export function CustomTabBar({
   state,
@@ -67,29 +63,51 @@ export function CustomTabBar({
   const insets = useSafeAreaInsets()
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <BlurView intensity={80} tint='light' style={styles.blur}>
-        <View style={styles.tabsContainer}>
-          {state.routes.map((route, index) => {
-            const isFocused = state.index === index
-            const tab = TABS[index]
-
-            if (!tab) return null
-
-            return (
-              <TabButton
-                key={route.key}
-                tab={tab}
-                isFocused={isFocused}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                  navigation.navigate(route.name)
-                }}
-              />
-            )
-          })}
+    <View
+      style={[styles.container, { paddingBottom: Math.max(insets.bottom, 20) }]}
+    >
+      {Platform.OS === 'ios' ? (
+        <BlurView intensity={30} tint='dark' style={styles.blurContainer}>
+          <TabContent state={state} navigation={navigation} />
+        </BlurView>
+      ) : (
+        <View style={[styles.blurContainer, styles.androidFallback]}>
+          <TabContent state={state} navigation={navigation} />
         </View>
-      </BlurView>
+      )}
+    </View>
+  )
+}
+
+function TabContent({ state, navigation }: { state: any; navigation: any }) {
+  return (
+    <View style={styles.tabsRow}>
+      {state.routes.map((route: any, index: number) => {
+        const isFocused = state.index === index
+        const tab = TAB_CONFIG[route.name]
+
+        if (!tab) return null
+
+        return (
+          <TabButton
+            key={route.key}
+            tab={tab}
+            isFocused={isFocused}
+            onPress={() => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              })
+
+              if (!isFocused && !event.defaultPrevented) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                navigation.navigate(route.name)
+              }
+            }}
+          />
+        )
+      })}
     </View>
   )
 }
@@ -102,7 +120,15 @@ interface TabButtonProps {
 
 function TabButton({ tab, isFocused, onPress }: TabButtonProps) {
   const scale = useSharedValue(1)
-  const translateY = useSharedValue(0)
+  const iconY = useSharedValue(0)
+
+  useEffect(() => {
+    if (isFocused) {
+      iconY.value = withSpring(-2, SPRING_CONFIGS.bouncy)
+    } else {
+      iconY.value = withSpring(0)
+    }
+  }, [isFocused])
 
   const handlePressIn = () => {
     scale.value = withSpring(0.9, SPRING_CONFIGS.snappy)
@@ -112,16 +138,16 @@ function TabButton({ tab, isFocused, onPress }: TabButtonProps) {
     scale.value = withSpring(1, SPRING_CONFIGS.snappy)
   }
 
-  React.useEffect(() => {
-    if (isFocused) {
-      translateY.value = withSpring(-2, SPRING_CONFIGS.snappy)
-    } else {
-      translateY.value = withSpring(0, SPRING_CONFIGS.snappy)
-    }
-  }, [isFocused])
+  const animatedIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }, { translateY: iconY.value }],
+  }))
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateY: translateY.value }],
+  // Label fades in/out and moves slightly
+  const animatedLabelStyle = useAnimatedStyle(() => ({
+    opacity: withTiming(isFocused ? 1 : 0.5, { duration: 200 }),
+    transform: [
+      { translateY: withTiming(isFocused ? 0 : 2, { duration: 200 }) },
+    ],
   }))
 
   return (
@@ -131,24 +157,39 @@ function TabButton({ tab, isFocused, onPress }: TabButtonProps) {
       onPressOut={handlePressOut}
       style={styles.tabButton}
     >
-      <Animated.View style={[styles.tabContent, animatedStyle]}>
-        {isFocused ? (
-          <LinearGradient
-            colors={COLORS.gradients.primary as [string, string]}
-            style={styles.activeBackground}
+      <View style={styles.iconContainer}>
+        {isFocused && (
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            style={styles.activePill}
           >
-            <Ionicons name={tab.iconFocused} size={22} color='#FFF' />
-          </LinearGradient>
-        ) : (
-          <View style={styles.inactiveIcon}>
-            <Ionicons name={tab.icon} size={22} color={COLORS.neutral[400]} />
-          </View>
+            <LinearGradient
+              colors={DARK.gradients.primary as [string, string]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
         )}
 
-        <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
-          {tab.label}
-        </Text>
-      </Animated.View>
+        <Animated.View style={animatedIconStyle}>
+          <Ionicons
+            name={isFocused ? tab.iconFocused : tab.icon}
+            size={22}
+            color={isFocused ? '#FFF' : DARK.text.secondary}
+          />
+        </Animated.View>
+      </View>
+
+      <Animated.Text
+        style={[
+          styles.label,
+          animatedLabelStyle,
+          isFocused && styles.labelFocused,
+        ]}
+      >
+        {tab.label}
+      </Animated.Text>
     </Pressable>
   )
 }
@@ -159,51 +200,61 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    alignItems: 'center',
+    // Ensure this sits above everything else
+    zIndex: 100,
+    elevation: 20,
   },
-  blur: {
-    borderRadius: RADIUS.xl,
+  blurContainer: {
+    width: '100%',
+    borderRadius: RADIUS['2xl'],
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    ...SHADOWS.lg,
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+    backgroundColor: 'rgba(0,0,0,0.3)', // Fallback tint for blur
   },
-  tabsContainer: {
+  androidFallback: {
+    backgroundColor: '#1E232E',
+    opacity: 0.98,
+  },
+  tabsRow: {
     flexDirection: 'row',
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.sm,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    justifyContent: 'space-between',
+    paddingVertical: 12, // Fixed height padding
+    paddingHorizontal: SPACING.xs,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
-  },
-  tabContent: {
-    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
-  activeBackground: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  iconContainer: {
+    width: 48,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.glow(COLORS.primary[500]),
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 4,
   },
-  inactiveIcon: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
+  activePill: {
+    ...StyleSheet.absoluteFillObject,
+    ...DARK.glow.rose,
   },
-  tabLabel: {
+  label: {
+    fontSize: 10,
     fontFamily: FONTS.medium,
-    fontSize: 11,
-    color: COLORS.neutral[400],
+    color: DARK.text.secondary,
   },
-  tabLabelActive: {
-    color: COLORS.primary[600],
+  labelFocused: {
+    color: '#FFF',
     fontFamily: FONTS.semiBold,
   },
 })

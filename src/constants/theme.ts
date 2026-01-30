@@ -1,8 +1,7 @@
 // src/constants/theme.ts
 
-// =============================================================================
-// EXISTING COLORS (Keep these - used throughout the app)
-// =============================================================================
+// LIGHT THEME COLORS (Existing - Keep for backward compatibility)
+
 export const COLORS = {
   // Primary - Warm, empowering coral/rose
   primary: {
@@ -11,7 +10,7 @@ export const COLORS = {
     200: '#FFCCD5',
     300: '#FFA3B5',
     400: '#FF7A95',
-    500: '#F43F5E', // Main
+    500: '#F43F5E',
     600: '#E11D48',
     700: '#BE123C',
     800: '#9F1239',
@@ -85,9 +84,6 @@ export const COLORS = {
     dream: ['#A855F7', '#F43F5E'],
     ocean: ['#06B6D4', '#3B82F6'],
     aurora: ['#A855F7', '#06B6D4', '#10B981'],
-    // NEW: Dark theme gradients
-    momentum: ['#6C7CFF', '#8B98FF'],
-    darkPrimary: ['#0F1115', '#151A23'],
   },
 
   // Glass effects
@@ -98,7 +94,7 @@ export const COLORS = {
     border: 'rgba(255, 255, 255, 0.2)',
   },
 
-  // Semantic (existing)
+  // Semantic
   background: '#FFFBFA',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
@@ -107,59 +103,90 @@ export const COLORS = {
   info: '#3B82F6',
 }
 
-// =============================================================================
-// NEW: DARK THEME COLORS (For premium screens like Welcome, Auth, etc.)
-// =============================================================================
-export const DARK_COLORS = {
+// DARK THEME COLORS (Premium screens - Welcome, Auth, etc.)
+
+export const DARK = {
   // Backgrounds
-  background: {
+  bg: {
     primary: '#0F1115',
-    secondary: '#151A23',
+    secondary: '#161B22',
     tertiary: '#1C2130',
-    elevated: '#242938',
+    card: 'rgba(20, 22, 30, 0.6)',
   },
 
-  // Text on dark
+  // Text
   text: {
-    primary: '#F5F7FA',
-    secondary: '#A0A6B4',
-    tertiary: '#6B7280',
-    muted: '#4B5163',
+    primary: '#FFFFFF',
+    secondary: '#94A3B8',
+    tertiary: '#64748B',
+    muted: '#475569',
   },
 
-  // Accent - Electric Indigo
+  // Accent colors
   accent: {
-    primary: '#6C7CFF',
-    secondary: '#8B98FF',
-    muted: 'rgba(108, 124, 255, 0.15)',
-    glow: 'rgba(108, 124, 255, 0.4)',
+    rose: '#F43F5E',
+    roseDark: '#E11D48',
+    gold: '#F59E0B',
+    violet: '#8B5CF6',
   },
-
-  // Progress/Success - Soft Teal
-  progress: {
-    primary: '#4FD1C5',
-    secondary: '#6EE7DB',
-    muted: 'rgba(79, 209, 197, 0.15)',
-  },
-
-  // Borders for dark theme
+  error: '#EF4444',
+  success: '#10B981',
+  info: '#3B82F6',
+  warning: '#FBBF24',
+  // Borders & overlays
   border: {
-    primary: 'rgba(255, 255, 255, 0.08)',
-    secondary: 'rgba(255, 255, 255, 0.04)',
-    accent: 'rgba(108, 124, 255, 0.3)',
+    light: 'rgba(255, 255, 255, 0.1)',
+    medium: 'rgba(255, 255, 255, 0.06)',
+    accent: 'rgba(244, 63, 94, 0.3)',
   },
 
-  // Overlays for dark theme
   overlay: {
     light: 'rgba(255, 255, 255, 0.03)',
     medium: 'rgba(255, 255, 255, 0.06)',
-    heavy: 'rgba(0, 0, 0, 0.5)',
+  },
+
+  // Badge styles
+  badge: {
+    gold: {
+      bg: 'rgba(245, 158, 11, 0.15)',
+      border: 'rgba(245, 158, 11, 0.3)',
+      text: '#F59E0B',
+    },
+    rose: {
+      bg: 'rgba(244, 63, 94, 0.15)',
+      border: 'rgba(244, 63, 94, 0.3)',
+      text: '#F43F5E',
+    },
+  },
+
+  // Gradients
+  gradients: {
+    bg: ['#0F1115', '#161B22', '#0F1115'],
+    primary: ['#F43F5E', '#E11D48'],
+    momentum: ['#F43F5E', '#F59E0B'],
+  },
+
+  // Glow effects
+  glow: {
+    rose: {
+      shadowColor: '#F43F5E',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.4,
+      shadowRadius: 16,
+      elevation: 10,
+    },
+    gold: {
+      shadowColor: '#F59E0B',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.4,
+      shadowRadius: 16,
+      elevation: 10,
+    },
   },
 }
 
-// =============================================================================
-// EXISTING SPACING (Keep as-is)
-// =============================================================================
+// SPACING
+
 export const SPACING = {
   xs: 4,
   sm: 8,
@@ -167,7 +194,6 @@ export const SPACING = {
   lg: 24,
   xl: 32,
   xxl: 48,
-  // NEW: Additional spacing values
   '2xl': 24,
   '3xl': 32,
   '4xl': 40,
@@ -175,23 +201,21 @@ export const SPACING = {
   '6xl': 64,
 }
 
-// =============================================================================
-// EXISTING RADIUS (Keep as-is)
-// =============================================================================
+// RADIUS
+
 export const RADIUS = {
+  none: 0,
   sm: 8,
   md: 12,
   lg: 16,
   xl: 24,
+  '2xl': 28,
+  '3xl': 32,
   full: 9999,
-  // NEW: Additional radius values
-  none: 0,
-  '2xl': 20,
 }
 
-// =============================================================================
-// EXISTING FONTS (Keep as-is)
-// =============================================================================
+// FONTS
+
 export const FONTS = {
   regular: 'Poppins_400Regular',
   medium: 'Poppins_500Medium',
@@ -199,14 +223,21 @@ export const FONTS = {
   bold: 'Poppins_700Bold',
 }
 
-// =============================================================================
-// EXISTING TYPOGRAPHY (Keep as-is)
-// =============================================================================
+// TYPOGRAPHY
+
 export const TYPOGRAPHY = {
+  // Display
+  display: {
+    fontFamily: FONTS.bold,
+    fontSize: 40,
+    lineHeight: 48,
+    letterSpacing: -1,
+  },
+  // Headings
   h1: {
     fontFamily: FONTS.bold,
-    fontSize: 32,
-    lineHeight: 40,
+    fontSize: 34,
+    lineHeight: 42,
   },
   h2: {
     fontFamily: FONTS.bold,
@@ -218,6 +249,12 @@ export const TYPOGRAPHY = {
     fontSize: 20,
     lineHeight: 28,
   },
+  h4: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  // Body
   body: {
     fontFamily: FONTS.regular,
     fontSize: 16,
@@ -227,6 +264,17 @@ export const TYPOGRAPHY = {
     fontFamily: FONTS.medium,
     fontSize: 16,
     lineHeight: 24,
+  },
+  bodySm: {
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  // Labels
+  label: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 11,
+    letterSpacing: 1.5,
   },
   caption: {
     fontFamily: FONTS.regular,
@@ -238,37 +286,10 @@ export const TYPOGRAPHY = {
     fontSize: 12,
     lineHeight: 16,
   },
-  // NEW: Additional typography for dark theme
-  display: {
-    fontFamily: FONTS.bold,
-    fontSize: 40,
-    lineHeight: 48,
-  },
-  h4: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 18,
-    lineHeight: 24,
-  },
-  bodySm: {
-    fontFamily: FONTS.regular,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  label: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  labelSm: {
-    fontFamily: FONTS.medium,
-    fontSize: 12,
-    lineHeight: 16,
-  },
 }
 
-// =============================================================================
-// EXISTING SHADOWS (Keep as-is)
-// =============================================================================
+// SHADOWS
+
 export const SHADOWS = {
   sm: {
     shadowColor: '#000',
@@ -314,47 +335,13 @@ export const SHADOWS = {
   }),
 }
 
-// NEW: Dark theme shadows
-export const DARK_SHADOWS = {
-  sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  glow: {
-    shadowColor: DARK_COLORS.accent.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 0,
-  },
-}
+// ANIMATION CONFIGS
 
-// =============================================================================
-// EXISTING ANIMATION CONFIGS (Keep as-is)
-// =============================================================================
 export const SPRING_CONFIGS = {
   gentle: { damping: 20, stiffness: 90 },
   snappy: { damping: 15, stiffness: 150 },
   bouncy: { damping: 10, stiffness: 180 },
   stiff: { damping: 20, stiffness: 300 },
-  // NEW
   smooth: { damping: 25, stiffness: 120 },
 }
 
@@ -363,4 +350,53 @@ export const TIMING_CONFIGS = {
   normal: { duration: 250 },
   slow: { duration: 400 },
   verySlow: { duration: 600 },
+}
+
+// to be removed in future refactors
+
+export const DARK_COLORS = {
+  // Backgrounds
+  background: {
+    primary: '#0F1115',
+    secondary: '#151A23',
+    tertiary: '#1C2130',
+    elevated: '#242938',
+  },
+
+  // Text on dark
+  text: {
+    primary: '#F5F7FA',
+    secondary: '#A0A6B4',
+    tertiary: '#6B7280',
+    muted: '#4B5163',
+  },
+
+  // Accent - Electric Indigo
+  accent: {
+    primary: '#6C7CFF',
+    secondary: '#8B98FF',
+    muted: 'rgba(108, 124, 255, 0.15)',
+    glow: 'rgba(108, 124, 255, 0.4)',
+  },
+
+  // Progress/Success - Soft Teal
+  progress: {
+    primary: '#4FD1C5',
+    secondary: '#6EE7DB',
+    muted: 'rgba(79, 209, 197, 0.15)',
+  },
+
+  // Borders for dark theme
+  border: {
+    primary: 'rgba(255, 255, 255, 0.08)',
+    secondary: 'rgba(255, 255, 255, 0.04)',
+    accent: 'rgba(108, 124, 255, 0.3)',
+  },
+
+  // Overlays for dark theme
+  overlay: {
+    light: 'rgba(255, 255, 255, 0.03)',
+    medium: 'rgba(255, 255, 255, 0.06)',
+    heavy: 'rgba(0, 0, 0, 0.5)',
+  },
 }

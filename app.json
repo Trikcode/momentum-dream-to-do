@@ -12,7 +12,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#FFFBFA"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.trikcode.momentum",
@@ -34,7 +36,8 @@
           "icon": "./assets/images/icon.png",
           "color": "#F43F5E"
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true

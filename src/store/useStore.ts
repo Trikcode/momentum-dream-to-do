@@ -112,6 +112,10 @@ export const useAuthStore = create<AuthState>()(
           },
         })
 
+        console.log('SignUp data:', data)
+
+        console.log('SignUp error:', error)
+
         if (error) throw error
       },
 

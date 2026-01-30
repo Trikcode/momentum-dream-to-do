@@ -10,11 +10,10 @@ import Animated, {
   withTiming,
   withDelay,
   Easing,
-  interpolate,
 } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS, FONTS, SPACING, SHADOWS } from '@/src/constants/theme'
+import { DARK, FONTS, SPACING } from '@/src/constants/theme'
 
 interface StatOrbProps {
   value: number | string
@@ -40,9 +39,9 @@ export function StatOrb({
   const floatY = useSharedValue(0)
 
   const sizeConfig = {
-    sm: { orb: 70, icon: 20, value: 18, label: 10 },
-    md: { orb: 90, icon: 26, value: 24, label: 11 },
-    lg: { orb: 110, icon: 32, value: 30, label: 12 },
+    sm: { orb: 70, icon: 20, value: 16, label: 10 },
+    md: { orb: 90, icon: 24, value: 20, label: 12 },
+    lg: { orb: 110, icon: 30, value: 26, label: 13 },
   }
 
   const config = sizeConfig[size]
@@ -50,28 +49,22 @@ export function StatOrb({
   useEffect(() => {
     if (!animated) {
       scale.value = 1
-      glowOpacity.value = 0.4
+      glowOpacity.value = 0.3
       return
     }
 
-    // Entry animation
-    scale.value = withDelay(
-      delay,
-      withSpring(1, { damping: 10, stiffness: 100 }),
-    )
-
+    scale.value = withDelay(delay, withSpring(1, { damping: 12 }))
     glowOpacity.value = withDelay(
       delay + 200,
-      withTiming(0.4, { duration: 500 }),
+      withTiming(0.3, { duration: 800 }),
     )
 
-    // Float animation
     floatY.value = withDelay(
       delay + 500,
       withRepeat(
         withSequence(
-          withTiming(-4, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-          withTiming(4, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(-4, { duration: 2500, easing: Easing.inOut(Easing.quad) }),
+          withTiming(4, { duration: 2500, easing: Easing.inOut(Easing.quad) }),
         ),
         -1,
         true,
@@ -85,27 +78,27 @@ export function StatOrb({
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,
-    transform: [{ scale: 1 + glowOpacity.value * 0.2 }],
+    transform: [{ scale: 1.4 }], // Constant scale for glow
   }))
 
   return (
     <View style={styles.wrapper}>
       <Animated.View style={[styles.container, containerStyle]}>
-        {/* Glow effect */}
+        {/* Glow */}
         <Animated.View
           style={[
             styles.glow,
             {
-              width: config.orb * 1.4,
-              height: config.orb * 1.4,
-              borderRadius: config.orb * 0.7,
+              width: config.orb,
+              height: config.orb,
+              borderRadius: config.orb / 2,
               backgroundColor: gradient[0],
             },
             glowStyle,
           ]}
         />
 
-        {/* Main orb */}
+        {/* Orb */}
         <LinearGradient
           colors={gradient}
           style={[
@@ -119,7 +112,6 @@ export function StatOrb({
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          {/* Icon */}
           <View
             style={[
               styles.iconContainer,
@@ -132,46 +124,32 @@ export function StatOrb({
               color='rgba(255,255,255,0.9)'
             />
           </View>
-
-          {/* Value */}
           <Text style={[styles.value, { fontSize: config.value }]}>
             {typeof value === 'number' ? value.toLocaleString() : value}
           </Text>
         </LinearGradient>
       </Animated.View>
 
-      {/* Label */}
       <Text style={[styles.label, { fontSize: config.label }]}>{label}</Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    alignItems: 'center',
-  },
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  glow: {
-    position: 'absolute',
-  },
+  wrapper: { alignItems: 'center' },
+  container: { alignItems: 'center', justifyContent: 'center' },
+  glow: { position: 'absolute', filter: 'blur(20px)' },
   orb: {
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  iconContainer: {
-    opacity: 0.9,
-  },
-  value: {
-    fontFamily: FONTS.bold,
-    color: '#FFF',
-  },
+  iconContainer: { opacity: 0.8 },
+  value: { fontFamily: FONTS.bold, color: '#FFF' },
   label: {
     fontFamily: FONTS.medium,
-    color: COLORS.neutral[500],
+    color: DARK.text.secondary,
     marginTop: SPACING.sm,
     textAlign: 'center',
   },

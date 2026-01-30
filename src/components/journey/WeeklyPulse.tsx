@@ -9,13 +9,11 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-  Easing,
-  interpolate,
 } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
 import { format, parseISO, isToday } from 'date-fns'
-import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '@/src/constants/theme'
+import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 import { DayActivity } from '@/src/hooks/useJourneyStats'
 
 interface WeeklyPulseProps {
@@ -38,7 +36,7 @@ export function WeeklyPulse({
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>This Week's Pulse</Text>
+          <Text style={styles.title}>Weekly Pulse</Text>
           <Text style={styles.subtitle}>
             {totalCompleted} power moves · {completionRate}% rate
           </Text>
@@ -47,20 +45,26 @@ export function WeeklyPulse({
         <View
           style={[
             styles.rateBadge,
-            completionRate >= 70 && styles.rateBadgeHigh,
+            {
+              backgroundColor:
+                completionRate >= 70
+                  ? 'rgba(245, 158, 11, 0.15)'
+                  : 'rgba(244, 63, 94, 0.15)',
+            },
           ]}
         >
           <Ionicons
             name={completionRate >= 70 ? 'flame' : 'pulse'}
             size={14}
-            color={
-              completionRate >= 70 ? COLORS.accent[600] : COLORS.primary[600]
-            }
+            color={completionRate >= 70 ? DARK.accent.gold : DARK.accent.rose}
           />
           <Text
             style={[
               styles.rateText,
-              completionRate >= 70 && styles.rateTextHigh,
+              {
+                color:
+                  completionRate >= 70 ? DARK.accent.gold : DARK.accent.rose,
+              },
             ]}
           >
             {completionRate}%
@@ -68,7 +72,7 @@ export function WeeklyPulse({
         </View>
       </View>
 
-      {/* Bar chart */}
+      {/* Chart */}
       <View style={styles.chartContainer}>
         {data.map((day, index) => (
           <DayBar
@@ -93,56 +97,32 @@ function DayBar({
   maxValue: number
 }) {
   const height = useSharedValue(0)
-  const pulseScale = useSharedValue(1)
   const isActive = isToday(parseISO(day.date))
   const hasActivity = day.completed > 0
-
   const targetHeight = (day.completed / maxValue) * BAR_MAX_HEIGHT
 
   useEffect(() => {
-    // Animate bar height
-    height.value = withDelay(
-      200 + index * 80,
-      withSpring(targetHeight || 4, { damping: 12, stiffness: 100 }),
-    )
-
-    // Pulse animation for today
-    if (isActive) {
-      pulseScale.value = withRepeat(
-        withSequence(
-          withTiming(1.1, { duration: 1000 }),
-          withTiming(1, { duration: 1000 }),
-        ),
-        -1,
-        true,
-      )
-    }
-  }, [targetHeight, isActive])
+    height.value = withDelay(200 + index * 50, withSpring(targetHeight || 4))
+  }, [targetHeight])
 
   const barStyle = useAnimatedStyle(() => ({
     height: Math.max(height.value, 4),
-  }))
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
   }))
 
   const dayName = format(parseISO(day.date), 'EEE')
 
   return (
     <View style={styles.barWrapper}>
-      {/* Value label */}
       {hasActivity && <Text style={styles.barValue}>{day.completed}</Text>}
 
-      {/* Bar */}
       <View style={styles.barContainer}>
         <Animated.View style={[styles.barBackground, barStyle]}>
           {hasActivity ? (
             <LinearGradient
               colors={
                 isActive
-                  ? [COLORS.primary[400], COLORS.primary[500]]
-                  : [COLORS.secondary[300], COLORS.secondary[400]]
+                  ? (DARK.gradients.primary as [string, string])
+                  : ['#475569', '#334155']
               }
               style={styles.barFill}
               start={{ x: 0, y: 1 }}
@@ -153,15 +133,9 @@ function DayBar({
           )}
         </Animated.View>
 
-        {/* Today indicator */}
-        {isActive && (
-          <Animated.View style={[styles.todayDot, pulseStyle]}>
-            <View style={styles.todayDotInner} />
-          </Animated.View>
-        )}
+        {isActive && <View style={styles.todayIndicator} />}
       </View>
 
-      {/* Day label */}
       <Text style={[styles.dayLabel, isActive && styles.dayLabelActive]}>
         {isActive ? 'Today' : dayName}
       </Text>
@@ -171,11 +145,12 @@ function DayBar({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: RADIUS.xl,
     padding: SPACING.md,
     marginHorizontal: SPACING.lg,
-    ...SHADOWS.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   header: {
     flexDirection: 'row',
@@ -184,90 +159,62 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   title: {
-    fontFamily: FONTS.semiBold,
+    fontFamily: FONTS.bold,
     fontSize: 16,
-    color: COLORS.neutral[900],
+    color: DARK.text.primary,
   },
   subtitle: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.medium,
     fontSize: 12,
-    color: COLORS.neutral[400],
+    color: DARK.text.secondary,
     marginTop: 2,
   },
   rateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: COLORS.primary[50],
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  rateBadgeHigh: {
-    backgroundColor: COLORS.accent[50],
-  },
-  rateText: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 13,
-    color: COLORS.primary[600],
-  },
-  rateTextHigh: {
-    color: COLORS.accent[600],
-  },
+  rateText: { fontFamily: FONTS.bold, fontSize: 12 },
+
   chartContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    height: BAR_MAX_HEIGHT + 50,
+    height: BAR_MAX_HEIGHT + 40,
   },
-  barWrapper: {
-    alignItems: 'center',
-    flex: 1,
-  },
+  barWrapper: { alignItems: 'center', flex: 1 },
   barValue: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 11,
-    color: COLORS.neutral[600],
+    fontFamily: FONTS.bold,
+    fontSize: 10,
+    color: DARK.text.secondary,
     marginBottom: 4,
   },
   barContainer: {
-    width: 28,
+    width: 24,
     height: BAR_MAX_HEIGHT,
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
-  barBackground: {
-    width: 28,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  barFill: {
-    flex: 1,
-    borderRadius: 8,
-  },
-  emptyBar: {
-    flex: 1,
-    backgroundColor: COLORS.neutral[100],
-    borderRadius: 8,
-  },
-  todayDot: {
+  barBackground: { width: '100%', borderRadius: 6, overflow: 'hidden' },
+  barFill: { flex: 1 },
+  emptyBar: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)' },
+
+  todayIndicator: {
     position: 'absolute',
     bottom: -6,
-  },
-  todayDotInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.primary[500],
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: DARK.accent.rose,
   },
   dayLabel: {
     fontFamily: FONTS.medium,
-    fontSize: 11,
-    color: COLORS.neutral[400],
-    marginTop: SPACING.sm,
+    fontSize: 10,
+    color: DARK.text.tertiary,
+    marginTop: 8,
   },
-  dayLabelActive: {
-    color: COLORS.primary[500],
-    fontFamily: FONTS.semiBold,
-  },
+  dayLabelActive: { color: DARK.accent.rose, fontFamily: FONTS.bold },
 })

@@ -16,17 +16,10 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import {
-  COLORS,
-  DARK_COLORS,
-  FONTS,
-  SPACING,
-  RADIUS,
-} from '@/src/constants/theme'
+import { COLORS, DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
-// Button variants
 type ButtonVariant =
   | 'primary'
   | 'secondary'
@@ -34,7 +27,6 @@ type ButtonVariant =
   | 'ghost'
   | 'danger'
   | 'accent'
-  // Dark theme variants
   | 'dark-primary'
   | 'dark-secondary'
   | 'dark-ghost'
@@ -122,12 +114,12 @@ export function Button({
     </View>
   )
 
-  // Gradient variants (accent, dark-accent)
+  // Gradient variants
   if (variant === 'accent' || variant === 'dark-accent') {
     const gradientColors =
       variant === 'accent'
         ? ([COLORS.primary[500], COLORS.primary[600]] as const)
-        : ([DARK_COLORS.accent.primary, DARK_COLORS.accent.secondary] as const)
+        : ([DARK.accent.rose, DARK.accent.roseDark] as const)
 
     return (
       <AnimatedPressable
@@ -216,7 +208,6 @@ const styles = StyleSheet.create({
   },
 })
 
-// Size configurations
 const SIZE_CONFIG: Record<
   ButtonSize,
   { height: number; paddingX: number; fontSize: number }
@@ -226,7 +217,6 @@ const SIZE_CONFIG: Record<
   lg: { height: 56, paddingX: 24, fontSize: 16 },
 }
 
-// Variant configurations
 const VARIANT_CONFIG: Record<
   ButtonVariant,
   {
@@ -236,7 +226,7 @@ const VARIANT_CONFIG: Record<
     borderColor: string
   }
 > = {
-  // ============ LIGHT THEME VARIANTS ============
+  // Light theme
   primary: {
     backgroundColor: COLORS.primary[500],
     textColor: COLORS.neutral[0],
@@ -268,35 +258,33 @@ const VARIANT_CONFIG: Record<
     borderColor: 'transparent',
   },
   accent: {
-    // Handled by gradient
     backgroundColor: COLORS.primary[500],
     textColor: COLORS.neutral[0],
     borderWidth: 0,
     borderColor: 'transparent',
   },
 
-  // ============ DARK THEME VARIANTS ============
+  // Dark theme
   'dark-primary': {
     backgroundColor: COLORS.neutral[0],
-    textColor: DARK_COLORS.background.primary,
+    textColor: DARK.bg.primary,
     borderWidth: 0,
     borderColor: 'transparent',
   },
   'dark-secondary': {
-    backgroundColor: DARK_COLORS.overlay.medium,
-    textColor: DARK_COLORS.text.primary,
+    backgroundColor: DARK.bg.tertiary,
+    textColor: DARK.text.primary,
     borderWidth: 1,
-    borderColor: DARK_COLORS.border.primary,
+    borderColor: DARK.border.light,
   },
   'dark-ghost': {
     backgroundColor: 'transparent',
-    textColor: DARK_COLORS.text.secondary,
+    textColor: DARK.text.secondary,
     borderWidth: 0,
     borderColor: 'transparent',
   },
   'dark-accent': {
-    // Handled by gradient
-    backgroundColor: DARK_COLORS.accent.primary,
+    backgroundColor: DARK.accent.rose,
     textColor: COLORS.neutral[0],
     borderWidth: 0,
     borderColor: 'transparent',

@@ -104,6 +104,14 @@ export default function RootLayout() {
               name='(modals)/dream-detail'
               options={{ presentation: 'card', animation: 'slide_from_right' }}
             />
+            <Stack.Screen
+              name='(modals)/ai-coach'
+              options={{
+                headerShown: false,
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+              }}
+            />
           </Stack>
           <CelebrationOrchestrator />
         </ToastProvider>

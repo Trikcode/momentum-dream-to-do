@@ -2,7 +2,6 @@
 import React from 'react'
 import { View, StyleSheet, ViewStyle } from 'react-native'
 import { BlurView } from 'expo-blur'
-import { LinearGradient } from 'expo-linear-gradient'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,49 +9,32 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import * as Haptics from 'expo-haptics'
-import {
-  COLORS,
-  RADIUS,
-  SPACING,
-  SHADOWS,
-  SPRING_CONFIGS,
-} from '@/src/constants/theme'
+import { RADIUS, SPACING } from '@/src/constants/theme'
 
 interface GlassCardProps {
   children: React.ReactNode
   intensity?: number
   padding?: 'none' | 'sm' | 'md' | 'lg'
   onPress?: () => void
-  glowColor?: string
   style?: ViewStyle
-  animated?: boolean
 }
 
 export function GlassCard({
   children,
-  intensity = 60,
+  intensity = 40,
   padding = 'md',
   onPress,
-  glowColor,
   style,
-  animated = true,
 }: GlassCardProps) {
   const scale = useSharedValue(1)
-  const pressed = useSharedValue(false)
 
   const gesture = Gesture.Tap()
     .onBegin(() => {
-      if (onPress && animated) {
-        scale.value = withSpring(0.97, SPRING_CONFIGS.snappy)
-        pressed.value = true
-      }
+      if (onPress) scale.value = withSpring(0.98)
     })
     .onFinalize(() => {
-      if (animated) {
-        scale.value = withSpring(1, SPRING_CONFIGS.snappy)
-        pressed.value = false
-      }
       if (onPress) {
+        scale.value = withSpring(1)
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
         onPress()
       }
@@ -62,39 +44,26 @@ export function GlassCard({
     transform: [{ scale: scale.value }],
   }))
 
-  const paddingValue = {
-    none: 0,
-    sm: SPACING.sm,
-    md: SPACING.md,
-    lg: SPACING.lg,
-  }
+  const paddingMap = { none: 0, sm: SPACING.sm, md: SPACING.md, lg: SPACING.lg }
 
   const content = (
-    <View style={[styles.container, { padding: paddingValue[padding] }, style]}>
-      {/* Glass background */}
-      <BlurView intensity={intensity} style={styles.blur} tint='light' />
-
-      {/* Gradient border effect */}
-      <LinearGradient
-        colors={['rgba(255,255,255,0.5)', 'rgba(255,255,255,0.1)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.borderGradient}
+    <View style={[styles.container, { padding: paddingMap[padding] }, style]}>
+      <BlurView
+        intensity={intensity}
+        tint='dark'
+        style={StyleSheet.absoluteFill}
       />
-
-      {/* Content */}
-      <View style={styles.content}>{children}</View>
+      <View style={styles.border} />
+      <View style={{ zIndex: 1 }}>{children}</View>
     </View>
   )
 
-  if (onPress) {
+  if (onPress)
     return (
       <GestureDetector gesture={gesture}>
         <Animated.View style={animatedStyle}>{content}</Animated.View>
       </GestureDetector>
     )
-  }
-
   return content
 }
 
@@ -102,23 +71,12 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
-    backgroundColor: COLORS.glass.medium,
+    backgroundColor: 'rgba(20, 22, 30, 0.4)',
+  },
+  border: {
+    ...StyleSheet.absoluteFillObject,
     borderWidth: 1,
-    borderColor: COLORS.glass.border,
-  },
-  blur: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  borderGradient: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.5,
-  },
-  glow: {
-    ...StyleSheet.absoluteFillObject,
+    borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: RADIUS.xl,
-  },
-  content: {
-    position: 'relative',
-    zIndex: 1,
   },
 })

@@ -1,35 +1,21 @@
 // src/components/home/MomentumRing.tsx
 import React, { useEffect } from 'react'
-import { View, Text, StyleSheet, Dimensions } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
 import Animated, {
   useSharedValue,
   useAnimatedProps,
   withTiming,
-  withSpring,
-  withSequence,
-  withDelay,
   Easing,
   useAnimatedStyle,
-  interpolateColor,
+  interpolate,
 } from 'react-native-reanimated'
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { Ionicons } from '@expo/vector-icons'
-import { BlurView } from 'expo-blur'
-import { COLORS, FONTS, SPACING } from '@/src/constants/theme'
-import { LANGUAGE } from '@/src/constants/language'
+import { DARK, FONTS, SPACING } from '@/src/constants/theme'
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
-
-interface MomentumRingProps {
-  currentMomentum: number
-  todayProgress: number // 0-1
-  totalSparks: number
-  userName: string
-  avatarUrl?: string
-}
-
-const SIZE = 200
-const STROKE_WIDTH = 12
+const SIZE = 220
+const STROKE_WIDTH = 16
 const RADIUS = (SIZE - STROKE_WIDTH) / 2
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
@@ -38,240 +24,142 @@ export function MomentumRing({
   todayProgress,
   totalSparks,
   userName,
-}: MomentumRingProps) {
+}: any) {
   const progress = useSharedValue(0)
-  const pulseScale = useSharedValue(1)
-  const glowOpacity = useSharedValue(0.5)
-  const sparkScale = useSharedValue(1)
 
   useEffect(() => {
-    // Animate progress
-    progress.value = withDelay(
-      300,
-      withTiming(todayProgress, {
-        duration: 1500,
-        easing: Easing.out(Easing.cubic),
-      }),
-    )
-
-    // Subtle pulse animation
-    pulseScale.value = withSequence(
-      withTiming(1.02, { duration: 1500 }),
-      withTiming(1, { duration: 1500 }),
-    )
-
-    // Glow animation
-    glowOpacity.value = withSequence(
-      withTiming(0.7, { duration: 1500 }),
-      withTiming(0.5, { duration: 1500 }),
-    )
+    progress.value = withTiming(todayProgress, {
+      duration: 1500,
+      easing: Easing.out(Easing.exp),
+    })
   }, [todayProgress])
 
-  // Spark counter animation
-  useEffect(() => {
-    sparkScale.value = withSequence(
-      withSpring(1.2, { damping: 8 }),
-      withSpring(1, { damping: 10 }),
-    )
-  }, [totalSparks])
-
-  const animatedCircleProps = useAnimatedProps(() => ({
+  const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: CIRCUMFERENCE * (1 - progress.value),
   }))
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-  }))
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }))
-
-  const sparkStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sparkScale.value }],
-  }))
-
-  // Determine color based on momentum
-  const getMomentumColor = () => {
-    if (currentMomentum >= 30) return COLORS.accent[500]
-    if (currentMomentum >= 14) return COLORS.primary[500]
-    if (currentMomentum >= 7) return COLORS.secondary[500]
-    return COLORS.success[500]
-  }
-
-  const momentumColor = getMomentumColor()
-
   return (
     <View style={styles.container}>
-      {/* Outer glow */}
-      <Animated.View
-        style={[
-          styles.glowOuter,
-          glowStyle,
-          {
-            backgroundColor: momentumColor,
-            shadowColor: momentumColor,
-          },
-        ]}
-      />
+      {/* GLOW BACKGROUND */}
+      <View style={styles.glowBg} />
 
-      {/* Main ring */}
-      <Animated.View style={[styles.ringContainer, pulseStyle]}>
-        <Svg width={SIZE} height={SIZE} style={styles.svg}>
+      {/* SVG RING */}
+      <View style={styles.ringWrapper}>
+        <Svg width={SIZE} height={SIZE}>
           <Defs>
-            <LinearGradient id='gradient' x1='0%' y1='0%' x2='100%' y2='100%'>
-              <Stop offset='0%' stopColor={COLORS.primary[400]} />
-              <Stop offset='50%' stopColor={COLORS.primary[500]} />
-              <Stop offset='100%' stopColor={COLORS.secondary[500]} />
+            <LinearGradient id='grad' x1='0' y1='0' x2='1' y2='1'>
+              <Stop offset='0' stopColor={DARK.accent.rose} />
+              <Stop offset='1' stopColor={DARK.accent.gold} />
             </LinearGradient>
           </Defs>
-
-          {/* Background circle */}
+          {/* Track */}
           <Circle
             cx={SIZE / 2}
             cy={SIZE / 2}
             r={RADIUS}
-            stroke={COLORS.neutral[100]}
+            stroke='rgba(255,255,255,0.05)'
             strokeWidth={STROKE_WIDTH}
             fill='none'
           />
-
-          {/* Progress circle */}
+          {/* Progress */}
           <AnimatedCircle
             cx={SIZE / 2}
             cy={SIZE / 2}
             r={RADIUS}
-            stroke='url(#gradient)'
+            stroke='url(#grad)'
             strokeWidth={STROKE_WIDTH}
             fill='none'
             strokeLinecap='round'
             strokeDasharray={CIRCUMFERENCE}
-            animatedProps={animatedCircleProps}
+            animatedProps={animatedProps}
             transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
           />
         </Svg>
 
-        {/* Center content */}
-        <View style={styles.centerContent}>
-          {/* Avatar placeholder or initials */}
-          <View
-            style={[styles.avatar, { backgroundColor: momentumColor + '20' }]}
-          >
-            <Text style={[styles.avatarText, { color: momentumColor }]}>
-              {userName.charAt(0).toUpperCase()}
-            </Text>
+        {/* INNER CONTENT */}
+        <View style={styles.innerContent}>
+          <View style={styles.initialCircle}>
+            <Text style={styles.initialText}>{userName.charAt(0)}</Text>
           </View>
         </View>
-      </Animated.View>
-
-      {/* Momentum badge */}
-      <View style={[styles.momentumBadge, { backgroundColor: momentumColor }]}>
-        <Ionicons name='flame' size={14} color='#FFF' />
-        <Text style={styles.momentumText}>{currentMomentum}</Text>
       </View>
 
-      {/* Stats below */}
-      <View style={styles.statsContainer}>
-        {/* Spark counter */}
-        <Animated.View style={[styles.sparkContainer, sparkStyle]}>
-          <View style={styles.sparkIcon}>
-            <Ionicons name='sparkles' size={18} color={COLORS.accent[500]} />
-          </View>
-          <Text style={styles.sparkValue}>{totalSparks.toLocaleString()}</Text>
-          <Text style={styles.sparkLabel}>{LANGUAGE.spark.plural}</Text>
-        </Animated.View>
+      {/* STATS BADGE */}
+      <View style={styles.statsRow}>
+        <View style={styles.statPill}>
+          <Ionicons name='flame' size={14} color={DARK.accent.rose} />
+          <Text style={styles.statText}>{currentMomentum} Days</Text>
+        </View>
+        <View style={styles.statPill}>
+          <Ionicons name='sparkles' size={14} color={DARK.accent.gold} />
+          <Text style={styles.statText}>{totalSparks} XP</Text>
+        </View>
       </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    paddingVertical: SPACING.lg,
-  },
-  glowOuter: {
+  container: { alignItems: 'center', marginVertical: SPACING.md },
+  glowBg: {
     position: 'absolute',
-    width: SIZE + 40,
-    height: SIZE + 40,
-    borderRadius: (SIZE + 40) / 2,
-    top: SPACING.lg - 20,
-    opacity: 0.15,
-  },
-  ringContainer: {
     width: SIZE,
     height: SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: DARK.accent.rose,
+    borderRadius: SIZE / 2,
+    opacity: 0.1,
+    filter: 'blur(50px)',
   },
-  svg: {
+  ringWrapper: {
+    width: SIZE,
+    height: SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  innerContent: {
     position: 'absolute',
-  },
-  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatar: {
-    width: SIZE * 0.55,
-    height: SIZE * 0.55,
-    borderRadius: SIZE * 0.275,
-    alignItems: 'center',
+  initialCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  avatarText: {
+  initialText: {
+    fontSize: 32,
     fontFamily: FONTS.bold,
-    fontSize: 48,
+    color: DARK.text.primary,
   },
-  momentumBadge: {
-    position: 'absolute',
-    top: SPACING.lg + 10,
-    right: '25%',
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: -20,
+  },
+  statPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
+    gap: 6,
+    backgroundColor: DARK.bg.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
-    gap: 4,
+    borderWidth: 1,
+    borderColor: DARK.border.medium,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
   },
-  momentumText: {
-    fontFamily: FONTS.bold,
-    fontSize: 14,
-    color: '#FFF',
-  },
-  statsContainer: {
-    marginTop: SPACING.md,
-    alignItems: 'center',
-  },
-  sparkContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.accent[50],
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: 20,
-  },
-  sparkIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.accent[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sparkValue: {
-    fontFamily: FONTS.bold,
-    fontSize: 18,
-    color: COLORS.neutral[900],
-  },
-  sparkLabel: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
-    color: COLORS.neutral[500],
+  statText: {
+    color: DARK.text.secondary,
+    fontFamily: FONTS.semiBold,
+    fontSize: 13,
   },
 })

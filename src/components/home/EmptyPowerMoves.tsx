@@ -10,21 +10,13 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-  withSpring,
   withDelay,
   Easing,
   FadeIn,
   FadeInUp,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import {
-  COLORS,
-  FONTS,
-  SPACING,
-  RADIUS,
-  SHADOWS,
-  SPRING_CONFIGS,
-} from '@/src/constants/theme'
+import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 import { LANGUAGE } from '@/src/constants/language'
 
 interface EmptyPowerMovesProps {
@@ -36,17 +28,14 @@ export function EmptyPowerMoves({
 }: EmptyPowerMovesProps) {
   const floatY = useSharedValue(0)
   const rotate = useSharedValue(0)
-  const sparkle1 = useSharedValue(0)
-  const sparkle2 = useSharedValue(0)
-  const sparkle3 = useSharedValue(0)
   const pulseScale = useSharedValue(1)
 
   useEffect(() => {
     // Float animation
     floatY.value = withRepeat(
       withSequence(
-        withTiming(-8, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(8, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-8, { duration: 2500, easing: Easing.inOut(Easing.quad) }),
+        withTiming(8, { duration: 2500, easing: Easing.inOut(Easing.quad) }),
       ),
       -1,
       true,
@@ -55,48 +44,13 @@ export function EmptyPowerMoves({
     // Subtle rotation
     rotate.value = withRepeat(
       withSequence(
-        withTiming(-3, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(3, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-2, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(2, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true,
     )
 
-    // Sparkle animations (staggered)
-    sparkle1.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1000 }),
-        withTiming(0, { duration: 1000 }),
-      ),
-      -1,
-      true,
-    )
-
-    sparkle2.value = withDelay(
-      400,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 1200 }),
-          withTiming(0, { duration: 1200 }),
-        ),
-        -1,
-        true,
-      ),
-    )
-
-    sparkle3.value = withDelay(
-      800,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 1400 }),
-          withTiming(0, { duration: 1400 }),
-        ),
-        -1,
-        true,
-      ),
-    )
-
-    // Pulse for "all done" variant
     if (variant === 'all-done') {
       pulseScale.value = withRepeat(
         withSequence(
@@ -117,108 +71,62 @@ export function EmptyPowerMoves({
     transform: [{ scale: pulseScale.value }],
   }))
 
-  const sparkle1Style = useAnimatedStyle(() => ({
-    opacity: sparkle1.value,
-    transform: [{ scale: 0.5 + sparkle1.value * 0.5 }],
-  }))
-
-  const sparkle2Style = useAnimatedStyle(() => ({
-    opacity: sparkle2.value,
-    transform: [{ scale: 0.5 + sparkle2.value * 0.5 }],
-  }))
-
-  const sparkle3Style = useAnimatedStyle(() => ({
-    opacity: sparkle3.value,
-    transform: [{ scale: 0.5 + sparkle3.value * 0.5 }],
-  }))
-
   const handleAddMove = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     router.push('/(modals)/new-action')
   }
 
+  // ============================================================================
+  // VARIANT: ALL DONE (Success State)
+  // ============================================================================
   if (variant === 'all-done') {
     return (
       <Animated.View entering={FadeIn.duration(600)} style={styles.container}>
         <Animated.View style={[styles.iconWrapper, pulseStyle]}>
-          {/* Glow effect */}
-          <View
-            style={[styles.glow, { backgroundColor: COLORS.success[400] }]}
-          />
+          {/* Neon Glow */}
+          <View style={[styles.glow, { backgroundColor: DARK.accent.gold }]} />
 
           <LinearGradient
-            colors={COLORS.gradients.success as [string, string]}
+            colors={[DARK.accent.gold, '#B45309']}
             style={styles.iconCircle}
           >
-            <Ionicons name='checkmark-done' size={48} color='#FFF' />
+            <Ionicons name='trophy' size={48} color='#FFF' />
           </LinearGradient>
-
-          {/* Sparkles */}
-          <Animated.View
-            style={[styles.sparkle, styles.sparkle1, sparkle1Style]}
-          >
-            <Ionicons name='sparkles' size={16} color={COLORS.accent[400]} />
-          </Animated.View>
-          <Animated.View
-            style={[styles.sparkle, styles.sparkle2, sparkle2Style]}
-          >
-            <Ionicons name='star' size={12} color={COLORS.primary[400]} />
-          </Animated.View>
-          <Animated.View
-            style={[styles.sparkle, styles.sparkle3, sparkle3Style]}
-          >
-            <Ionicons name='sparkles' size={14} color={COLORS.secondary[400]} />
-          </Animated.View>
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(200).duration(500)}>
           <Text style={styles.title}>You crushed it! 🔥</Text>
           <Text style={styles.subtitle}>
-            All power moves complete for today.{'\n'}
+            All power moves complete.{'\n'}
             Your momentum is unstoppable!
           </Text>
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(400).duration(500)}>
-          <Pressable onPress={handleAddMove} style={styles.addMoreButton}>
-            <Ionicons
-              name='add-circle-outline'
-              size={20}
-              color={COLORS.primary[500]}
-            />
-            <Text style={styles.addMoreText}>Add more power moves</Text>
+          <Pressable onPress={handleAddMove} style={styles.secondaryButton}>
+            <Ionicons name='add' size={18} color={DARK.accent.rose} />
+            <Text style={styles.secondaryButtonText}>Add bonus move</Text>
           </Pressable>
         </Animated.View>
       </Animated.View>
     )
   }
 
-  // Default: No moves scheduled
+  // ============================================================================
+  // VARIANT: NO MOVES (Empty State)
+  // ============================================================================
   return (
     <Animated.View entering={FadeIn.duration(600)} style={styles.container}>
       <Animated.View style={[styles.iconWrapper, floatStyle]}>
-        {/* Glow effect */}
-        <View
-          style={[styles.glow, { backgroundColor: COLORS.secondary[400] }]}
-        />
+        {/* Neon Glow */}
+        <View style={[styles.glow, { backgroundColor: DARK.accent.rose }]} />
 
         <LinearGradient
-          colors={COLORS.gradients.dream as [string, string]}
+          colors={DARK.gradients.primary as [string, string]}
           style={styles.iconCircle}
         >
           <Ionicons name='flash' size={48} color='#FFF' />
         </LinearGradient>
-
-        {/* Sparkles */}
-        <Animated.View style={[styles.sparkle, styles.sparkle1, sparkle1Style]}>
-          <Ionicons name='sparkles' size={16} color={COLORS.accent[400]} />
-        </Animated.View>
-        <Animated.View style={[styles.sparkle, styles.sparkle2, sparkle2Style]}>
-          <Ionicons name='star' size={12} color={COLORS.primary[400]} />
-        </Animated.View>
-        <Animated.View style={[styles.sparkle, styles.sparkle3, sparkle3Style]}>
-          <Ionicons name='sparkles' size={14} color={COLORS.secondary[400]} />
-        </Animated.View>
       </Animated.View>
 
       <Animated.View entering={FadeInUp.delay(200).duration(500)}>
@@ -232,17 +140,25 @@ export function EmptyPowerMoves({
 
       <Animated.View entering={FadeInUp.delay(400).duration(500)}>
         <Pressable onPress={handleAddMove}>
-          <LinearGradient
-            colors={COLORS.gradients.primary as [string, string]}
-            style={styles.addButton}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Ionicons name='add' size={22} color='#FFF' />
-            <Text style={styles.addButtonText}>
-              Add {LANGUAGE.powerMoves.singular}
-            </Text>
-          </LinearGradient>
+          {({ pressed }) => (
+            <Animated.View
+              style={[
+                styles.primaryButton,
+                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+              ]}
+            >
+              <LinearGradient
+                colors={DARK.gradients.primary as [string, string]}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <Ionicons name='add' size={22} color='#FFF' />
+              <Text style={styles.primaryButtonText}>
+                Add {LANGUAGE.powerMoves.singular}
+              </Text>
+            </Animated.View>
+          )}
         </Pressable>
       </Animated.View>
     </Animated.View>
@@ -254,83 +170,84 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: SPACING.xl,
     paddingHorizontal: SPACING.lg,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: RADIUS['2xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   iconWrapper: {
     position: 'relative',
     marginBottom: SPACING.lg,
+    marginTop: SPACING.md,
   },
   glow: {
     position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
-    bottom: 10,
+    top: 15,
+    left: 15,
+    right: 15,
+    bottom: 15,
     borderRadius: 50,
-    opacity: 0.3,
+    opacity: 0.5,
+    filter: 'blur(30px)', // Web support
   },
   iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.lg,
-  },
-  sparkle: {
-    position: 'absolute',
-  },
-  sparkle1: {
-    top: -5,
-    right: -10,
-  },
-  sparkle2: {
-    bottom: 10,
-    left: -15,
-  },
-  sparkle3: {
-    top: 20,
-    right: -20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   title: {
     fontFamily: FONTS.bold,
-    fontSize: 22,
-    color: COLORS.neutral[900],
+    fontSize: 20,
+    color: DARK.text.primary,
     textAlign: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
   subtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
-    color: COLORS.neutral[500],
+    fontSize: 14,
+    color: DARK.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: SPACING.lg,
   },
-  addButton: {
+
+  // Primary Gradient Button
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xl,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     borderRadius: RADIUS.full,
-    ...SHADOWS.md,
+    overflow: 'hidden',
+    ...DARK.glow.rose,
   },
-  addButtonText: {
+  primaryButtonText: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
     color: '#FFF',
   },
-  addMoreButton: {
+
+  // Secondary Button (Outline/Ghost)
+  secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  addMoreText: {
+  secondaryButtonText: {
     fontFamily: FONTS.medium,
     fontSize: 14,
-    color: COLORS.primary[500],
+    color: DARK.text.secondary,
   },
 })

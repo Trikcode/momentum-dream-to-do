@@ -1,125 +1,215 @@
 // app/(onboarding)/complete.tsx
 import React, { useEffect } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  Platform,
+  StatusBar,
+} from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
+import { BlurView } from 'expo-blur'
 import Animated, {
   FadeIn,
   FadeInDown,
   FadeInUp,
-  SlideInUp,
+  ZoomIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
+
+// Components & Logic
 import { Confetti } from '@/src/components/celebrations/Confetti'
 import { SuccessCheck } from '@/src/components/celebrations/SuccessCheck'
-import { Button } from '@/src/components/ui/Button'
+import { Button } from '@/src/components/ui/Button' // Assuming this supports variants or we style it manually
 import { useAuthStore } from '@/src/store/authStore'
-import { COLORS, FONTS, SPACING } from '@/src/constants/theme'
+import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+
+const { width } = Dimensions.get('window')
+
+// ============================================================================
+// HELPER COMPONENTS
+// ============================================================================
+
+const StatItem = ({ icon, value, label, color, delay }: any) => (
+  <Animated.View
+    entering={FadeInDown.delay(delay).springify()}
+    style={styles.statItem}
+  >
+    <View
+      style={[
+        styles.statIconBox,
+        { backgroundColor: color + '20', borderColor: color + '40' },
+      ]}
+    >
+      <Ionicons name={icon} size={20} color={color} />
+    </View>
+    <Text style={styles.statValue}>{value}</Text>
+    <Text style={styles.statLabel}>{label}</Text>
+  </Animated.View>
+)
+
+const VerticalDivider = () => <View style={styles.statDivider} />
+
+// ============================================================================
+// MAIN SCREEN
+// ============================================================================
 
 export default function CompleteScreen() {
   const insets = useSafeAreaInsets()
   const { profile, refreshProfile, setHasOnboarded } = useAuthStore()
 
+  // Glow Animation for the checkmark background
+  const glowScale = useSharedValue(1)
+  const glowOpacity = useSharedValue(0.3)
+
   useEffect(() => {
-    // Vibrate on mount
+    // 1. Success Haptics
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-    // Refresh profile to get updated data
+    // 2. Data Logic
     refreshProfile()
     setHasOnboarded(true)
+
+    // 3. Ambient Animation
+    glowScale.value = withRepeat(
+      withSequence(
+        withTiming(1.2, { duration: 2000 }),
+        withTiming(1, { duration: 2000 }),
+      ),
+      -1,
+      true,
+    )
+    glowOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.1, { duration: 2000 }),
+        withTiming(0.3, { duration: 2000 }),
+      ),
+      -1,
+      true,
+    )
   }, [])
 
   const handleStart = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     router.replace('/(tabs)')
   }
 
+  // Animated styles
+  const glowStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: glowScale.value }],
+    opacity: glowOpacity.value,
+  }))
+
+  const firstName = profile?.full_name?.split(' ')[0] || 'Dreamer'
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Confetti */}
-      <Confetti count={60} />
+    <View style={styles.container}>
+      <StatusBar barStyle='light-content' />
 
-      {/* Content */}
-      <View style={styles.content}>
-        {/* Success Animation */}
-        <Animated.View
-          entering={FadeIn.delay(200).duration(600)}
-          style={styles.checkContainer}
-        >
-          <SuccessCheck size={120} delay={300} />
-        </Animated.View>
+      {/* BACKGROUND */}
+      <View style={StyleSheet.absoluteFill}>
+        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
+        <LinearGradient
+          colors={DARK.gradients.bg as [string, string, string]}
+          style={StyleSheet.absoluteFill}
+        />
+        {/* Subtle Ambient Light */}
+        <View style={styles.ambientLight} />
+      </View>
 
-        {/* Celebration Text */}
+      {/* CONFETTI LAYER (Z-Index High) */}
+      <View
+        style={[StyleSheet.absoluteFill, { zIndex: 50, pointerEvents: 'none' }]}
+      >
+        <Confetti count={100} />
+      </View>
+
+      <View style={[styles.content, { paddingTop: insets.top + 60 }]}>
+        {/* SUCCESS CHECKMARK */}
+        <View style={styles.checkWrapper}>
+          {/* Glow Effect */}
+          <Animated.View style={[styles.glowRing, glowStyle]} />
+
+          {/* The Actual Check Component */}
+          <Animated.View entering={ZoomIn.duration(600).springify()}>
+            <SuccessCheck size={100} delay={300} />
+          </Animated.View>
+        </View>
+
+        {/* TEXT CONTENT */}
         <Animated.View
-          entering={FadeInUp.delay(700).duration(600)}
+          entering={FadeInUp.delay(600).springify()}
           style={styles.textContainer}
         >
           <Text style={styles.title}>You're All Set!</Text>
           <Text style={styles.subtitle}>
             Welcome to Momentum,{' '}
-            {profile?.full_name?.split(' ')[0] || 'Dreamer'}!
+            <Text style={{ color: DARK.accent.rose }}>{firstName}</Text>
           </Text>
           <Text style={styles.description}>
-            Your journey to achieving your dreams starts now. We'll help you
-            break them down into simple daily actions.
+            Your journey begins now. We've set up your profile and credited your
+            first XP.
           </Text>
         </Animated.View>
 
-        {/* Stats Preview */}
+        {/* STATS CARD (Glassmorphism) */}
         <Animated.View
-          entering={FadeInUp.delay(1000).duration(600)}
-          style={styles.statsContainer}
+          entering={FadeInUp.delay(900).springify()}
+          style={styles.statsCardWrapper}
         >
-          <View style={styles.statItem}>
-            <View
-              style={[
-                styles.statIcon,
-                { backgroundColor: COLORS.primary[100] },
-              ]}
-            >
-              <Ionicons name='sparkles' size={20} color={COLORS.primary[500]} />
-            </View>
-            <Text style={styles.statValue}>1</Text>
-            <Text style={styles.statLabel}>Dream Created</Text>
-          </View>
+          <BlurView
+            intensity={30}
+            tint='dark'
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.statsBorder} />
 
-          <View style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <View
-              style={[styles.statIcon, { backgroundColor: COLORS.accent[100] }]}
-            >
-              <Ionicons name='flame' size={20} color={COLORS.accent[500]} />
-            </View>
-            <Text style={styles.statValue}>0</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          <View style={styles.statItem}>
-            <View
-              style={[
-                styles.statIcon,
-                { backgroundColor: COLORS.secondary[100] },
-              ]}
-            >
-              <Ionicons name='star' size={20} color={COLORS.secondary[500]} />
-            </View>
-            <Text style={styles.statValue}>50</Text>
-            <Text style={styles.statLabel}>XP Earned</Text>
+          <View style={styles.statsContent}>
+            <StatItem
+              icon='sparkles'
+              value='1'
+              label='Dream'
+              color={DARK.accent.rose}
+              delay={1000}
+            />
+            <VerticalDivider />
+            <StatItem
+              icon='flame'
+              value='1'
+              label='Streak'
+              color={DARK.accent.gold}
+              delay={1100}
+            />
+            <VerticalDivider />
+            <StatItem
+              icon='trophy'
+              value='50'
+              label='XP Earned'
+              color={DARK.accent.violet}
+              delay={1200}
+            />
           </View>
         </Animated.View>
       </View>
 
-      {/* Bottom Button */}
+      {/* BOTTOM BUTTON */}
       <Animated.View
-        entering={SlideInUp.delay(1300).duration(600)}
+        entering={FadeInDown.delay(1400).springify()}
         style={[
           styles.bottomSection,
           { paddingBottom: insets.bottom + SPACING.lg },
         ]}
       >
+        {/* Custom Button Style for maximum polish */}
         <Button
           title="Let's Start Dreaming"
           onPress={handleStart}
@@ -127,6 +217,7 @@ export default function CompleteScreen() {
           fullWidth
           icon={<Ionicons name='arrow-forward' size={20} color='#FFF' />}
           iconPosition='right'
+          style={styles.actionButton}
         />
       </Animated.View>
     </View>
@@ -136,83 +227,127 @@ export default function CompleteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: DARK.bg.primary,
+  },
+  ambientLight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 400,
+    backgroundColor: DARK.accent.rose,
+    opacity: 0.15,
+    filter: 'blur(80px)', // Web support
   },
   content: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: SPACING.lg,
   },
-  checkContainer: {
-    marginBottom: SPACING.xl,
+
+  // Checkmark Section
+  checkWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING['3xl'],
+    marginTop: SPACING.xl,
   },
+  glowRing: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: DARK.accent.rose,
+    filter: 'blur(40px)',
+  },
+
+  // Typography
   textContainer: {
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING['2xl'],
+    gap: SPACING.sm,
   },
   title: {
     fontFamily: FONTS.bold,
-    fontSize: 32,
-    color: COLORS.neutral[900],
-    marginBottom: SPACING.sm,
+    fontSize: 34,
+    color: DARK.text.primary,
+    letterSpacing: -1,
   },
   subtitle: {
-    fontFamily: FONTS.semiBold,
+    fontFamily: FONTS.medium,
     fontSize: 18,
-    color: COLORS.primary[500],
-    marginBottom: SPACING.md,
+    color: DARK.text.secondary,
   },
   description: {
     fontFamily: FONTS.regular,
     fontSize: 15,
-    color: COLORS.neutral[500],
+    color: DARK.text.tertiary,
     textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: SPACING.lg,
+    lineHeight: 24,
+    maxWidth: '85%',
+    marginTop: SPACING.xs,
   },
-  statsContainer: {
+
+  // Stats Card
+  statsCardWrapper: {
+    width: '100%',
+    borderRadius: RADIUS['2xl'],
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  statsBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: RADIUS['2xl'],
+  },
+  statsContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    padding: SPACING.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.md,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
+    gap: 6,
   },
-  statIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  statIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.xs,
+    borderWidth: 1,
+    marginBottom: 4,
   },
   statValue: {
     fontFamily: FONTS.bold,
-    fontSize: 24,
-    color: COLORS.neutral[900],
+    fontSize: 22,
+    color: DARK.text.primary,
   },
   statLabel: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.medium,
     fontSize: 12,
-    color: COLORS.neutral[500],
+    color: DARK.text.tertiary,
   },
   statDivider: {
     width: 1,
-    height: 50,
-    backgroundColor: COLORS.neutral[200],
-    marginHorizontal: SPACING.sm,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
+
+  // Bottom Section
   bottomSection: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
+  },
+  actionButton: {
+    backgroundColor: DARK.accent.rose,
+    shadowColor: DARK.accent.rose,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
 })

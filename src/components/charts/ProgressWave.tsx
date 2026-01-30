@@ -1,3 +1,4 @@
+// src/components/charts/ProgressWave.tsx
 import React, { useEffect } from 'react'
 import { View, Text, StyleSheet, Dimensions } from 'react-native'
 import Animated, {
@@ -9,11 +10,10 @@ import Animated, {
   withRepeat,
   withSequence,
   Easing,
-  interpolate,
   SharedValue,
 } from 'react-native-reanimated'
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg'
-import { COLORS, FONTS, SPACING } from '@/src/constants/theme'
+import { DARK, FONTS, SPACING } from '@/src/constants/theme'
 import { DayActivity } from '@/src/hooks/useJourneyStats'
 import { format, parseISO } from 'date-fns'
 
@@ -23,6 +23,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 interface ProgressWaveProps {
   data: DayActivity[]
   height?: number
+  color?: string // Optional override
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
@@ -31,36 +32,20 @@ const CHART_WIDTH = SCREEN_WIDTH - SPACING.lg * 2 - CHART_PADDING * 2
 
 export function ProgressWave({ data, height = 160 }: ProgressWaveProps) {
   const progress = useSharedValue(0)
-  const waveOffset = useSharedValue(0)
-  const dotScales = data.map(() => useSharedValue(0))
+  // Instead of mapping hooks (which causes the crash if data length changes),
+  // we use a single shared value for entry animation and interpolate delays in the child components.
+  const entryProgress = useSharedValue(0)
 
   useEffect(() => {
-    // Animate the wave drawing
     progress.value = withDelay(
       300,
       withTiming(1, { duration: 1500, easing: Easing.out(Easing.cubic) }),
     )
 
-    // Subtle wave animation
-    waveOffset.value = withRepeat(
-      withSequence(
-        withTiming(5, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(-5, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      true,
-    )
-
-    // Animate dots with stagger
-    dotScales.forEach((scale, index) => {
-      scale.value = withDelay(
-        800 + index * 100,
-        withTiming(1, { duration: 400, easing: Easing.out(Easing.back(1.5)) }),
-      )
-    })
+    // Animate all dots entry from 0 to 1
+    entryProgress.value = withTiming(1, { duration: 1000 })
   }, [data])
 
-  // Calculate chart points
   const maxValue = Math.max(...data.map((d) => d.completed), 5)
   const stepX = CHART_WIDTH / (data.length - 1 || 1)
 
@@ -74,42 +59,30 @@ export function ProgressWave({ data, height = 160 }: ProgressWaveProps) {
     date: d.date,
   }))
 
-  // Create smooth curve path using bezier curves
   const createSmoothPath = () => {
     if (points.length < 2) return ''
-
     let path = `M ${points[0].x} ${points[0].y}`
-
     for (let i = 0; i < points.length - 1; i++) {
       const current = points[i]
       const next = points[i + 1]
       const midX = (current.x + next.x) / 2
-
       path += ` C ${midX} ${current.y}, ${midX} ${next.y}, ${next.x} ${next.y}`
     }
-
     return path
   }
 
-  // Create filled area path
   const createAreaPath = () => {
     const linePath = createSmoothPath()
     if (!linePath) return ''
-
     const lastPoint = points[points.length - 1]
     const firstPoint = points[0]
-
-    return `${linePath} L ${lastPoint.x} ${height - CHART_PADDING} L ${firstPoint.x} ${height - CHART_PADDING} Z`
+    return `${linePath} L ${lastPoint.x} ${height} L ${firstPoint.x} ${height} Z`
   }
 
-  const animatedPathProps = useAnimatedProps(() => {
-    const totalLength = 1000 // Approximate
-
-    return {
-      strokeDasharray: totalLength,
-      strokeDashoffset: totalLength * (1 - progress.value),
-    }
-  })
+  const animatedPathProps = useAnimatedProps(() => ({
+    strokeDashoffset: 1000 * (1 - progress.value),
+    strokeDasharray: 1000,
+  }))
 
   const animatedAreaStyle = useAnimatedStyle(() => ({
     opacity: progress.value * 0.3,
@@ -119,30 +92,20 @@ export function ProgressWave({ data, height = 160 }: ProgressWaveProps) {
     <View style={[styles.container, { height }]}>
       <Svg width={CHART_WIDTH + CHART_PADDING * 2} height={height}>
         <Defs>
-          <LinearGradient id='lineGradient' x1='0%' y1='0%' x2='100%' y2='0%'>
-            <Stop offset='0%' stopColor={COLORS.primary[400]} />
-            <Stop offset='100%' stopColor={COLORS.secondary[500]} />
+          <LinearGradient id='lineGradient' x1='0' y1='0' x2='1' y2='0'>
+            <Stop offset='0' stopColor={DARK.accent.rose} />
+            <Stop offset='1' stopColor={DARK.accent.gold} />
           </LinearGradient>
-          <LinearGradient id='areaGradient' x1='0%' y1='0%' x2='0%' y2='100%'>
-            <Stop
-              offset='0%'
-              stopColor={COLORS.primary[400]}
-              stopOpacity={0.4}
-            />
-            <Stop
-              offset='100%'
-              stopColor={COLORS.primary[400]}
-              stopOpacity={0}
-            />
+          <LinearGradient id='areaGradient' x1='0' y1='0' x2='0' y2='1'>
+            <Stop offset='0' stopColor={DARK.accent.rose} stopOpacity={0.4} />
+            <Stop offset='1' stopColor={DARK.accent.rose} stopOpacity={0} />
           </LinearGradient>
         </Defs>
 
-        {/* Area fill */}
         <Animated.View style={animatedAreaStyle}>
           <Path d={createAreaPath()} fill='url(#areaGradient)' />
         </Animated.View>
 
-        {/* Main line */}
         <AnimatedPath
           d={createSmoothPath()}
           stroke='url(#lineGradient)'
@@ -153,22 +116,20 @@ export function ProgressWave({ data, height = 160 }: ProgressWaveProps) {
           animatedProps={animatedPathProps}
         />
 
-        {/* Data points */}
         {points.map((point, index) => (
           <DataPoint
             key={point.date}
             x={point.x}
             y={point.y}
-            value={point.value}
-            scale={dotScales[index]}
+            index={index}
+            entryProgress={entryProgress}
             isToday={index === points.length - 1}
           />
         ))}
       </Svg>
 
-      {/* X-axis labels */}
       <View style={styles.xLabels}>
-        {data.map((d, i) => (
+        {data.map((d) => (
           <Text key={d.date} style={styles.xLabel}>
             {format(parseISO(d.date), 'EEE')}
           </Text>
@@ -178,69 +139,73 @@ export function ProgressWave({ data, height = 160 }: ProgressWaveProps) {
   )
 }
 
-function DataPoint({
-  x,
-  y,
-  value,
-  scale,
-  isToday,
-}: {
-  x: number
-  y: number
-  value: number
-  scale: SharedValue<number>
-  isToday: boolean
-}) {
-  const animatedProps = useAnimatedProps(() => ({
-    r: (isToday ? 8 : 5) * scale.value,
-    opacity: scale.value,
-  }))
+// Sub-component manages its own interpolation based on index to avoid hook rules issues
+function DataPoint({ x, y, index, entryProgress, isToday }: any) {
+  const animatedProps = useAnimatedProps(() => {
+    // Stagger effect: calculate local progress based on index
+    // We delay the start based on index
+    const delay = index * 0.1
+    const localProgress = Math.max(
+      0,
+      Math.min(1, (entryProgress.value - delay) * 2),
+    )
 
-  const glowProps = useAnimatedProps(() => ({
-    r: 12 * scale.value,
-    opacity: scale.value * 0.3,
-  }))
+    return {
+      r: (isToday ? 6 : 4) * localProgress,
+      opacity: localProgress,
+    }
+  })
+
+  const glowProps = useAnimatedProps(() => {
+    const delay = index * 0.1
+    const localProgress = Math.max(
+      0,
+      Math.min(1, (entryProgress.value - delay) * 2),
+    )
+    return {
+      r: 12 * localProgress,
+      opacity: localProgress * 0.4,
+    }
+  })
 
   return (
     <>
-      {/* Glow effect for today */}
       {isToday && (
         <AnimatedCircle
           cx={x}
           cy={y}
-          fill={COLORS.primary[400]}
+          fill={DARK.accent.gold}
           animatedProps={glowProps}
         />
       )}
-
-      {/* Outer ring */}
       <AnimatedCircle
         cx={x}
         cy={y}
-        fill={COLORS.surface}
-        stroke={isToday ? COLORS.primary[500] : COLORS.secondary[400]}
+        fill={DARK.bg.primary}
+        stroke={isToday ? DARK.accent.gold : DARK.text.muted}
         strokeWidth={2}
         animatedProps={animatedProps}
       />
-
       {/* Inner dot */}
       <AnimatedCircle
         cx={x}
         cy={y}
-        fill={isToday ? COLORS.primary[500] : COLORS.secondary[400]}
-        animatedProps={useAnimatedProps(() => ({
-          r: (isToday ? 4 : 2.5) * scale.value,
-          opacity: scale.value,
-        }))}
+        fill={isToday ? DARK.accent.gold : DARK.text.muted}
+        animatedProps={useAnimatedProps(() => {
+          const delay = index * 0.1
+          const localProgress = Math.max(
+            0,
+            Math.min(1, (entryProgress.value - delay) * 2),
+          )
+          return { r: (isToday ? 3 : 2) * localProgress }
+        })}
       />
     </>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-  },
+  container: { alignItems: 'center' },
   xLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -250,8 +215,8 @@ const styles = StyleSheet.create({
   },
   xLabel: {
     fontFamily: FONTS.medium,
-    fontSize: 11,
-    color: COLORS.neutral[400],
+    fontSize: 10,
+    color: DARK.text.tertiary,
     textAlign: 'center',
     width: 30,
   },

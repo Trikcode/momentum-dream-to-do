@@ -1,7 +1,8 @@
+// app/(tabs)/_layout.tsx
 import React from 'react'
 import { Tabs } from 'expo-router'
 import { CustomTabBar } from '@/src/components/navigation/CustomTabBar'
-import { COLORS } from '@/src/constants/theme'
+import { DARK } from '@/src/constants/theme'
 
 export default function TabsLayout() {
   return (
@@ -9,13 +10,13 @@ export default function TabsLayout() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { display: 'none' },
+        sceneStyle: { backgroundColor: DARK.bg.primary },
       }}
     >
-      <Tabs.Screen name='index' />
-      <Tabs.Screen name='dreams' />
-      <Tabs.Screen name='journey' />
-      <Tabs.Screen name='profile' />
+      <Tabs.Screen name='index' options={{ title: 'Today' }} />
+      <Tabs.Screen name='dreams' options={{ title: 'Dreams' }} />
+      <Tabs.Screen name='journey' options={{ title: 'Journey' }} />
+      <Tabs.Screen name='profile' options={{ title: 'You' }} />
     </Tabs>
   )
 }

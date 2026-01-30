@@ -1,3 +1,4 @@
+// src/store/dreamStore.ts
 import { create } from 'zustand'
 import { supabase } from '@/src/lib/supabase'
 import { useAuthStore } from './authStore'
@@ -30,6 +31,16 @@ type CreateDreamInput = {
   target_date?: string
 }
 
+type UpdateDreamInput = {
+  title?: string
+  description?: string
+  category_id?: string
+  target_date?: string
+  status?: 'active' | 'completed' | 'paused' | 'archived'
+  completed_at?: string
+  progress_percent?: number
+}
+
 type CreateActionInput = {
   dream_id: string
   title: string
@@ -42,21 +53,35 @@ type CreateActionInput = {
 
 interface DreamState {
   dreams: Dream[]
+  actions: Action[] // All actions (not just today's)
   todayActions: Action[]
   isLoading: boolean
 
-  // Actions
+  // Dream Actions
   fetchDreams: () => Promise<void>
-  fetchTodayActions: () => Promise<void>
   createDream: (dream: CreateDreamInput) => Promise<void>
-  completeAction: (actionId: string) => Promise<void>
+  updateDream: (dreamId: string, updates: UpdateDreamInput) => Promise<void>
+  deleteDream: (dreamId: string) => Promise<void>
+
+  // Action Actions
+  fetchTodayActions: () => Promise<void>
+  fetchAllActions: () => Promise<void>
+  fetchActionsByDream: (dreamId: string) => Promise<void>
   addAction: (action: CreateActionInput) => Promise<void>
+  completeAction: (actionId: string) => Promise<void>
+  skipAction: (actionId: string) => Promise<void>
+  deleteAction: (actionId: string) => Promise<void>
 }
 
 export const useDreamStore = create<DreamState>((set, get) => ({
   dreams: [],
+  actions: [],
   todayActions: [],
   isLoading: false,
+
+  // ============================================================================
+  // DREAM METHODS
+  // ============================================================================
 
   fetchDreams: async () => {
     const user = useAuthStore.getState().user
@@ -95,6 +120,159 @@ export const useDreamStore = create<DreamState>((set, get) => ({
     }
   },
 
+  createDream: async (dream: CreateDreamInput) => {
+    const user = useAuthStore.getState().user
+    if (!user) return
+
+    try {
+      const insertData: TablesInsert<'dreams'> = {
+        user_id: user.id,
+        title: dream.title,
+        description: dream.description ?? null,
+        category_id: dream.category_id ?? null,
+        target_date: dream.target_date ?? null,
+      }
+
+      const { data, error } = await supabase
+        .from('dreams')
+        .insert(insertData)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      set((state) => ({
+        dreams: [
+          { ...data, completed_actions: 0, total_actions: 0 } as Dream,
+          ...state.dreams,
+        ],
+      }))
+    } catch (error) {
+      console.error('Error creating dream:', error)
+      throw error
+    }
+  },
+
+  updateDream: async (dreamId: string, updates: UpdateDreamInput) => {
+    const user = useAuthStore.getState().user
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('dreams')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', dreamId)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      set((state) => ({
+        dreams: state.dreams.map((d) =>
+          d.id === dreamId ? { ...d, ...data } : d,
+        ),
+      }))
+
+      // If completing a dream, trigger celebration
+      if (updates.status === 'completed') {
+        const dream = get().dreams.find((d) => d.id === dreamId)
+        if (dream) {
+          useCelebrationStore.getState().triggerDreamComplete(dream.title, 500)
+        }
+        await checkForAchievements(user.id)
+      }
+    } catch (error) {
+      console.error('Error updating dream:', error)
+      throw error
+    }
+  },
+
+  deleteDream: async (dreamId: string) => {
+    const user = useAuthStore.getState().user
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from('dreams')
+        .delete()
+        .eq('id', dreamId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      set((state) => ({
+        dreams: state.dreams.filter((d) => d.id !== dreamId),
+        actions: state.actions.filter((a) => a.dream_id !== dreamId),
+        todayActions: state.todayActions.filter((a) => a.dream_id !== dreamId),
+      }))
+    } catch (error) {
+      console.error('Error deleting dream:', error)
+      throw error
+    }
+  },
+
+  // ============================================================================
+  // ACTION METHODS
+  // ============================================================================
+
+  fetchAllActions: async () => {
+    const user = useAuthStore.getState().user
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('actions')
+        .select(
+          `
+          *,
+          dream:dreams (id, title, category_id)
+        `,
+        )
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      set({ actions: (data as Action[]) || [] })
+    } catch (error) {
+      console.error('Error fetching all actions:', error)
+    }
+  },
+
+  fetchActionsByDream: async (dreamId: string) => {
+    const user = useAuthStore.getState().user
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from('actions')
+        .select(
+          `
+          *,
+          dream:dreams (id, title, category_id)
+        `,
+        )
+        .eq('user_id', user.id)
+        .eq('dream_id', dreamId)
+        .order('is_completed', { ascending: true })
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      // Merge into actions array (update existing, add new)
+      set((state) => {
+        const otherActions = state.actions.filter((a) => a.dream_id !== dreamId)
+        return { actions: [...otherActions, ...(data as Action[])] }
+      })
+    } catch (error) {
+      console.error('Error fetching actions by dream:', error)
+    }
+  },
+
   fetchTodayActions: async () => {
     const user = useAuthStore.getState().user
     if (!user) return
@@ -127,84 +305,6 @@ export const useDreamStore = create<DreamState>((set, get) => ({
     }
   },
 
-  createDream: async (dream: CreateDreamInput) => {
-    const user = useAuthStore.getState().user
-    if (!user) return
-
-    try {
-      const insertData: TablesInsert<'dreams'> = {
-        user_id: user.id,
-        title: dream.title,
-        description: dream.description ?? null,
-        category_id: dream.category_id ?? null,
-        target_date: dream.target_date ?? null,
-      }
-
-      const { data, error } = await supabase
-        .from('dreams')
-        .insert(insertData)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      set((state) => ({
-        dreams: [data as Dream, ...state.dreams],
-      }))
-    } catch (error) {
-      console.error('Error creating dream:', error)
-      throw error
-    }
-  },
-
-  completeAction: async (actionId) => {
-    const user = useAuthStore.getState().user
-    if (!user) return
-
-    try {
-      const action = get().todayActions.find((a) => a.id === actionId)
-      if (!action) return
-
-      // Update action in database
-      const { error: updateError } = await supabase
-        .from('actions')
-        .update({
-          is_completed: true,
-          completed_at: new Date().toISOString(),
-        })
-        .eq('id', actionId)
-
-      if (updateError) throw updateError
-
-      // Log completion
-      await supabase.from('action_completions').insert({
-        action_id: actionId,
-        user_id: user.id,
-        xp_earned: action.xp_reward ?? 10,
-      })
-
-      await supabase.rpc('update_user_streak', { p_user_id: user.id })
-
-      set((state) => ({
-        todayActions: state.todayActions.map((a) =>
-          a.id === actionId ? { ...a, is_completed: true } : a,
-        ),
-      }))
-
-      useCelebrationStore
-        .getState()
-        .triggerPowerMoveComplete(action.title, action.xp_reward ?? 10)
-
-      await useAuthStore.getState().refreshProfile()
-
-      // Check for achievements
-      await checkForAchievements(user.id)
-    } catch (error) {
-      console.error('Error completing action:', error)
-      throw error
-    }
-  },
-
   addAction: async (action: CreateActionInput) => {
     const user = useAuthStore.getState().user
     if (!user) return
@@ -234,11 +334,162 @@ export const useDreamStore = create<DreamState>((set, get) => ({
 
       if (error) throw error
 
+      const newAction = data as Action
+
       set((state) => ({
-        todayActions: [...state.todayActions, data as Action],
+        actions: [newAction, ...state.actions],
+        todayActions:
+          newAction.due_date === new Date().toISOString().split('T')[0] ||
+          !newAction.due_date
+            ? [...state.todayActions, newAction]
+            : state.todayActions,
+      }))
+
+      // Update dream's total_actions count
+      set((state) => ({
+        dreams: state.dreams.map((d) =>
+          d.id === action.dream_id
+            ? { ...d, total_actions: (d.total_actions || 0) + 1 }
+            : d,
+        ),
       }))
     } catch (error) {
       console.error('Error adding action:', error)
+      throw error
+    }
+  },
+
+  completeAction: async (actionId: string) => {
+    const user = useAuthStore.getState().user
+    if (!user) return
+
+    try {
+      // Find action from either list
+      const action =
+        get().todayActions.find((a) => a.id === actionId) ||
+        get().actions.find((a) => a.id === actionId)
+      if (!action) return
+
+      // Update action in database
+      const { error: updateError } = await supabase
+        .from('actions')
+        .update({
+          is_completed: true,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', actionId)
+
+      if (updateError) throw updateError
+
+      // Log completion
+      await supabase.from('action_completions').insert({
+        action_id: actionId,
+        user_id: user.id,
+        xp_earned: action.xp_reward ?? 10,
+      })
+
+      // Update streak
+      await supabase.rpc('update_user_streak', { p_user_id: user.id })
+
+      // Update local state
+      const updateActionList = (actions: Action[]) =>
+        actions.map((a) =>
+          a.id === actionId
+            ? {
+                ...a,
+                is_completed: true,
+                completed_at: new Date().toISOString(),
+              }
+            : a,
+        )
+
+      set((state) => ({
+        todayActions: updateActionList(state.todayActions),
+        actions: updateActionList(state.actions),
+        dreams: state.dreams.map((d) =>
+          d.id === action.dream_id
+            ? { ...d, completed_actions: (d.completed_actions || 0) + 1 }
+            : d,
+        ),
+      }))
+
+      // Trigger celebration
+      useCelebrationStore
+        .getState()
+        .triggerPowerMoveComplete(action.title, action.xp_reward ?? 10)
+
+      // Refresh profile for updated XP/streak
+      await useAuthStore.getState().refreshProfile()
+
+      // Check for achievements
+      await checkForAchievements(user.id)
+    } catch (error) {
+      console.error('Error completing action:', error)
+      throw error
+    }
+  },
+
+  skipAction: async (actionId: string) => {
+    const user = useAuthStore.getState().user
+    if (!user) return
+
+    try {
+      // Move due date to tomorrow
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+      const { error } = await supabase
+        .from('actions')
+        .update({ due_date: tomorrowStr })
+        .eq('id', actionId)
+
+      if (error) throw error
+
+      // Remove from today's actions
+      set((state) => ({
+        todayActions: state.todayActions.filter((a) => a.id !== actionId),
+        actions: state.actions.map((a) =>
+          a.id === actionId ? { ...a, due_date: tomorrowStr } : a,
+        ),
+      }))
+    } catch (error) {
+      console.error('Error skipping action:', error)
+      throw error
+    }
+  },
+
+  deleteAction: async (actionId: string) => {
+    const user = useAuthStore.getState().user
+    if (!user) return
+
+    try {
+      const action = get().actions.find((a) => a.id === actionId)
+
+      const { error } = await supabase
+        .from('actions')
+        .delete()
+        .eq('id', actionId)
+
+      if (error) throw error
+
+      set((state) => ({
+        actions: state.actions.filter((a) => a.id !== actionId),
+        todayActions: state.todayActions.filter((a) => a.id !== actionId),
+        // Decrement dream's total_actions
+        dreams: action
+          ? state.dreams.map((d) =>
+              d.id === action.dream_id
+                ? {
+                    ...d,
+                    total_actions: Math.max(0, (d.total_actions || 0) - 1),
+                  }
+                : d,
+            )
+          : state.dreams,
+      }))
+    } catch (error) {
+      console.error('Error deleting action:', error)
       throw error
     }
   },

@@ -1,5 +1,5 @@
 // app/(tabs)/journey.tsx
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import {
   View,
   ScrollView,
@@ -11,6 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
+
+// Components
 import { StatOrb } from '@/src/components/journey/StatOrb'
 import { WeeklyPulse } from '@/src/components/journey/WeeklyPulse'
 import { MomentumCalendar } from '@/src/components/journey/MomentumCalendar'
@@ -19,18 +21,22 @@ import { InsightCard } from '@/src/components/journey/InsightCard'
 import { VictoriesShowcase } from '@/src/components/journey/VictoriesShowcase'
 import { ChapterProgress } from '@/src/components/journey/ChapterProgress'
 import { GlassCard } from '@/src/components/shared/GlassCard'
+
+// Logic
 import { useJourneyStats } from '@/src/hooks/useJourneyStats'
-import { COLORS, FONTS, SPACING } from '@/src/constants/theme'
+import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 import { LANGUAGE } from '@/src/constants/language'
 
 export default function JourneyScreen() {
   const insets = useSafeAreaInsets()
   const [refreshing, setRefreshing] = useState(false)
+
+  // Hook called unconditionally at the top level
   const stats = useJourneyStats()
 
   const onRefresh = async () => {
     setRefreshing(true)
-    // Refetch stats
+    // Simulate refetch
     await new Promise((resolve) => setTimeout(resolve, 1000))
     setRefreshing(false)
   }
@@ -39,16 +45,28 @@ export default function JourneyScreen() {
   const xpForNextChapter = Math.pow(stats.currentChapter + 1, 2) * 100
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
+      {/* Background */}
+      <View style={StyleSheet.absoluteFill}>
+        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
+        <LinearGradient
+          colors={DARK.gradients.bg as [string, string, string]}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + SPACING.md },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary[500]}
+            tintColor={DARK.accent.rose}
           />
         }
       >
@@ -62,35 +80,32 @@ export default function JourneyScreen() {
         </Animated.View>
 
         {/* Main Stats Orbs */}
-        <Animated.View
-          entering={FadeInUp.delay(200).duration(600)}
-          style={styles.statsRow}
-        >
+        <Animated.View entering={FadeInUp.delay(200)} style={styles.statsRow}>
           <StatOrb
             value={stats.totalPowerMoves}
             label='Power Moves'
             icon='flash'
-            gradient={COLORS.gradients.primary as [string, string]}
+            gradient={DARK.gradients.primary as [string, string]}
             delay={0}
           />
           <StatOrb
             value={stats.currentMomentum}
-            label='Day Momentum'
+            label='Day Streak'
             icon='flame'
-            gradient={['#FF6B6B', '#FF8E53']}
+            gradient={DARK.gradients.momentum as [string, string]}
             delay={100}
           />
           <StatOrb
             value={stats.totalSparks}
-            label={LANGUAGE.spark.name}
+            label='Total XP'
             icon='sparkles'
-            gradient={COLORS.gradients.accent as [string, string]}
+            gradient={[DARK.accent.violet, '#A78BFA']}
             delay={200}
           />
         </Animated.View>
 
         {/* Chapter Progress */}
-        <Animated.View entering={FadeInUp.delay(400).duration(500)}>
+        <Animated.View entering={FadeInUp.delay(400)}>
           <ChapterProgress
             currentChapter={stats.currentChapter}
             currentXP={stats.totalSparks}
@@ -100,7 +115,7 @@ export default function JourneyScreen() {
 
         {/* Weekly Pulse */}
         <Animated.View
-          entering={FadeInUp.delay(500).duration(500)}
+          entering={FadeInUp.delay(500)}
           style={styles.sectionSpacing}
         >
           <WeeklyPulse
@@ -111,10 +126,7 @@ export default function JourneyScreen() {
         </Animated.View>
 
         {/* Progress Wave Chart */}
-        <Animated.View
-          entering={FadeInUp.delay(600).duration(500)}
-          style={styles.section}
-        >
+        <Animated.View entering={FadeInUp.delay(600)} style={styles.section}>
           <Text style={styles.sectionTitle}>Week at a Glance</Text>
           <GlassCard padding='md' style={styles.chartCard}>
             <ProgressWave data={stats.weekStats.days} height={140} />
@@ -123,12 +135,9 @@ export default function JourneyScreen() {
 
         {/* Insights */}
         {stats.insights.length > 0 && (
-          <Animated.View
-            entering={FadeInUp.delay(700).duration(500)}
-            style={styles.section}
-          >
+          <Animated.View entering={FadeInUp.delay(700)} style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name='bulb' size={20} color={COLORS.secondary[500]} />
+              <Ionicons name='bulb' size={20} color={DARK.accent.gold} />
               <Text style={styles.sectionTitle}>Insights</Text>
             </View>
             {stats.insights.map((insight, index) => (
@@ -146,61 +155,58 @@ export default function JourneyScreen() {
 
         {/* Momentum Calendar */}
         <Animated.View
-          entering={FadeInUp.delay(800).duration(500)}
+          entering={FadeInUp.delay(800)}
           style={styles.sectionSpacing}
         >
           <MomentumCalendar
             data={stats.monthHeatmap}
-            onDayPress={(date, completed) => {
-              console.log('Day pressed:', date, completed)
-            }}
+            onDayPress={(date: string, completed: boolean) => {}}
           />
         </Animated.View>
 
         {/* Victories Showcase */}
-        <VictoriesShowcase
-          victories={[]} // Pass actual victories from stats
-          totalVictories={stats.victoriesUnlocked}
-          onViewAll={() => {
-            console.log('View all victories')
-          }}
-        />
+        <Animated.View
+          entering={FadeInUp.delay(850)}
+          style={styles.sectionSpacing}
+        >
+          <VictoriesShowcase
+            victories={[]} // Pass actual recent victories from your store/hook here
+            totalVictories={stats.victoriesUnlocked}
+            onViewAll={() => console.log('View all victories')}
+          />
+        </Animated.View>
 
         {/* Extra Stats Grid */}
-        <Animated.View
-          entering={FadeInUp.delay(900).duration(500)}
-          style={styles.section}
-        >
+        <Animated.View entering={FadeInUp.delay(900)} style={styles.section}>
           <Text style={styles.sectionTitle}>Lifetime Stats</Text>
           <View style={styles.statsGrid}>
             <MiniStat
-              label='Dreams Active'
+              label='Active Dreams'
               value={stats.dreamsActive}
               icon='planet'
-              color={COLORS.secondary[500]}
+              color={DARK.accent.violet}
             />
             <MiniStat
-              label='Dreams Achieved'
+              label='Achieved'
               value={stats.dreamsCompleted}
               icon='trophy'
-              color={COLORS.accent[500]}
+              color={DARK.accent.gold}
             />
             <MiniStat
-              label='Longest Momentum'
+              label='Max Streak'
               value={stats.longestMomentum}
               icon='flame'
-              color='#FF6B6B'
+              color={DARK.accent.rose}
             />
             <MiniStat
-              label={LANGUAGE.victories.name}
+              label='Victories'
               value={stats.victoriesUnlocked}
-              icon='star'
-              color={COLORS.primary[500]}
+              icon='medal'
+              color='#10B981'
             />
           </View>
         </Animated.View>
 
-        {/* Bottom padding for tab bar */}
         <View style={{ height: 120 }} />
       </ScrollView>
     </View>
@@ -221,8 +227,13 @@ function MiniStat({
 }) {
   return (
     <View style={styles.miniStat}>
-      <View style={[styles.miniStatIcon, { backgroundColor: color + '15' }]}>
-        <Ionicons name={icon as any} size={18} color={color} />
+      <View
+        style={[
+          styles.miniStatIcon,
+          { backgroundColor: color + '15', borderColor: color + '30' },
+        ]}
+      >
+        <Ionicons name={icon as any} size={20} color={color} />
       </View>
       <Text style={styles.miniStatValue}>{value}</Text>
       <Text style={styles.miniStatLabel}>{label}</Text>
@@ -233,29 +244,28 @@ function MiniStat({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: DARK.bg.primary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: SPACING.xxl,
+    paddingBottom: SPACING['4xl'],
   },
   header: {
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
     marginBottom: SPACING.lg,
   },
   title: {
     fontFamily: FONTS.bold,
-    fontSize: 28,
-    color: COLORS.neutral[900],
+    fontSize: 32,
+    color: DARK.text.primary,
   },
   subtitle: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.medium,
     fontSize: 14,
-    color: COLORS.neutral[500],
-    marginTop: 2,
+    color: DARK.text.secondary,
+    marginTop: 4,
   },
   statsRow: {
     flexDirection: 'row',
@@ -265,10 +275,10 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: SPACING.lg,
-    marginTop: SPACING.lg,
+    marginTop: SPACING['2xl'],
   },
   sectionSpacing: {
-    marginTop: SPACING.lg,
+    marginTop: SPACING['2xl'],
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -277,43 +287,49 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   sectionTitle: {
-    fontFamily: FONTS.semiBold,
+    fontFamily: FONTS.bold,
     fontSize: 18,
-    color: COLORS.neutral[900],
+    color: DARK.text.primary,
     marginBottom: SPACING.md,
   },
   chartCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: RADIUS.xl,
+    overflow: 'hidden',
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
+    gap: SPACING.md,
   },
   miniStat: {
-    width: '48%',
-    backgroundColor: COLORS.surface,
-    borderRadius: SPACING.md,
-    padding: SPACING.md,
+    width: '47%',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   miniStatIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.sm,
+    borderWidth: 1,
   },
   miniStatValue: {
     fontFamily: FONTS.bold,
     fontSize: 24,
-    color: COLORS.neutral[900],
+    color: DARK.text.primary,
   },
   miniStatLabel: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.medium,
     fontSize: 12,
-    color: COLORS.neutral[500],
+    color: DARK.text.secondary,
     textAlign: 'center',
+    marginTop: 2,
   },
 })

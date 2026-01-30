@@ -15,45 +15,16 @@ export interface DreamCategory {
   examples: string[]
 }
 
+// IDs now match the local CATEGORIES in pick-dreams.tsx
 export const DREAM_CATEGORIES: DreamCategory[] = [
   {
-    id: '1',
-    name: 'Travel & Adventure',
-    slug: 'travel',
-    description: 'Explore the world, solo trips, bucket list destinations',
-    icon: { library: 'ionicons', name: 'airplane' },
-    color: '#F43F5E',
-    gradient: ['#F43F5E', '#E11D48'],
-    examples: [
-      'Visit 10 countries this year',
-      'Solo trip to Japan',
-      'Road trip across Europe',
-      'Learn to scuba dive',
-    ],
-  },
-  {
-    id: '2',
-    name: 'Career & Success',
-    slug: 'career',
-    description: 'Promotions, salary goals, dream jobs, side hustles',
-    icon: { library: 'ionicons', name: 'rocket' },
-    color: '#8B5CF6',
-    gradient: ['#8B5CF6', '#7C3AED'],
-    examples: [
-      'Get promoted to senior role',
-      'Negotiate a raise',
-      'Start a side business',
-      'Build my personal brand',
-    ],
-  },
-  {
-    id: '3',
-    name: 'Health & Fitness',
-    slug: 'fitness',
+    id: 'health', // ← matches pick-dreams
+    name: 'Fitness & Health',
+    slug: 'health',
     description: 'Workouts, wellness goals, healthy habits',
     icon: { library: 'ionicons', name: 'fitness' },
-    color: '#22C55E',
-    gradient: ['#22C55E', '#16A34A'],
+    color: '#F43F5E',
+    gradient: ['#F43F5E', '#E11D48'],
     examples: [
       'Run a marathon',
       'Workout 4x per week',
@@ -62,9 +33,24 @@ export const DREAM_CATEGORIES: DreamCategory[] = [
     ],
   },
   {
-    id: '4',
-    name: 'Financial Freedom',
-    slug: 'finance',
+    id: 'career', // ← matches pick-dreams
+    name: 'Career & Biz',
+    slug: 'career',
+    description: 'Promotions, salary goals, dream jobs, side hustles',
+    icon: { library: 'ionicons', name: 'briefcase' },
+    color: '#3B82F6',
+    gradient: ['#3B82F6', '#2563EB'],
+    examples: [
+      'Get promoted to senior role',
+      'Negotiate a raise',
+      'Start a side business',
+      'Build my personal brand',
+    ],
+  },
+  {
+    id: 'wealth', // ← matches pick-dreams
+    name: 'Wealth',
+    slug: 'wealth',
     description: 'Savings goals, investments, debt freedom',
     icon: { library: 'ionicons', name: 'wallet' },
     color: '#F59E0B',
@@ -77,22 +63,52 @@ export const DREAM_CATEGORIES: DreamCategory[] = [
     ],
   },
   {
-    id: '5',
-    name: 'Learning & Growth',
-    slug: 'learning',
-    description: 'New skills, courses, languages, certifications',
-    icon: { library: 'ionicons', name: 'book' },
-    color: '#3B82F6',
-    gradient: ['#3B82F6', '#2563EB'],
+    id: 'mind', // ← matches pick-dreams
+    name: 'Mindfulness',
+    slug: 'mind',
+    description: 'Mental health, meditation, inner peace',
+    icon: { library: 'ionicons', name: 'leaf' },
+    color: '#10B981',
+    gradient: ['#10B981', '#059669'],
     examples: [
-      'Learn Spanish fluently',
+      'Meditate daily for 10 minutes',
+      'Start a gratitude journal',
+      'Digital detox weekends',
+      'Practice deep breathing',
+    ],
+  },
+  {
+    id: 'skills', // ← matches pick-dreams
+    name: 'New Skills',
+    slug: 'skills',
+    description: 'Learn something new, courses, certifications',
+    icon: { library: 'ionicons', name: 'school' },
+    color: '#8B5CF6',
+    gradient: ['#8B5CF6', '#7C3AED'],
+    examples: [
+      'Learn a new language',
       'Complete coding bootcamp',
       'Read 24 books this year',
       'Get AWS certification',
     ],
   },
   {
-    id: '6',
+    id: 'travel', // ← matches pick-dreams
+    name: 'Travel',
+    slug: 'travel',
+    description: 'Explore the world, solo trips, bucket list destinations',
+    icon: { library: 'ionicons', name: 'airplane' },
+    color: '#06B6D4',
+    gradient: ['#06B6D4', '#0891B2'],
+    examples: [
+      'Visit 10 countries this year',
+      'Solo trip to Japan',
+      'Road trip across Europe',
+      'Learn to scuba dive',
+    ],
+  },
+  {
+    id: 'relationships', // ← matches pick-dreams
     name: 'Relationships',
     slug: 'relationships',
     description: 'Friendships, family, community, networking',
@@ -107,33 +123,18 @@ export const DREAM_CATEGORIES: DreamCategory[] = [
     ],
   },
   {
-    id: '7',
+    id: 'creativity', // ← matches pick-dreams
     name: 'Creativity',
     slug: 'creativity',
     description: 'Art, writing, music, crafts, content creation',
     icon: { library: 'ionicons', name: 'color-palette' },
-    color: '#06B6D4',
-    gradient: ['#06B6D4', '#0891B2'],
+    color: '#F97316',
+    gradient: ['#F97316', '#EA580C'],
     examples: [
       'Write a novel',
       'Learn to paint',
       'Start a YouTube channel',
       'Record an album',
-    ],
-  },
-  {
-    id: '8',
-    name: 'Home & Lifestyle',
-    slug: 'lifestyle',
-    description: 'Dream home, organization, minimalism',
-    icon: { library: 'ionicons', name: 'home' },
-    color: '#84CC16',
-    gradient: ['#84CC16', '#65A30D'],
-    examples: [
-      'Buy my first home',
-      'Declutter entire house',
-      'Create a morning routine',
-      'Design my dream office',
     ],
   },
 ]
@@ -156,4 +157,8 @@ export const getCategoryIcon = (
     default:
       return { IconComponent: Ionicons, iconName: 'star' as any }
   }
+}
+
+export const getCategoryById = (id: string): DreamCategory | undefined => {
+  return DREAM_CATEGORIES.find((cat) => cat.id === id)
 }

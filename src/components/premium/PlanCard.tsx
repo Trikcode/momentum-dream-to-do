@@ -1,3 +1,4 @@
+// src/components/premium/PlanCard.tsx
 import React, { useEffect } from 'react'
 import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { PurchasesPackage, PACKAGE_TYPE } from 'react-native-purchases'
@@ -8,12 +9,35 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withRepeat,
-  withSequence,
   withTiming,
   Easing,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '@/src/constants/theme'
+import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+
+// (Helper functions getPeriodLabel, getMonthlyEquivalent, getSavings remain the same)
+function getPeriodLabel(packageType: PACKAGE_TYPE): string {
+  switch (packageType) {
+    case PACKAGE_TYPE.MONTHLY:
+      return 'Monthly'
+    case PACKAGE_TYPE.ANNUAL:
+      return 'Yearly'
+    default:
+      return 'Subscription'
+  }
+}
+
+function getMonthlyEquivalent(pkg: PurchasesPackage): string | null {
+  if (pkg.packageType === PACKAGE_TYPE.ANNUAL) {
+    return `$${(pkg.product.price / 12).toFixed(2)}`
+  }
+  return null
+}
+
+function getSavings(pkg: PurchasesPackage): string | null {
+  if (pkg.packageType === PACKAGE_TYPE.ANNUAL) return 'SAVE 40%'
+  return null
+}
 
 interface PlanCardProps {
   pkg: PurchasesPackage
@@ -29,24 +53,12 @@ export function PlanCard({
   onSelect,
 }: PlanCardProps) {
   const scale = useSharedValue(1)
-  const borderOpacity = useSharedValue(0)
   const shimmer = useSharedValue(0)
 
-  // Parse package info
-  const { product } = pkg
-  const price = product.priceString
+  const price = pkg.product.priceString
   const period = getPeriodLabel(pkg.packageType)
   const perMonth = getMonthlyEquivalent(pkg)
   const savings = getSavings(pkg)
-
-  useEffect(() => {
-    if (isSelected) {
-      borderOpacity.value = withSpring(1)
-      scale.value = withSequence(withSpring(1.02), withSpring(1))
-    } else {
-      borderOpacity.value = withSpring(0)
-    }
-  }, [isSelected])
 
   useEffect(() => {
     if (isPopular) {
@@ -59,258 +71,135 @@ export function PlanCard({
   }, [isPopular])
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     onSelect()
   }
-
-  const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }))
-
-  const borderStyle = useAnimatedStyle(() => ({
-    opacity: borderOpacity.value,
-  }))
 
   const shimmerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: -200 + shimmer.value * 400 }],
   }))
 
-  const isMonthly = pkg.packageType === PACKAGE_TYPE.MONTHLY
-
   return (
-    <Pressable onPress={handlePress}>
-      <Animated.View style={[styles.container, containerStyle]}>
-        <Animated.View style={[styles.selectionBorder, borderStyle]}>
-          <LinearGradient
-            colors={COLORS.gradients.primary as [string, string]}
-            style={styles.borderGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </Animated.View>
+    <Pressable onPress={handlePress} style={styles.container}>
+      <Animated.View
+        style={[
+          styles.card,
+          isSelected && styles.cardSelected,
+          isPopular && !isSelected && styles.cardPopular,
+        ]}
+      >
+        {/* Popular Badge */}
+        {isPopular && (
+          <View style={styles.popularBadge}>
+            <LinearGradient
+              colors={[DARK.accent.gold, '#B45309']}
+              style={styles.popularGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Animated.View style={[styles.shimmer, shimmerStyle]}>
+                <LinearGradient
+                  colors={[
+                    'transparent',
+                    'rgba(255,255,255,0.5)',
+                    'transparent',
+                  ]}
+                  style={{ flex: 1 }}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                />
+              </Animated.View>
+              <Text style={styles.popularText}>BEST VALUE</Text>
+            </LinearGradient>
+          </View>
+        )}
 
-        {/* Card content */}
-        <View style={[styles.card, isSelected && styles.cardSelected]}>
-          {/* Popular badge */}
-          {isPopular && (
-            <View style={styles.popularBadge}>
-              <LinearGradient
-                colors={COLORS.gradients.accent as [string, string]}
-                style={styles.popularGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Animated.View style={[styles.shimmer, shimmerStyle]}>
-                  <LinearGradient
-                    colors={[
-                      'transparent',
-                      'rgba(255,255,255,0.4)',
-                      'transparent',
-                    ]}
-                    style={styles.shimmerGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  />
-                </Animated.View>
-                <Ionicons name='star' size={12} color='#FFF' />
-                <Text style={styles.popularText}>MOST POPULAR</Text>
-              </LinearGradient>
-            </View>
-          )}
-
-          {/* Main content */}
-          <View style={styles.content}>
-            {/* Period */}
+        <View style={styles.content}>
+          <View>
             <Text style={styles.period}>{period}</Text>
-
-            {/* Price */}
-            <View style={styles.priceRow}>
-              <Text style={styles.price}>{price}</Text>
-              {perMonth && !isMonthly && (
-                <Text style={styles.perMonth}>{perMonth}/mo</Text>
-              )}
-            </View>
-
-            {savings && (
-              <View style={styles.savingsBadge}>
-                <Text style={styles.savingsText}>Save {savings}</Text>
-              </View>
-            )}
+            {savings && <Text style={styles.savings}>{savings}</Text>}
           </View>
-
-          {/* Selection indicator */}
-          <View
-            style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}
-          >
-            {isSelected && (
-              <LinearGradient
-                colors={COLORS.gradients.primary as [string, string]}
-                style={styles.radioInner}
-              >
-                <Ionicons name='checkmark' size={14} color='#FFF' />
-              </LinearGradient>
-            )}
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={styles.price}>{price}</Text>
+            {perMonth && <Text style={styles.perMonth}>{perMonth}/mo</Text>}
           </View>
+        </View>
+
+        {/* Selection Radio */}
+        <View style={[styles.radio, isSelected && styles.radioSelected]}>
+          {isSelected && <View style={styles.radioInner} />}
         </View>
       </Animated.View>
     </Pressable>
   )
 }
 
-function getPeriodLabel(packageType: PACKAGE_TYPE): string {
-  switch (packageType) {
-    case PACKAGE_TYPE.MONTHLY:
-      return 'Monthly'
-    case PACKAGE_TYPE.ANNUAL:
-      return 'Yearly'
-    case PACKAGE_TYPE.LIFETIME:
-      return 'Lifetime'
-    case PACKAGE_TYPE.WEEKLY:
-      return 'Weekly'
-    case PACKAGE_TYPE.TWO_MONTH:
-      return '2 Months'
-    case PACKAGE_TYPE.THREE_MONTH:
-      return '3 Months'
-    case PACKAGE_TYPE.SIX_MONTH:
-      return '6 Months'
-    default:
-      return 'Subscription'
-  }
-}
-
-function getMonthlyEquivalent(pkg: PurchasesPackage): string | null {
-  const { product, packageType } = pkg
-
-  if (packageType === PACKAGE_TYPE.ANNUAL) {
-    const yearlyPrice = product.price
-    const monthlyEquiv = yearlyPrice / 12
-    return `$${monthlyEquiv.toFixed(2)}`
-  }
-
-  return null
-}
-
-function getSavings(pkg: PurchasesPackage): string | null {
-  if (pkg.packageType === PACKAGE_TYPE.ANNUAL) {
-    return '40%'
-  }
-  return null
-}
-
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: SPACING.md,
-  },
-  selectionBorder: {
-    position: 'absolute',
-    top: -2,
-    left: -2,
-    right: -2,
-    bottom: -2,
-    borderRadius: RADIUS.xl + 2,
-    overflow: 'hidden',
-  },
-  borderGradient: {
-    flex: 1,
-  },
+  container: { marginBottom: SPACING.md },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: RADIUS.xl,
     padding: SPACING.lg,
-    borderWidth: 2,
-    borderColor: COLORS.neutral[200],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   cardSelected: {
-    borderColor: 'transparent',
-    backgroundColor: COLORS.primary[50],
+    backgroundColor: 'rgba(245, 158, 11, 0.1)', // Gold tint
+    borderColor: DARK.accent.gold,
+  },
+  cardPopular: {
+    borderColor: 'rgba(245, 158, 11, 0.3)',
   },
   popularBadge: {
     position: 'absolute',
-    top: -12,
-    left: SPACING.lg,
+    top: -10,
+    left: 20,
+    borderRadius: 4,
     overflow: 'hidden',
-    borderRadius: 8,
-    ...SHADOWS.sm,
   },
   popularGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
-  shimmer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 200,
-  },
-  shimmerGradient: {
-    flex: 1,
-    width: 200,
-  },
-  popularText: {
-    fontFamily: FONTS.bold,
-    fontSize: 10,
-    color: '#FFF',
-    letterSpacing: 1,
-  },
+  shimmer: { position: 'absolute', top: 0, bottom: 0, width: 50 },
+  popularText: { fontSize: 10, fontWeight: 'bold', color: '#FFF' },
+
   content: {
     flex: 1,
-  },
-  period: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 18,
-    color: COLORS.neutral[900],
-    marginBottom: 4,
-  },
-  priceRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: SPACING.sm,
+    justifyContent: 'space-between',
+    paddingRight: SPACING.lg,
   },
-  price: {
-    fontFamily: FONTS.bold,
-    fontSize: 28,
-    color: COLORS.neutral[900],
-  },
-  perMonth: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
-    color: COLORS.neutral[500],
-  },
-  savingsBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.success[100],
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginTop: SPACING.xs,
-  },
-  savingsText: {
-    fontFamily: FONTS.semiBold,
+  period: { fontSize: 16, fontFamily: FONTS.bold, color: '#FFF' },
+  savings: {
     fontSize: 12,
-    color: COLORS.success[700],
+    color: DARK.accent.gold,
+    marginTop: 2,
+    fontFamily: FONTS.bold,
   },
-  radioOuter: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+
+  price: { fontSize: 18, fontFamily: FONTS.bold, color: '#FFF' },
+  perMonth: { fontSize: 12, color: DARK.text.secondary },
+
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.neutral[300],
+    borderColor: DARK.text.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOuterSelected: {
-    borderColor: COLORS.primary[500],
+  radioSelected: {
+    borderColor: DARK.accent.gold,
+    backgroundColor: DARK.accent.gold,
   },
   radioInner: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#000',
   },
 })
