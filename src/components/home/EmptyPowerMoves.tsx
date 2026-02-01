@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     bottom: 15,
     borderRadius: 50,
     opacity: 0.5,
-    filter: 'blur(30px)', // Web support
+    // Web support
   },
   iconCircle: {
     width: 90,

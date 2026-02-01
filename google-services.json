@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "217223445515",
+    "project_id": "momentum-446a5",
+    "storage_bucket": "momentum-446a5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:217223445515:android:6b66c79995ec2451f85b0e",
+        "android_client_info": {
+          "package_name": "com.trikcode.momentum"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXdi4UvvqQPzRK6jDT5EExAyZkaOEWEKU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

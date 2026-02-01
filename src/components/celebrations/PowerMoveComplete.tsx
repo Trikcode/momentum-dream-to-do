@@ -47,36 +47,38 @@ export function PowerMoveComplete({
   useEffect(() => {
     trigger('success')
 
-    // Overlay fade in
-    overlayOpacity.value = withTiming(1, { duration: 200 })
+    overlayOpacity.value = withTiming(1, { duration: 400 })
 
-    // Check mark animation
     checkScale.value = withDelay(
-      200,
-      withSpring(1, { damping: 8, stiffness: 150 }),
+      300,
+      withSpring(1, { damping: 12, stiffness: 100 }),
     )
-    checkOpacity.value = withDelay(200, withTiming(1, { duration: 200 }))
+    checkOpacity.value = withDelay(300, withTiming(1, { duration: 300 }))
 
-    // Expanding ring
     ringScale.value = withDelay(
-      200,
-      withTiming(3, { duration: 600, easing: Easing.out(Easing.cubic) }),
+      300,
+      withTiming(3, { duration: 700, easing: Easing.out(Easing.cubic) }),
     )
-    ringOpacity.value = withDelay(200, withTiming(0, { duration: 600 }))
+    ringOpacity.value = withDelay(300, withTiming(0, { duration: 700 }))
 
-    // Content fade in
-    contentOpacity.value = withDelay(500, withTiming(1, { duration: 300 }))
-    contentY.value = withDelay(500, withSpring(0, { damping: 15 }))
+    contentOpacity.value = withDelay(600, withTiming(1, { duration: 400 }))
+    contentY.value = withDelay(
+      600,
+      withSpring(0, { damping: 18, stiffness: 100 }),
+    )
 
     // Spark animation
-    sparkScale.value = withDelay(800, withSpring(1, { damping: 10 }))
+    sparkScale.value = withDelay(
+      900,
+      withSpring(1, { damping: 14, stiffness: 100 }),
+    )
 
-    // Auto dismiss
+    // Auto dismiss (keep timing)
     setTimeout(() => {
-      overlayOpacity.value = withTiming(0, { duration: 300 }, () => {
+      overlayOpacity.value = withTiming(0, { duration: 400 }, () => {
         runOnJS(onComplete)()
       })
-    }, 2200)
+    }, 2500)
   }, [])
 
   const overlayStyle = useAnimatedStyle(() => ({

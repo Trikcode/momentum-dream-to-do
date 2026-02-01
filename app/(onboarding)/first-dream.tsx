@@ -119,7 +119,7 @@ export default function FirstDreamScreen() {
   const { user } = useAuthStore()
 
   // Store Logic
-  const { dreams } = useDreamStore()
+  const { dreams, fetchDreams } = useDreamStore()
   const { isPremium, getDreamsLimit, setShowPaywall } = usePremiumStore()
 
   const dreamsLimit = getDreamsLimit()
@@ -193,12 +193,7 @@ export default function FirstDreamScreen() {
       })
 
       if (dreamError) throw dreamError
-
-      await supabase
-        .from('profiles')
-        .update({ has_onboarded: true })
-        .eq('id', user.id)
-
+      await fetchDreams()
       router.replace('/(onboarding)/complete')
     } catch (error: any) {
       console.error('Dream creation error:', error)

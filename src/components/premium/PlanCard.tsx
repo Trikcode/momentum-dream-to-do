@@ -1,4 +1,3 @@
-// src/components/premium/PlanCard.tsx
 import React, { useEffect } from 'react'
 import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { PurchasesPackage, PACKAGE_TYPE } from 'react-native-purchases'
@@ -15,7 +14,6 @@ import Animated, {
 import * as Haptics from 'expo-haptics'
 import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 
-// (Helper functions getPeriodLabel, getMonthlyEquivalent, getSavings remain the same)
 function getPeriodLabel(packageType: PACKAGE_TYPE): string {
   switch (packageType) {
     case PACKAGE_TYPE.MONTHLY:
@@ -39,10 +37,19 @@ function getSavings(pkg: PurchasesPackage): string | null {
   return null
 }
 
+function getTrialText(pkg: PurchasesPackage): string | null {
+  if (pkg.product.introPrice) {
+    const intro = pkg.product.introPrice
+    return `${intro.periodNumberOfUnits} ${intro.periodUnit.toLowerCase()} free`
+  }
+  return null
+}
+
 interface PlanCardProps {
   pkg: PurchasesPackage
   isSelected: boolean
   isPopular?: boolean
+  hasFreeTrial?: boolean
   onSelect: () => void
 }
 
@@ -50,6 +57,7 @@ export function PlanCard({
   pkg,
   isSelected,
   isPopular,
+  hasFreeTrial = false,
   onSelect,
 }: PlanCardProps) {
   const scale = useSharedValue(1)
@@ -59,6 +67,7 @@ export function PlanCard({
   const period = getPeriodLabel(pkg.packageType)
   const perMonth = getMonthlyEquivalent(pkg)
   const savings = getSavings(pkg)
+  const trialText = hasFreeTrial ? getTrialText(pkg) : null
 
   useEffect(() => {
     if (isPopular) {
@@ -115,9 +124,21 @@ export function PlanCard({
         )}
 
         <View style={styles.content}>
-          <View>
+          <View style={styles.leftContent}>
             <Text style={styles.period}>{period}</Text>
-            {savings && <Text style={styles.savings}>{savings}</Text>}
+            <View style={styles.badgesRow}>
+              {savings && <Text style={styles.savings}>{savings}</Text>}
+              {trialText && (
+                <View style={styles.trialBadge}>
+                  <Ionicons
+                    name='gift-outline'
+                    size={10}
+                    color={DARK.accent.emerald}
+                  />
+                  <Text style={styles.trialText}>{trialText}</Text>
+                </View>
+              )}
+            </View>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.price}>{price}</Text>
@@ -146,7 +167,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   cardSelected: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)', // Gold tint
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
     borderColor: DARK.accent.gold,
   },
   cardPopular: {
@@ -172,12 +193,36 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingRight: SPACING.lg,
   },
+  leftContent: {
+    flex: 1,
+  },
   period: { fontSize: 16, fontFamily: FONTS.bold, color: '#FFF' },
+
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
   savings: {
     fontSize: 12,
     color: DARK.accent.gold,
-    marginTop: 2,
     fontFamily: FONTS.bold,
+  },
+  trialBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  trialText: {
+    fontSize: 10,
+    color: DARK.accent.emerald,
+    fontFamily: FONTS.medium,
+    textTransform: 'capitalize',
   },
 
   price: { fontSize: 18, fontFamily: FONTS.bold, color: '#FFF' },

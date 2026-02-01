@@ -1,6 +1,12 @@
-// src/components/celebrations/VictoryModal.tsx
 import React, { useEffect } from 'react'
-import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  Pressable,
+  Platform,
+} from 'react-native'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
@@ -11,16 +17,32 @@ import Animated, {
   withDelay,
   withSequence,
   withTiming,
+  withRepeat,
   Easing,
   FadeIn,
   SlideInDown,
+  interpolate,
+  ZoomIn,
 } from 'react-native-reanimated'
-import { Confetti } from './Confetti'
-import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '@/src/constants/theme'
-import { LANGUAGE } from '@/src/constants/language'
-import { useHaptics } from '@/src/hooks/useHaptics'
+import * as Haptics from 'expo-haptics'
+import { Confetti } from './Confetti' // Assuming you have this component
 
 const { width, height } = Dimensions.get('window')
+
+// ============================================================================
+// LOCAL THEME (Premium Dark Mode)
+// ============================================================================
+const THEME = {
+  colors: {
+    gold: ['#F59E0B', '#D97706'],
+    purple: ['#A855F7', '#7C3AED'],
+    rose: ['#F43F5E', '#E11D48'],
+    glass: 'rgba(30, 35, 45, 0.7)',
+    border: 'rgba(255,255,255,0.15)',
+    text: '#FFFFFF',
+    textDim: '#94A3B8',
+  },
+}
 
 interface Victory {
   id: string
@@ -38,142 +60,225 @@ interface VictoryModalProps {
   showConfetti?: boolean
 }
 
+// ============================================================================
+// COMPONENT: SUNBURST (God Rays)
+// ============================================================================
+const Sunburst = () => {
+  const rotation = useSharedValue(0)
+
+  useEffect(() => {
+    rotation.value = withRepeat(
+      withTiming(360, { duration: 20000, easing: Easing.linear }),
+      -1,
+      false,
+    )
+  }, [])
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }))
+
+  return (
+    <Animated.View style={[styles.sunburstContainer, animatedStyle]}>
+      {[...Array(12)].map((_, i) => (
+        <View
+          key={i}
+          style={[styles.sunRay, { transform: [{ rotate: `${i * 30}deg` }] }]}
+        />
+      ))}
+    </Animated.View>
+  )
+}
+
 export function VictoryModal({
   victory,
   onDismiss,
   showConfetti = true,
 }: VictoryModalProps) {
-  const { trigger } = useHaptics()
+  // Animation Values
   const badgeScale = useSharedValue(0)
-  const badgeRotate = useSharedValue(-30)
   const shimmer = useSharedValue(0)
-  const sparkScale = useSharedValue(0)
+  const glowOpacity = useSharedValue(0)
 
   useEffect(() => {
-    trigger('celebration')
+    // 1. Trigger Haptics
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-    // Badge entrance animation
+    // 2. Animate Badge Pop
     badgeScale.value = withDelay(
       300,
-      withSpring(1, { damping: 8, stiffness: 100 }),
+      withSpring(1, { damping: 12, stiffness: 100 }),
     )
 
-    badgeRotate.value = withDelay(
-      300,
-      withSequence(
-        withSpring(10, { damping: 4 }),
-        withSpring(0, { damping: 8 }),
+    // 3. Animate Glow Pulse
+    glowOpacity.value = withDelay(
+      600,
+      withRepeat(
+        withSequence(
+          withTiming(0.6, { duration: 1500 }),
+          withTiming(0.3, { duration: 1500 }),
+        ),
+        -1,
+        true,
       ),
     )
 
-    // Shimmer effect
-    shimmer.value = withDelay(
-      800,
-      withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+    // 4. Shimmer Effect
+    shimmer.value = withRepeat(
+      withSequence(
+        withDelay(
+          2000,
+          withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        ),
+        withTiming(0, { duration: 0 }),
+      ),
+      -1,
+      false,
     )
-
-    // Spark reward animation
-    sparkScale.value = withDelay(1200, withSpring(1, { damping: 10 }))
   }, [])
 
+  // Styles
   const badgeStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: badgeScale.value }],
+  }))
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
     transform: [
-      { scale: badgeScale.value },
-      { rotate: `${badgeRotate.value}deg` },
+      { scale: interpolate(glowOpacity.value, [0.3, 0.6], [0.9, 1.1]) },
     ],
   }))
 
   const shimmerStyle = useAnimatedStyle(() => ({
-    opacity: shimmer.value * 0.5,
-    transform: [{ translateX: -150 + shimmer.value * 300 }],
+    opacity: interpolate(shimmer.value, [0, 0.5, 1], [0, 0.3, 0]),
+    transform: [
+      { translateX: interpolate(shimmer.value, [0, 1], [-100, 100]) },
+      { skewX: '-20deg' },
+    ],
   }))
 
-  const sparkStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sparkScale.value }],
-    opacity: sparkScale.value,
-  }))
-
-  const getCategoryColors = (): [string, string] => {
+  // Determine Colors based on category
+  const getGradient = (): readonly [string, string, ...string[]] => {
     switch (victory.category) {
-      case 'streak':
-        return ['#FF6B6B', '#FF8E53']
       case 'dreams':
-        return COLORS.gradients.dream as [string, string]
-      case 'actions':
-        return COLORS.gradients.success as [string, string]
-      case 'special':
-        return COLORS.gradients.accent as [string, string]
+        return THEME.colors.purple as any
+      case 'streak':
+        return THEME.colors.rose as any
       default:
-        return COLORS.gradients.primary as [string, string]
+        return THEME.colors.gold as any // Default to Gold for generic victory
     }
   }
 
   return (
     <View style={styles.container}>
-      {/* Background blur */}
-      <BlurView intensity={30} style={StyleSheet.absoluteFill} tint='dark' />
+      {/* 1. Dark Backdrop Blur */}
+      <BlurView intensity={40} tint='dark' style={StyleSheet.absoluteFill} />
+      <View style={styles.backdropOverlay} />
 
-      {/* Confetti */}
-      {showConfetti && <Confetti count={80} />}
+      {/* 2. Confetti Layer */}
+      {showConfetti && (
+        <View style={StyleSheet.absoluteFill} pointerEvents='none'>
+          <Confetti count={120} />
+        </View>
+      )}
 
-      {/* Backdrop tap to dismiss */}
+      {/* 3. Dismiss Area */}
       <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
 
-      {/* Modal content */}
+      {/* 4. The Glass Card */}
       <Animated.View
         entering={SlideInDown.springify().damping(15)}
-        style={styles.modal}
+        style={styles.modalCard}
       >
-        {/* Victory text */}
-        <Animated.View entering={FadeIn.delay(200)}>
-          <Text style={styles.victoryLabel}>{LANGUAGE.victories.unlocked}</Text>
-        </Animated.View>
+        {/* Glass Effect Inside Card */}
+        <View style={styles.cardGlassBg} />
 
-        {/* Badge */}
-        <Animated.View style={[styles.badgeContainer, badgeStyle]}>
-          <LinearGradient
-            colors={getCategoryColors()}
-            style={styles.badge}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            {/* Shimmer effect */}
-            <Animated.View style={[styles.shimmer, shimmerStyle]} />
+        {/* --- CONTENT --- */}
 
-            <Ionicons name={victory.iconName as any} size={64} color='#FFF' />
-          </LinearGradient>
-
-          {/* Glow rings */}
-          <View style={[styles.glowRing, styles.glowRing1]} />
-          <View style={[styles.glowRing, styles.glowRing2]} />
-        </Animated.View>
-
-        {/* Victory name */}
-        <Animated.View entering={FadeIn.delay(600)}>
-          <Text style={styles.victoryName}>{victory.name}</Text>
-          <Text style={styles.victoryDescription}>{victory.description}</Text>
-        </Animated.View>
-
-        {/* Spark reward */}
-        <Animated.View style={[styles.sparkReward, sparkStyle]}>
-          <View style={styles.sparkIcon}>
-            <Ionicons name='sparkles' size={20} color={COLORS.accent[500]} />
+        {/* Header Label */}
+        <Animated.View entering={FadeIn.delay(400)}>
+          <View style={styles.labelContainer}>
+            <View style={styles.labelLine} />
+            <Text style={styles.label}>VICTORY UNLOCKED</Text>
+            <View style={styles.labelLine} />
           </View>
-          <Text style={styles.sparkAmount}>+{victory.sparkReward}</Text>
-          <Text style={styles.sparkLabel}>{LANGUAGE.spark.plural}</Text>
         </Animated.View>
 
-        {/* Dismiss button */}
-        <Animated.View entering={FadeIn.delay(1500)}>
-          <Pressable onPress={onDismiss} style={styles.dismissButton}>
+        {/* HERO: The Badge */}
+        <View style={styles.heroContainer}>
+          {/* Rotating Sunburst behind */}
+          <Sunburst />
+
+          {/* Pulsing Glow */}
+          <Animated.View
+            style={[
+              styles.glowBehind,
+              glowStyle,
+              { backgroundColor: getGradient()[0] },
+            ]}
+          />
+
+          {/* The Icon Bubble */}
+          <Animated.View style={[styles.badge, badgeStyle]}>
             <LinearGradient
-              colors={getCategoryColors()}
-              style={styles.dismissGradient}
+              colors={getGradient()}
+              style={styles.badgeGradient}
               start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              <Text style={styles.dismissText}>Amazing!</Text>
+              <Animated.View style={[styles.shimmerOverlay, shimmerStyle]} />
+              <Ionicons name={victory.iconName as any} size={72} color='#FFF' />
             </LinearGradient>
+
+            {/* Glossy Reflection */}
+            <View style={styles.badgeGloss} />
+          </Animated.View>
+        </View>
+
+        {/* Text Details */}
+        <Animated.View
+          entering={FadeIn.delay(600).springify()}
+          style={styles.textContainer}
+        >
+          <Text style={styles.victoryName}>{victory.name}</Text>
+          <Text style={styles.victoryDesc}>{victory.description}</Text>
+        </Animated.View>
+
+        {/* Reward Pill */}
+        <Animated.View
+          entering={ZoomIn.delay(900)}
+          style={styles.rewardContainer}
+        >
+          <BlurView
+            intensity={20}
+            tint='light'
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.sparkIcon}>
+            <Ionicons name='sparkles' size={16} color={THEME.colors.gold[0]} />
+          </View>
+          <Text style={styles.rewardText}>
+            <Text style={styles.rewardValue}>+{victory.sparkReward}</Text>{' '}
+            Sparks Earned
+          </Text>
+        </Animated.View>
+
+        {/* Main Action Button */}
+        <Animated.View entering={FadeIn.delay(1200)} style={{ width: '100%' }}>
+          <Pressable onPress={onDismiss}>
+            {({ pressed }) => (
+              <Animated.View
+                style={[styles.button, pressed && styles.buttonPressed]}
+              >
+                <LinearGradient
+                  colors={getGradient()}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <Text style={styles.buttonText}>Claim Victory</Text>
+              </Animated.View>
+            )}
           </Pressable>
         </Animated.View>
       </Animated.View>
@@ -186,114 +291,183 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
+    zIndex: 9999,
   },
-  modal: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl * 1.5,
-    padding: SPACING.xl,
-    alignItems: 'center',
+  backdropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)', // Darken the background further
+  },
+  // The Main Card
+  modalCard: {
     width: width * 0.85,
-    maxWidth: 340,
-    ...SHADOWS.xl,
+    maxWidth: 360,
+    borderRadius: 40,
+    overflow: 'hidden',
+    alignItems: 'center',
+    padding: 32,
+    borderWidth: 1,
+    borderColor: THEME.colors.border,
+    backgroundColor: THEME.colors.glass,
   },
-  victoryLabel: {
-    fontFamily: FONTS.bold,
-    fontSize: 14,
-    color: COLORS.accent[500],
+  cardGlassBg: {
+    ...StyleSheet.absoluteFillObject,
+    // Add noise or subtle texture here if desired
+  },
+  // Top Label
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  labelLine: {
+    width: 20,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  label: {
+    fontFamily: 'Poppins_600SemiBold', // Make sure fonts are loaded
+    fontSize: 12,
+    color: '#F59E0B',
+    letterSpacing: 2,
     textTransform: 'uppercase',
-    letterSpacing: 3,
-    marginBottom: SPACING.lg,
   },
-  badgeContainer: {
+  // Hero Section
+  heroContainer: {
+    width: 200,
+    height: 200,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: 24,
+  },
+  sunburstContainer: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.15,
+  },
+  sunRay: {
+    position: 'absolute',
+    width: 4,
+    height: 300,
+    backgroundColor: '#FFF',
+    borderRadius: 2,
+  },
+  glowBehind: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    filter: 'blur(40px)', // Web/Expo 50+ property, safe to leave
   },
   badge: {
     width: 140,
     height: 140,
     borderRadius: 70,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  badgeGradient: {
+    flex: 1,
+    borderRadius: 70,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
-    ...SHADOWS.lg,
   },
-  shimmer: {
+  badgeGloss: {
     position: 'absolute',
-    width: 60,
-    height: '200%',
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    transform: [{ rotate: '25deg' }],
+    top: 0,
+    left: 20,
+    right: 20,
+    height: 70,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    transform: [{ scaleX: 0.8 }],
   },
-  glowRing: {
+  shimmerOverlay: {
     position: 'absolute',
-    borderRadius: 100,
-    borderWidth: 2,
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
-  glowRing1: {
-    width: 160,
-    height: 160,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  glowRing2: {
-    width: 180,
-    height: 180,
-    borderColor: 'rgba(255,255,255,0.1)',
+  // Text
+  textContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
   },
   victoryName: {
-    fontFamily: FONTS.bold,
-    fontSize: 26,
-    color: COLORS.neutral[900],
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 28,
+    color: '#FFF',
     textAlign: 'center',
-    marginBottom: SPACING.xs,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
-  victoryDescription: {
-    fontFamily: FONTS.regular,
+  victoryDesc: {
+    fontFamily: 'Poppins_400Regular',
     fontSize: 15,
-    color: COLORS.neutral[500],
+    color: THEME.colors.textDim,
     textAlign: 'center',
-    marginBottom: SPACING.lg,
+    lineHeight: 22,
   },
-  sparkReward: {
+  // Reward Pill
+  rewardContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.accent[50],
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    marginBottom: SPACING.xl,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 30,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)', // Low opacity gold
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    marginBottom: 24,
   },
   sparkIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.accent[100],
+    marginRight: 8,
+  },
+  rewardText: {
+    fontFamily: 'Poppins_500Medium',
+    color: '#FCD34D', // Light Gold
+    fontSize: 14,
+  },
+  rewardValue: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 16,
+  },
+  // Button
+  button: {
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  sparkAmount: {
-    fontFamily: FONTS.bold,
-    fontSize: 22,
-    color: COLORS.accent[600],
+  buttonPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
-  sparkLabel: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
-    color: COLORS.neutral[500],
-  },
-  dismissButton: {
-    ...SHADOWS.md,
-  },
-  dismissGradient: {
-    paddingHorizontal: SPACING.xl * 2,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.full,
-  },
-  dismissText: {
-    fontFamily: FONTS.bold,
+  buttonText: {
+    fontFamily: 'Poppins_600SemiBold',
     fontSize: 16,
     color: '#FFF',
+    letterSpacing: 0.5,
   },
 })

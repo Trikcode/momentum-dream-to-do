@@ -9,8 +9,25 @@ import { Database, Tables, TablesInsert } from '@/src/types/database'
 type DbDream = Tables<'dreams'>
 type DbAction = Tables<'actions'>
 
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  )
+
+const CATEGORY_SLUG_MAP: Record<string, string> = {
+  health: 'fitness',
+  wealth: 'finance',
+  mind: 'lifestyle',
+  skills: 'learning',
+  career: 'career',
+  travel: 'travel',
+  relationships: 'relationships',
+  creativity: 'creativity',
+}
+
 // Extended types for our app (with computed fields)
 interface Dream extends DbDream {
+  category?: { slug: string | null }
   completed_actions?: number
   total_actions?: number
   actions?: { id: string; is_completed: boolean | null }[]
@@ -21,6 +38,9 @@ interface Action extends Omit<DbAction, 'dream'> {
     id: string
     title: string
     category_id: string | null
+    category?: {
+      slug: string
+    }
   }
 }
 
@@ -53,11 +73,10 @@ type CreateActionInput = {
 
 interface DreamState {
   dreams: Dream[]
-  actions: Action[] // All actions (not just today's)
+  actions: Action[]
   todayActions: Action[]
-  isLoading: boolean
-
-  // Dream Actions
+  dreamsLoading: boolean
+  actionsLoading: boolean
   fetchDreams: () => Promise<void>
   createDream: (dream: CreateDreamInput) => Promise<void>
   updateDream: (dreamId: string, updates: UpdateDreamInput) => Promise<void>
@@ -77,26 +96,26 @@ export const useDreamStore = create<DreamState>((set, get) => ({
   dreams: [],
   actions: [],
   todayActions: [],
-  isLoading: false,
+  dreamsLoading: false,
+  actionsLoading: false,
 
-  // ============================================================================
   // DREAM METHODS
-  // ============================================================================
 
   fetchDreams: async () => {
     const user = useAuthStore.getState().user
-    if (!user) return
+    if (!user) throw new Error('Not authenticated')
 
     try {
-      set({ isLoading: true })
+      set({ dreamsLoading: true })
 
       const { data, error } = await supabase
         .from('dreams')
         .select(
           `
-          *,
-          actions (id, is_completed)
-        `,
+  *,
+  category:dream_categories (slug),
+  actions (id, is_completed)
+`,
         )
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -116,34 +135,55 @@ export const useDreamStore = create<DreamState>((set, get) => ({
     } catch (error) {
       console.error('Error fetching dreams:', error)
     } finally {
-      set({ isLoading: false })
+      set({ dreamsLoading: false })
     }
   },
 
   createDream: async (dream: CreateDreamInput) => {
     const user = useAuthStore.getState().user
-    if (!user) return
+    if (!user) throw new Error('Not authenticated')
 
     try {
+      // Resolve category UUID if UI passed a key like "health"
+      let categoryId: string | null = dream.category_id ?? null
+
+      if (categoryId && !isUuid(categoryId)) {
+        const slug = CATEGORY_SLUG_MAP[categoryId] ?? categoryId
+
+        const { data: cat, error: catErr } = await supabase
+          .from('dream_categories')
+          .select('id')
+          .eq('slug', slug)
+          .single()
+
+        if (catErr) throw catErr
+        categoryId = cat.id
+      }
+
       const insertData: TablesInsert<'dreams'> = {
         user_id: user.id,
         title: dream.title,
         description: dream.description ?? null,
-        category_id: dream.category_id ?? null,
+        category_id: categoryId,
         target_date: dream.target_date ?? null,
       }
 
       const { data, error } = await supabase
         .from('dreams')
         .insert(insertData)
-        .select()
+        .select(
+          `
+        *,
+        category:dream_categories (slug)
+      `,
+        )
         .single()
 
       if (error) throw error
 
       set((state) => ({
         dreams: [
-          { ...data, completed_actions: 0, total_actions: 0 } as Dream,
+          { ...(data as any), completed_actions: 0, total_actions: 0 } as Dream,
           ...state.dreams,
         ],
       }))
@@ -155,7 +195,7 @@ export const useDreamStore = create<DreamState>((set, get) => ({
 
   updateDream: async (dreamId: string, updates: UpdateDreamInput) => {
     const user = useAuthStore.getState().user
-    if (!user) return
+    if (!user) throw new Error('Not authenticated')
 
     try {
       const { data, error } = await supabase
@@ -193,7 +233,7 @@ export const useDreamStore = create<DreamState>((set, get) => ({
 
   deleteDream: async (dreamId: string) => {
     const user = useAuthStore.getState().user
-    if (!user) return
+    if (!user) throw new Error('Not authenticated')
 
     try {
       const { error } = await supabase
@@ -215,13 +255,11 @@ export const useDreamStore = create<DreamState>((set, get) => ({
     }
   },
 
-  // ============================================================================
   // ACTION METHODS
-  // ============================================================================
 
   fetchAllActions: async () => {
     const user = useAuthStore.getState().user
-    if (!user) return
+    if (!user) throw new Error('Not authenticated')
 
     try {
       const { data, error } = await supabase
@@ -229,7 +267,7 @@ export const useDreamStore = create<DreamState>((set, get) => ({
         .select(
           `
           *,
-          dream:dreams (id, title, category_id)
+          dream:dreams (id, title, category_id, category:dream_categories (slug))
         `,
         )
         .eq('user_id', user.id)
@@ -245,7 +283,7 @@ export const useDreamStore = create<DreamState>((set, get) => ({
 
   fetchActionsByDream: async (dreamId: string) => {
     const user = useAuthStore.getState().user
-    if (!user) return
+    if (!user) throw new Error('Not authenticated')
 
     try {
       const { data, error } = await supabase
@@ -253,7 +291,7 @@ export const useDreamStore = create<DreamState>((set, get) => ({
         .select(
           `
           *,
-          dream:dreams (id, title, category_id)
+          dream:dreams (id, title, category_id, category:dream_categories (slug))
         `,
         )
         .eq('user_id', user.id)
@@ -275,10 +313,10 @@ export const useDreamStore = create<DreamState>((set, get) => ({
 
   fetchTodayActions: async () => {
     const user = useAuthStore.getState().user
-    if (!user) return
+    if (!user) throw new Error('Not authenticated')
 
     try {
-      set({ isLoading: true })
+      set({ actionsLoading: true })
 
       const today = new Date().toISOString().split('T')[0]
 
@@ -287,7 +325,7 @@ export const useDreamStore = create<DreamState>((set, get) => ({
         .select(
           `
           *,
-          dream:dreams (id, title, category_id)
+          dream:dreams (id, title, category_id, category:dream_categories (slug))
         `,
         )
         .eq('user_id', user.id)
@@ -301,13 +339,13 @@ export const useDreamStore = create<DreamState>((set, get) => ({
     } catch (error) {
       console.error('Error fetching today actions:', error)
     } finally {
-      set({ isLoading: false })
+      set({ actionsLoading: false })
     }
   },
 
   addAction: async (action: CreateActionInput) => {
     const user = useAuthStore.getState().user
-    if (!user) return
+    if (!user) throw new Error('Not authenticated')
 
     try {
       const insertData: TablesInsert<'actions'> = {
@@ -327,7 +365,7 @@ export const useDreamStore = create<DreamState>((set, get) => ({
         .select(
           `
           *,
-          dream:dreams (id, title, category_id)
+          dream:dreams (id, title, category_id, category:dream_categories (slug))
         `,
         )
         .single()
@@ -414,9 +452,11 @@ export const useDreamStore = create<DreamState>((set, get) => ({
       }))
 
       // Trigger celebration
-      useCelebrationStore
-        .getState()
-        .triggerPowerMoveComplete(action.title, action.xp_reward ?? 10)
+      setTimeout(() => {
+        useCelebrationStore
+          .getState()
+          .triggerPowerMoveComplete(action.title, action.xp_reward ?? 10)
+      }, 400)
 
       // Refresh profile for updated XP/streak
       await useAuthStore.getState().refreshProfile()

@@ -37,9 +37,7 @@ import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 
 const { width, height } = Dimensions.get('window')
 
-// ============================================================================
 // TYPES & DATA
-// ============================================================================
 
 interface SlideData {
   id: string
@@ -80,9 +78,7 @@ const SLIDES: SlideData[] = [
   },
 ]
 
-// ============================================================================
 // COMPONENTS
-// ============================================================================
 
 // Reusing the Blob from Welcome screen for consistency
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
@@ -136,7 +132,6 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           borderRadius: size / 2,
           backgroundColor: color,
           opacity: 0.4,
-          filter: 'blur(40px)', // Web support
         },
         animatedStyle,
       ]}
@@ -211,58 +206,47 @@ const IntroSlide = ({
     </View>
   )
 }
+// Add this component before Paginator
+const PaginatorDot = ({ index, scrollX }: { index: number; scrollX: any }) => {
+  const animatedDotStyle = useAnimatedStyle(() => {
+    const inputRange = [(index - 1) * width, index * width, (index + 1) * width]
 
-// Pagination Component
+    const dotWidth = interpolate(
+      scrollX.value,
+      inputRange,
+      [8, 24, 8],
+      Extrapolation.CLAMP,
+    )
+
+    const opacity = interpolate(
+      scrollX.value,
+      inputRange,
+      [0.3, 1, 0.3],
+      Extrapolation.CLAMP,
+    )
+
+    return {
+      width: dotWidth,
+      opacity,
+      backgroundColor: DARK.text.primary,
+    }
+  })
+
+  return <Animated.View style={[styles.dot, animatedDotStyle]} />
+}
+
+// Replace existing Paginator with this
 const Paginator = ({ data, scrollX }: { data: SlideData[]; scrollX: any }) => {
   return (
     <View style={styles.paginatorContainer}>
-      {data.map((_, i) => {
-        const animatedDotStyle = useAnimatedStyle(() => {
-          const inputRange = [(i - 1) * width, i * width, (i + 1) * width]
-
-          const dotWidth = interpolate(
-            scrollX.value,
-            inputRange,
-            [8, 24, 8],
-            Extrapolation.CLAMP,
-          )
-
-          const opacity = interpolate(
-            scrollX.value,
-            inputRange,
-            [0.3, 1, 0.3],
-            Extrapolation.CLAMP,
-          )
-
-          const backgroundColor = interpolate(
-            scrollX.value,
-            inputRange,
-            // Interpolating colors needs manual handling or use Animated.interpolateColor
-            // Simple fallback approach for opacity handling primarily
-            [0, 1, 0],
-          )
-
-          return {
-            width: dotWidth,
-            opacity,
-            backgroundColor: DARK.text.primary,
-          }
-        })
-
-        return (
-          <Animated.View
-            key={i.toString()}
-            style={[styles.dot, animatedDotStyle]}
-          />
-        )
-      })}
+      {data.map((_, i) => (
+        <PaginatorDot key={i.toString()} index={i} scrollX={scrollX} />
+      ))}
     </View>
   )
 }
 
-// ============================================================================
 // MAIN SCREEN
-// ============================================================================
 
 export default function IntroScreen() {
   const insets = useSafeAreaInsets()
@@ -404,9 +388,7 @@ export default function IntroScreen() {
   )
 }
 
-// ============================================================================
 // STYLES
-// ============================================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -456,7 +438,6 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     opacity: 0.5,
-    filter: 'blur(30px)',
   },
   iconGlass: {
     width: 120,

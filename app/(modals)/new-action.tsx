@@ -1,5 +1,5 @@
 // app/(modals)/new-action.tsx
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
   Text,
@@ -10,8 +10,10 @@ import {
   Platform,
   Pressable,
   Dimensions,
+  ActivityIndicator,
+  InteractionManager,
 } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
@@ -104,7 +106,6 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           borderRadius: size / 2,
           backgroundColor: color,
           opacity: 0.25,
-          filter: 'blur(50px)',
         },
         style,
       ]}
@@ -120,7 +121,7 @@ export default function NewActionModal() {
   const insets = useSafeAreaInsets()
   const { dreamId } = useLocalSearchParams<{ dreamId?: string }>()
   const { showToast } = useToast()
-  const { addAction, dreams } = useDreamStore()
+  const { addAction, dreams, fetchDreams, dreamsLoading } = useDreamStore()
 
   const [title, setTitle] = useState('')
   const [selectedDreamId, setSelectedDreamId] = useState(dreamId || '')
@@ -130,6 +131,18 @@ export default function NewActionModal() {
   const [isFocused, setIsFocused] = useState(false)
 
   const activeDreams = dreams.filter((d) => d.status === 'active')
+
+  useFocusEffect(
+    useCallback(() => {
+      if (dreams.length === 0) fetchDreams()
+    }, [dreams.length, fetchDreams]),
+  )
+
+  useEffect(() => {
+    if (!selectedDreamId && activeDreams.length > 0) {
+      setSelectedDreamId(activeDreams[0].id)
+    }
+  }, [activeDreams.length])
 
   // Custom Toggle Animation
   const togglePos = useSharedValue(0)
@@ -169,11 +182,15 @@ export default function NewActionModal() {
       })
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      showToast({
-        type: 'success',
-        title: `${LANGUAGE.powerMoves.singular} added!`,
-      })
       router.back()
+
+      InteractionManager.runAfterInteractions(() => {
+        showToast({
+          type: 'success',
+          title: `${LANGUAGE.powerMoves.singular} added`,
+          message: 'Ready when you are.',
+        })
+      })
     } catch (error) {
       showToast({ type: 'error', title: 'Failed to add action' })
     } finally {
@@ -257,57 +274,79 @@ export default function NewActionModal() {
             </View>
           </Animated.View>
 
-          {/* Dream Selection */}
           <Animated.View entering={FadeInUp.delay(200).duration(500)}>
             <Text style={styles.label}>Connect to a Dream</Text>
-            <View style={styles.dreamsGrid}>
-              {activeDreams.map((dream) => {
-                const isSelected = selectedDreamId === dream.id
-                return (
-                  <Pressable
-                    key={dream.id}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                      setSelectedDreamId(dream.id)
-                    }}
-                    style={[
-                      styles.dreamOption,
-                      isSelected && {
-                        borderColor: DARK.accent.rose,
-                        backgroundColor: DARK.accent.rose + '10',
-                      },
-                    ]}
-                  >
-                    <View style={styles.dreamIcon}>
-                      <Ionicons
-                        name='planet'
-                        size={16}
-                        color={isSelected ? DARK.accent.rose : DARK.text.muted}
-                      />
-                    </View>
-                    <Text
+            {dreamsLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color={DARK.accent.rose} />
+                <Text style={styles.loadingText}>Loading dreams...</Text>
+              </View>
+            ) : activeDreams.length === 0 ? (
+              <Pressable
+                onPress={() => router.push('/(modals)/new-dream')}
+                style={styles.emptyDreamsCard}
+              >
+                <Ionicons
+                  name='add-circle-outline'
+                  size={32}
+                  color={DARK.text.muted}
+                />
+                <Text style={styles.emptyDreamsText}>
+                  No dreams yet. Create one first!
+                </Text>
+              </Pressable>
+            ) : (
+              <View style={styles.dreamsGrid}>
+                {activeDreams.map((dream) => {
+                  const isSelected = selectedDreamId === dream.id
+                  return (
+                    <Pressable
+                      key={dream.id}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                        setSelectedDreamId(dream.id)
+                      }}
                       style={[
-                        styles.dreamOptionText,
+                        styles.dreamOption,
                         isSelected && {
-                          color: DARK.text.primary,
-                          fontFamily: FONTS.semiBold,
+                          borderColor: DARK.accent.rose,
+                          backgroundColor: DARK.accent.rose + '10',
                         },
                       ]}
-                      numberOfLines={1}
                     >
-                      {dream.title}
-                    </Text>
-                    {isSelected && (
-                      <Ionicons
-                        name='checkmark'
-                        size={16}
-                        color={DARK.accent.rose}
-                      />
-                    )}
-                  </Pressable>
-                )
-              })}
-            </View>
+                      <View style={styles.dreamIcon}>
+                        <Ionicons
+                          name='planet'
+                          size={16}
+                          color={
+                            isSelected ? DARK.accent.rose : DARK.text.muted
+                          }
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.dreamOptionText,
+                          isSelected && {
+                            color: DARK.text.primary,
+                            fontFamily: FONTS.semiBold,
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {dream.title}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons
+                          name='checkmark'
+                          size={16}
+                          color={DARK.accent.rose}
+                        />
+                      )}
+                    </Pressable>
+                  )
+                })}
+              </View>
+            )}
           </Animated.View>
 
           {/* Difficulty Grid */}
@@ -652,5 +691,32 @@ const styles = StyleSheet.create({
   },
   createButton: {
     ...DARK.glow.rose,
+  },
+  // Add to styles in new-action.tsx
+  loadingContainer: {
+    padding: SPACING.xl,
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  loadingText: {
+    fontFamily: FONTS.medium,
+    fontSize: 14,
+    color: DARK.text.muted,
+  },
+  emptyDreamsCard: {
+    padding: SPACING.xl,
+    alignItems: 'center',
+    gap: SPACING.md,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderStyle: 'dashed',
+  },
+  emptyDreamsText: {
+    fontFamily: FONTS.medium,
+    fontSize: 14,
+    color: DARK.text.muted,
+    textAlign: 'center',
   },
 })

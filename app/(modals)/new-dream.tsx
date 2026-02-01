@@ -1,4 +1,3 @@
-// app/(modals)/new-dream.tsx
 import React, { useState, useRef } from 'react'
 import {
   View,
@@ -43,11 +42,8 @@ export default function NewDreamModal() {
   const [targetDate, setTargetDate] = useState<Date | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isFocused, setIsFocused] = useState(false)
+  const [activeInput, setActiveInput] = useState<string | null>(null)
 
-  const inputRef = useRef<TextInput>(null)
-
-  // Logic
   const activeDreams = dreams.filter((d) => d.status === 'active').length
   const dreamsLimit = getDreamsLimit()
   const canCreate = isPremium || activeDreams < dreamsLimit
@@ -80,7 +76,7 @@ export default function NewDreamModal() {
       showToast({
         type: 'success',
         title: 'Dream created!',
-        message: 'Start adding power moves to make it happen',
+        message: 'Let’s build some momentum.',
       })
       router.back()
     } catch (error) {
@@ -90,13 +86,22 @@ export default function NewDreamModal() {
     }
   }
 
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false)
+    }
+    if (selectedDate) {
+      setTargetDate(selectedDate)
+    }
+  }
+
   return (
     <View style={styles.container}>
       {/* Background Ambience */}
       <View style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={DARK.gradients.bg as [string, string, string]}
+          colors={['#0F1115', '#161B22', '#0F1115']}
           style={StyleSheet.absoluteFill}
         />
       </View>
@@ -109,46 +114,51 @@ export default function NewDreamModal() {
           <Pressable onPress={() => router.back()} style={styles.closeButton}>
             <Ionicons name='close' size={20} color={DARK.text.secondary} />
           </Pressable>
-          <Text style={styles.headerTitle}>New Dream</Text>
+          <Text style={styles.headerTitle}>New Mission</Text>
           <View style={{ width: 36 }} />
         </View>
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 140 }, // Added extra padding here to clear the button
+          ]}
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
-          {/* Free Limit Warning */}
+          {/* Limit Warning */}
           {!isPremium && (
             <Animated.View
               entering={FadeInUp.delay(100)}
               style={styles.limitCard}
             >
-              <Ionicons
-                name='information-circle'
-                size={20}
-                color={DARK.accent.rose}
-              />
+              <View style={styles.limitIcon}>
+                <Ionicons name='flash' size={14} color={DARK.accent.rose} />
+              </View>
               <Text style={styles.limitText}>
-                {activeDreams}/{dreamsLimit} dreams used
+                {activeDreams}/{dreamsLimit} active dreams used
               </Text>
               <Pressable
                 onPress={() => {
                   setShowPaywall(true)
                   router.push('/(modals)/premium')
                 }}
+                style={styles.upgradeBtn}
               >
-                <Text style={styles.upgradeLink}>Upgrade</Text>
+                <Text style={styles.upgradeLink}>Unlock Unlimited</Text>
               </Pressable>
             </Animated.View>
           )}
 
           {/* Title Input */}
           <Animated.View entering={FadeInUp.delay(200)}>
-            <Text style={styles.label}>What is your dream?</Text>
+            <Text style={styles.label}>Name your dream</Text>
             <View
-              style={[styles.inputWrapper, isFocused && styles.inputFocused]}
+              style={[
+                styles.inputWrapper,
+                activeInput === 'title' && styles.inputFocused,
+              ]}
             >
               <BlurView
                 intensity={20}
@@ -156,24 +166,23 @@ export default function NewDreamModal() {
                 style={StyleSheet.absoluteFill}
               />
               <TextInput
-                ref={inputRef}
                 style={styles.titleInput}
-                placeholder='e.g., Visit Japan, Run a marathon...'
+                placeholder='e.g., Run a Marathon, Visit Japan...'
                 placeholderTextColor={DARK.text.muted}
                 value={title}
                 onChangeText={setTitle}
-                maxLength={100}
+                maxLength={60}
                 multiline
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
+                onFocus={() => setActiveInput('title')}
+                onBlur={() => setActiveInput(null)}
               />
-              <Text style={styles.charCount}>{title.length}/100</Text>
+              <Text style={styles.charCount}>{title.length}/60</Text>
             </View>
           </Animated.View>
 
           {/* Category Selection */}
           <Animated.View entering={FadeInUp.delay(300)}>
-            <Text style={styles.label}>Category</Text>
+            <Text style={styles.label}>Choose a category</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -193,18 +202,19 @@ export default function NewDreamModal() {
                       isSelected && {
                         backgroundColor: category.color,
                         borderColor: category.color,
+                        transform: [{ scale: 1.05 }],
                       },
                     ]}
                   >
                     <Ionicons
                       name={category.icon.name as any}
                       size={16}
-                      color={isSelected ? '#FFF' : DARK.text.muted}
+                      color={isSelected ? '#FFF' : category.color}
                     />
                     <Text
                       style={[
                         styles.categoryChipText,
-                        isSelected && { color: '#FFF' },
+                        isSelected && { color: '#FFF', fontFamily: FONTS.bold },
                       ]}
                     >
                       {category.name}
@@ -218,10 +228,14 @@ export default function NewDreamModal() {
           {/* Description */}
           <Animated.View entering={FadeInUp.delay(400)}>
             <Text style={styles.label}>
-              Why is this important?{' '}
-              <Text style={styles.optional}>(Optional)</Text>
+              Why it matters <Text style={styles.optional}>(Optional)</Text>
             </Text>
-            <View style={styles.inputWrapper}>
+            <View
+              style={[
+                styles.inputWrapper,
+                activeInput === 'desc' && styles.inputFocused,
+              ]}
+            >
               <BlurView
                 intensity={10}
                 tint='dark'
@@ -229,13 +243,15 @@ export default function NewDreamModal() {
               />
               <TextInput
                 style={styles.descriptionInput}
-                placeholder='Describe your motivation...'
+                placeholder='Connect with your "Why"...'
                 placeholderTextColor={DARK.text.muted}
                 value={description}
                 onChangeText={setDescription}
-                maxLength={500}
+                maxLength={300}
                 multiline
                 textAlignVertical='top'
+                onFocus={() => setActiveInput('desc')}
+                onBlur={() => setActiveInput(null)}
               />
             </View>
           </Animated.View>
@@ -245,53 +261,81 @@ export default function NewDreamModal() {
             <Text style={styles.label}>
               Target Date <Text style={styles.optional}>(Optional)</Text>
             </Text>
-            <Pressable
-              onPress={() => setShowDatePicker(true)}
-              style={styles.dateButton}
-            >
-              <Ionicons
-                name='calendar-outline'
-                size={20}
-                color={DARK.text.secondary}
-              />
-              <Text
+
+            <View style={styles.dateContainer}>
+              <Pressable
+                onPress={() => setShowDatePicker(!showDatePicker)}
                 style={[
-                  styles.dateText,
-                  !targetDate && { color: DARK.text.muted },
+                  styles.dateButton,
+                  showDatePicker && { borderColor: DARK.accent.rose },
                 ]}
               >
-                {targetDate
-                  ? format(targetDate, 'MMMM d, yyyy')
-                  : 'Set a target date'}
-              </Text>
-              {targetDate && (
-                <Pressable onPress={() => setTargetDate(null)}>
+                <View style={styles.dateIconBox}>
                   <Ionicons
-                    name='close-circle'
+                    name='calendar-outline'
                     size={20}
+                    color={targetDate ? DARK.accent.rose : DARK.text.secondary}
+                  />
+                </View>
+                <View style={styles.dateInfo}>
+                  <Text style={styles.dateLabel}>Deadline</Text>
+                  <Text
+                    style={[
+                      styles.dateValue,
+                      !targetDate && { color: DARK.text.muted },
+                    ]}
+                  >
+                    {targetDate
+                      ? format(targetDate, 'MMMM d, yyyy')
+                      : 'Set a date'}
+                  </Text>
+                </View>
+                {targetDate ? (
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation()
+                      setTargetDate(null)
+                    }}
+                  >
+                    <Ionicons
+                      name='close-circle'
+                      size={20}
+                      color={DARK.text.muted}
+                    />
+                  </Pressable>
+                ) : (
+                  <Ionicons
+                    name='chevron-down'
+                    size={16}
                     color={DARK.text.muted}
                   />
-                </Pressable>
+                )}
+              </Pressable>
+
+              {/* iOS Inline Picker / Android Dialog Trigger */}
+              {(showDatePicker ||
+                (Platform.OS === 'ios' && showDatePicker)) && (
+                <Animated.View
+                  entering={FadeInUp}
+                  style={styles.datePickerContainer}
+                >
+                  <DateTimePicker
+                    value={targetDate || new Date()}
+                    mode='date'
+                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                    themeVariant='dark'
+                    accentColor={DARK.accent.rose}
+                    minimumDate={new Date()}
+                    onChange={onDateChange}
+                    style={styles.datePicker}
+                  />
+                </Animated.View>
               )}
-            </Pressable>
+            </View>
           </Animated.View>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={targetDate || new Date()}
-              mode='date'
-              minimumDate={new Date()}
-              onChange={(event, date) => {
-                setShowDatePicker(false)
-                if (date) setTargetDate(date)
-              }}
-            />
-          )}
-
-          <View style={{ height: 100 }} />
         </ScrollView>
 
-        {/* Create Button */}
+        {/* Bottom Floating Dock */}
         <Animated.View
           entering={FadeInUp.delay(600)}
           style={[
@@ -306,6 +350,12 @@ export default function NewDreamModal() {
           />
           <View style={styles.dockBorder} />
 
+          {/* Subtle gradient on top of dock for blending */}
+          <LinearGradient
+            colors={['rgba(255,255,255,0.05)', 'transparent']}
+            style={{ height: 1, width: '100%' }}
+          />
+
           <View style={styles.dockContent}>
             <Button
               title={canCreate ? 'Create Dream' : 'Upgrade to Create'}
@@ -316,13 +366,12 @@ export default function NewDreamModal() {
               size='lg'
               icon={
                 <Ionicons
-                  name={canCreate ? 'sparkles' : 'lock-closed'}
+                  name={canCreate ? 'rocket' : 'lock-closed'}
                   size={18}
                   color='#FFF'
                 />
               }
               iconPosition='left'
-              style={styles.createButton}
             />
           </View>
         </Animated.View>
@@ -367,24 +416,38 @@ const styles = StyleSheet.create({
   limitCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
-    padding: SPACING.md,
+    backgroundColor: 'rgba(244, 63, 94, 0.08)',
+    padding: 12,
     borderRadius: RADIUS.lg,
     marginBottom: SPACING.lg,
     borderWidth: 1,
     borderColor: 'rgba(244, 63, 94, 0.2)',
+    gap: 10,
+  },
+  limitIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(244, 63, 94, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   limitText: {
     flex: 1,
     fontFamily: FONTS.medium,
-    fontSize: 14,
+    fontSize: 13,
     color: DARK.text.secondary,
+  },
+  upgradeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: DARK.accent.rose,
+    borderRadius: RADIUS.full,
   },
   upgradeLink: {
     fontFamily: FONTS.bold,
-    fontSize: 14,
-    color: DARK.accent.rose,
+    fontSize: 12,
+    color: '#FFF',
   },
 
   label: {
@@ -392,7 +455,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: DARK.text.secondary,
     marginBottom: SPACING.sm,
-    marginTop: SPACING.lg,
+    marginTop: SPACING.md,
   },
   optional: {
     fontFamily: FONTS.regular,
@@ -405,18 +468,18 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.08)',
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
   inputFocused: {
     borderColor: DARK.accent.rose,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   titleInput: {
-    fontFamily: FONTS.medium,
-    fontSize: 18,
+    fontFamily: FONTS.semiBold,
+    fontSize: 20,
     color: DARK.text.primary,
-    minHeight: 80,
+    minHeight: 70,
     padding: SPACING.md,
     textAlignVertical: 'top',
   },
@@ -424,7 +487,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: 16,
     color: DARK.text.primary,
-    minHeight: 120,
+    minHeight: 100,
     padding: SPACING.md,
   },
   charCount: {
@@ -438,17 +501,17 @@ const styles = StyleSheet.create({
 
   // Categories
   categoriesScroll: {
-    gap: SPACING.sm,
+    gap: 8,
     paddingVertical: 4,
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: RADIUS.full,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: RADIUS.lg,
+    backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
@@ -458,22 +521,48 @@ const styles = StyleSheet.create({
     color: DARK.text.secondary,
   },
 
-  // Date
+  // Date Section
+  dateContainer: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.md,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
     padding: SPACING.md,
+    gap: SPACING.md,
   },
-  dateText: {
+  dateIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateInfo: {
     flex: 1,
+  },
+  dateLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: DARK.text.muted,
+  },
+  dateValue: {
     fontFamily: FONTS.medium,
     fontSize: 15,
     color: DARK.text.primary,
+    marginTop: 2,
+  },
+  datePickerContainer: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
+  },
+  datePicker: {
+    height: 300,
   },
 
   // Bottom Dock
@@ -482,9 +571,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    overflow: 'hidden',
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
+    overflow: 'hidden',
   },
   dockBorder: {
     position: 'absolute',
@@ -497,8 +586,5 @@ const styles = StyleSheet.create({
   dockContent: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
-  },
-  createButton: {
-    ...DARK.glow.rose,
   },
 })

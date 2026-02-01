@@ -1,3 +1,4 @@
+// app/(auth)/sign-in.tsx
 import React, { useState } from 'react'
 import {
   View,
@@ -11,6 +12,8 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
+  Dimensions,
+  Keyboard,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -22,67 +25,52 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import * as Haptics from 'expo-haptics'
-import { useAuthStore } from '@/src/store/authStore'
+import { useAuthStore, AUTH_CANCELLED_MESSAGE } from '@/src/store/authStore'
+import { DARK, FONTS, RADIUS } from '@/src/constants/theme'
 
-// ============================================================================
-// LOCAL THEME (Consistent with Sign Up)
-// ============================================================================
-const THEME = {
-  colors: {
-    background: '#0F1115',
-    surface: '#181B25',
-    primary: '#F43F5E',
-    primaryGradient: ['#F43F5E', '#E11D48'],
-    text: '#FFFFFF',
-    textSecondary: '#94A3B8',
-    border: 'rgba(255,255,255,0.1)',
-    inputBg: 'rgba(20, 22, 30, 0.6)',
-    error: '#EF4444',
-  },
-}
+// =============================================================================
+// COMPONENTS
+// =============================================================================
 
-// ============================================================================
-// COMPONENT: GLASS INPUT (Reused for consistency)
-// ============================================================================
 const GlassInput = ({ label, icon, error, isPassword, ...props }: any) => {
   const [isFocused, setIsFocused] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const borderColor = error
-    ? THEME.colors.error
+    ? DARK.error
     : isFocused
-      ? THEME.colors.primary
-      : THEME.colors.border
+      ? DARK.accent.rose
+      : 'rgba(255,255,255,0.1)'
 
   const iconColor = error
-    ? THEME.colors.error
+    ? DARK.error
     : isFocused
-      ? THEME.colors.primary
-      : THEME.colors.textSecondary
+      ? DARK.accent.rose
+      : DARK.text.secondary
 
   return (
     <View style={styles.inputContainer}>
       <Text style={styles.label}>{label}</Text>
       <View style={[styles.inputWrapper, { borderColor }]}>
-        <BlurView intensity={20} tint='dark' style={StyleSheet.absoluteFill} />
+        <BlurView intensity={10} tint='dark' style={StyleSheet.absoluteFill} />
 
         <Ionicons
           name={icon}
-          size={20}
+          size={18}
           color={iconColor}
           style={styles.inputIcon}
         />
 
         <TextInput
           style={styles.input}
-          placeholderTextColor={THEME.colors.textSecondary}
+          placeholderTextColor={DARK.text.muted}
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
             setIsFocused(false)
             props.onBlur?.()
           }}
           secureTextEntry={isPassword && !showPassword}
-          selectionColor={THEME.colors.primary}
+          selectionColor={DARK.accent.rose}
           {...props}
         />
 
@@ -90,11 +78,12 @@ const GlassInput = ({ label, icon, error, isPassword, ...props }: any) => {
           <Pressable
             onPress={() => setShowPassword(!showPassword)}
             style={styles.eyeIcon}
+            hitSlop={10}
           >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              size={20}
-              color={THEME.colors.textSecondary}
+              size={18}
+              color={DARK.text.secondary}
             />
           </Pressable>
         )}
@@ -108,9 +97,10 @@ const GlassInput = ({ label, icon, error, isPassword, ...props }: any) => {
   )
 }
 
-// ============================================================================
+// =============================================================================
 // LOGIC
-// ============================================================================
+// =============================================================================
+
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(1, 'Password is required'),
@@ -118,13 +108,13 @@ const signInSchema = z.object({
 
 type SignInForm = z.infer<typeof signInSchema>
 
-// ============================================================================
-// MAIN SCREEN
-// ============================================================================
 export default function SignInScreen() {
   const insets = useSafeAreaInsets()
   const [isLoading, setIsLoading] = useState(false)
-  const { signIn, hasOnboarded } = useAuthStore()
+
+  const signIn = useAuthStore((s) => s.signIn)
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle)
+  const signInWithApple = useAuthStore((s) => s.signInWithApple)
 
   const {
     control,
@@ -135,20 +125,49 @@ export default function SignInScreen() {
     defaultValues: { email: '', password: '' },
   })
 
+  const routeAfterAuth = () => {
+    const { hasOnboarded } = useAuthStore.getState()
+    router.replace(hasOnboarded ? '/(tabs)' : '/(onboarding)/intro')
+  }
+
   const onSubmit = async (data: SignInForm) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    Keyboard.dismiss()
     try {
       setIsLoading(true)
       await signIn(data.email, data.password)
-
-      if (hasOnboarded) {
-        router.replace('/(tabs)')
-      } else {
-        router.replace('/(onboarding)/intro')
-      }
+      routeAfterAuth()
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
       Alert.alert('Sign In Failed', error.message || 'Invalid credentials')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogle = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    try {
+      setIsLoading(true)
+      await signInWithGoogle()
+      routeAfterAuth()
+    } catch (error: any) {
+      if (error?.message === AUTH_CANCELLED_MESSAGE) return
+      Alert.alert('Google Sign-In Failed', error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleApple = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    try {
+      setIsLoading(true)
+      await signInWithApple()
+      routeAfterAuth()
+    } catch (error: any) {
+      if (error?.message === AUTH_CANCELLED_MESSAGE) return
+      Alert.alert('Apple Sign-In Failed', error.message)
     } finally {
       setIsLoading(false)
     }
@@ -158,160 +177,160 @@ export default function SignInScreen() {
     <View style={styles.container}>
       <StatusBar barStyle='light-content' />
 
-      {/* Background Gradient */}
+      {/* Background */}
       <LinearGradient
-        colors={[THEME.colors.background, '#161B22', THEME.colors.background]}
+        colors={[DARK.bg.primary, '#1A1E29', DARK.bg.primary]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Decorative Orb (Positioned differently than Sign Up for variety) */}
+      {/* Ambient Glow */}
       <View style={styles.orb} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: insets.top + 20 },
+            { paddingTop: insets.top + 10 },
           ]}
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
-          {/* Back Button */}
+          {/* Header */}
           <Animated.View entering={FadeInDown.delay(100).duration(400)}>
             <Pressable style={styles.backButton} onPress={() => router.back()}>
-              <BlurView
-                intensity={30}
-                tint='light'
-                style={StyleSheet.absoluteFill}
-              />
               <Ionicons name='arrow-back' size={24} color='#FFF' />
             </Pressable>
+
+            <View style={styles.header}>
+              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.subtitle}>
+                Let's get back to building your empire.
+              </Text>
+            </View>
           </Animated.View>
 
-          {/* Header */}
+          {/* Form Card */}
           <Animated.View
             entering={FadeInDown.delay(200).duration(500)}
-            style={styles.header}
+            style={styles.card}
           >
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>
-              Let's get back to building your empire.
-            </Text>
-          </Animated.View>
-
-          {/* Form */}
-          <Animated.View
-            entering={FadeInDown.delay(300).duration(500)}
-            style={styles.form}
-          >
-            <Controller
-              control={control}
-              name='email'
-              render={({ field: { onChange, onBlur, value } }) => (
-                <GlassInput
-                  label='Email'
-                  placeholder='jane@example.com'
-                  icon='mail-outline'
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.email?.message}
-                  keyboardType='email-address'
-                  autoCapitalize='none'
-                  autoComplete='email'
-                />
-              )}
+            {/* Glass Background */}
+            <BlurView
+              intensity={30}
+              tint='dark'
+              style={StyleSheet.absoluteFill}
             />
 
-            <Controller
-              control={control}
-              name='password'
-              render={({ field: { onChange, onBlur, value } }) => (
-                <GlassInput
-                  label='Password'
-                  placeholder='••••••••'
-                  icon='lock-closed-outline'
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.password?.message}
-                  isPassword
-                  autoCapitalize='none'
-                />
-              )}
-            />
+            <View style={styles.cardContent}>
+              <Controller
+                control={control}
+                name='email'
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <GlassInput
+                    label='Email'
+                    placeholder='jane@example.com'
+                    icon='mail-outline'
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    error={errors.email?.message}
+                    keyboardType='email-address'
+                    autoCapitalize='none'
+                    autoComplete='email'
+                  />
+                )}
+              />
 
-            {/* Forgot Password */}
-            <Pressable
-              style={styles.forgotButton}
-              onPress={() => router.push('/(auth)/forgot-password')}
-            >
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </Pressable>
+              <Controller
+                control={control}
+                name='password'
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <GlassInput
+                    label='Password'
+                    placeholder='••••••••'
+                    icon='lock-closed-outline'
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    error={errors.password?.message}
+                    isPassword
+                    autoCapitalize='none'
+                  />
+                )}
+              />
 
-            {/* Primary Button */}
-            <Pressable
-              onPress={handleSubmit(onSubmit)}
-              disabled={isLoading}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                pressed && { transform: [{ scale: 0.98 }], opacity: 0.9 },
-              ]}
-            >
-              <LinearGradient
-                colors={THEME.colors.primaryGradient as [string, string]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[
-                  StyleSheet.absoluteFill,
-                  { justifyContent: 'center', alignItems: 'center' },
+              <Pressable
+                style={styles.forgotButton}
+                onPress={() => router.push('/(auth)/forgot-password')}
+              >
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleSubmit(onSubmit)}
+                disabled={isLoading}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed && { transform: [{ scale: 0.98 }], opacity: 0.9 },
                 ]}
               >
-                {isLoading ? (
-                  <ActivityIndicator color='#FFF' />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Sign In</Text>
-                )}
-              </LinearGradient>
-            </Pressable>
+                <LinearGradient
+                  colors={DARK.gradients.primary as [string, string]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.btnGradient}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color='#FFF' />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>Sign In</Text>
+                  )}
+                </LinearGradient>
+              </Pressable>
+            </View>
           </Animated.View>
 
-          {/* Divider */}
+          {/* Social & Footer */}
           <Animated.View
-            entering={FadeInDown.delay(400).duration(500)}
-            style={styles.divider}
+            entering={FadeInDown.delay(300).duration(600)}
+            style={styles.footerSection}
           >
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or continue with</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <View style={styles.socialButtons}>
+              <Pressable style={styles.socialButton} onPress={handleGoogle}>
+                <Ionicons name='logo-google' size={22} color='#FFF' />
+              </Pressable>
+
+              {/* Hide Apple on Android */}
+              {Platform.OS === 'ios' && (
+                <Pressable style={styles.socialButton} onPress={handleApple}>
+                  <Ionicons name='logo-apple' size={24} color='#FFF' />
+                </Pressable>
+              )}
+            </View>
+
+            <View style={styles.loginRow}>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <Pressable
+                onPress={() => router.push('/(auth)/sign-up')}
+                hitSlop={10}
+              >
+                <Text style={styles.footerLink}>Sign Up</Text>
+              </Pressable>
+            </View>
           </Animated.View>
 
-          {/* Social Buttons */}
-          <Animated.View
-            entering={FadeInDown.delay(500).duration(500)}
-            style={styles.socialButtons}
-          >
-            <Pressable style={styles.socialButton}>
-              <Ionicons name='logo-google' size={24} color='#FFF' />
-            </Pressable>
-            <Pressable style={styles.socialButton}>
-              <Ionicons name='logo-apple' size={24} color='#FFF' />
-            </Pressable>
-          </Animated.View>
-
-          {/* Footer */}
-          <Animated.View
-            entering={FadeInDown.delay(600).duration(500)}
-            style={styles.footer}
-          >
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <Pressable onPress={() => router.push('/(auth)/sign-up')}>
-              <Text style={styles.footerLink}>Sign Up</Text>
-            </Pressable>
-          </Animated.View>
+          {/* Spacer for Scrolling */}
+          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -321,123 +340,140 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+    backgroundColor: DARK.bg.primary,
   },
   orb: {
     position: 'absolute',
-    bottom: -50,
-    left: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#8B5CF6', // Violet orb for Sign In (vs Pink for Sign Up)
+    bottom: -80,
+    left: -60,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: '#8B5CF6',
     opacity: 0.15,
-    filter: 'blur(80px)',
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    justifyContent: 'center', // Centers content on large screens
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: THEME.colors.border,
-    marginBottom: 32,
+    marginBottom: 20,
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   title: {
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 32,
-    color: THEME.colors.text,
-    letterSpacing: -0.5,
+    fontFamily: FONTS.bold,
+    fontSize: 28,
+    color: '#FFF',
+    marginBottom: 4,
   },
   subtitle: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 16,
-    color: THEME.colors.textSecondary,
-    marginTop: 8,
+    fontFamily: FONTS.regular,
+    fontSize: 15,
+    color: DARK.text.secondary,
   },
-  form: {
-    gap: 20,
+
+  // Card Style
+  card: {
+    borderRadius: RADIUS.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(15, 17, 21, 0.4)',
   },
-  // Custom Glass Input
+  cardContent: {
+    padding: 20,
+    gap: 16,
+  },
+
+  // Input
   inputContainer: {
-    gap: 8,
+    gap: 6,
   },
   label: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 14,
-    color: THEME.colors.textSecondary,
+    fontFamily: FONTS.medium,
+    fontSize: 13,
+    color: DARK.text.secondary,
     marginLeft: 4,
   },
   inputWrapper: {
-    height: 56,
-    borderRadius: 16,
+    height: 52,
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    overflow: 'hidden',
+    paddingHorizontal: 14,
     backgroundColor: 'rgba(255,255,255,0.03)',
+    overflow: 'hidden',
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   input: {
     flex: 1,
     height: '100%',
-    color: THEME.colors.text,
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 16,
+    color: '#FFF',
+    fontFamily: FONTS.regular,
+    fontSize: 15,
   },
   eyeIcon: {
-    padding: 8,
+    padding: 4,
   },
   errorText: {
-    color: THEME.colors.error,
+    color: DARK.error,
     fontSize: 12,
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: FONTS.regular,
     marginLeft: 4,
   },
-  // Form specifics
+
+  // Buttons
   forgotButton: {
     alignSelf: 'flex-end',
+    marginTop: -4,
   },
   forgotText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 14,
-    color: THEME.colors.primary,
+    fontFamily: FONTS.medium,
+    fontSize: 13,
+    color: DARK.accent.rose,
   },
   primaryButton: {
-    height: 56,
-    borderRadius: 28,
+    height: 52,
+    borderRadius: 26,
     marginTop: 8,
-    overflow: 'hidden',
-    shadowColor: THEME.colors.primary,
-    shadowOffset: { width: 0, height: 8 },
+    shadowColor: DARK.accent.rose,
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  btnGradient: {
+    flex: 1,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   primaryButtonText: {
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: FONTS.semiBold,
     fontSize: 16,
     color: '#FFF',
   },
-  // Divider
+
+  // Footer
+  footerSection: {
+    marginTop: 24,
+  },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 32,
+    marginBottom: 20,
   },
   dividerLine: {
     flex: 1,
@@ -445,41 +481,39 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
   dividerText: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
-    color: THEME.colors.textSecondary,
+    fontFamily: FONTS.regular,
+    fontSize: 13,
+    color: DARK.text.tertiary,
     marginHorizontal: 16,
   },
-  // Social
   socialButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 20,
+    gap: 16,
+    marginBottom: 24,
   },
   socialButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Footer
-  footer: {
+  loginRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 32,
   },
   footerText: {
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: FONTS.regular,
     fontSize: 14,
-    color: THEME.colors.textSecondary,
+    color: DARK.text.secondary,
   },
   footerLink: {
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: FONTS.semiBold,
     fontSize: 14,
-    color: THEME.colors.primary,
+    color: DARK.accent.rose,
   },
 })

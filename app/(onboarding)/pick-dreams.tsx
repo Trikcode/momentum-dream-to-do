@@ -111,7 +111,6 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           borderRadius: size / 2,
           backgroundColor: color,
           opacity: 0.4,
-          filter: 'blur(40px)',
         },
         style,
       ]}

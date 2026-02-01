@@ -1,9 +1,63 @@
 // src/constants/theme.ts
 
-// LIGHT THEME COLORS (Existing - Keep for backward compatibility)
+// =============================================================================
+// SPACING, RADIUS, FONTS (Shared)
+// =============================================================================
+export const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+  '2xl': 24,
+  '3xl': 32,
+  '4xl': 40,
+  '5xl': 48,
+  '6xl': 64,
+}
 
+export const RADIUS = {
+  none: 0,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  '2xl': 28,
+  '3xl': 32,
+  full: 9999,
+}
+
+export const FONTS = {
+  regular: 'Poppins_400Regular',
+  medium: 'Poppins_500Medium',
+  semiBold: 'Poppins_600SemiBold',
+  bold: 'Poppins_700Bold',
+}
+
+export const TYPOGRAPHY = {
+  display: {
+    fontFamily: FONTS.bold,
+    fontSize: 40,
+    lineHeight: 48,
+    letterSpacing: -1,
+  },
+  h1: { fontFamily: FONTS.bold, fontSize: 34, lineHeight: 42 },
+  h2: { fontFamily: FONTS.bold, fontSize: 24, lineHeight: 32 },
+  h3: { fontFamily: FONTS.semiBold, fontSize: 20, lineHeight: 28 },
+  h4: { fontFamily: FONTS.semiBold, fontSize: 18, lineHeight: 24 },
+  body: { fontFamily: FONTS.regular, fontSize: 16, lineHeight: 24 },
+  bodyMedium: { fontFamily: FONTS.medium, fontSize: 16, lineHeight: 24 },
+  bodySm: { fontFamily: FONTS.regular, fontSize: 14, lineHeight: 20 },
+  label: { fontFamily: FONTS.semiBold, fontSize: 11, letterSpacing: 1.5 },
+  caption: { fontFamily: FONTS.regular, fontSize: 14, lineHeight: 20 },
+  small: { fontFamily: FONTS.medium, fontSize: 12, lineHeight: 16 },
+}
+
+// =============================================================================
+// LEGACY LIGHT THEME (COLORS)
+// =============================================================================
 export const COLORS = {
-  // Primary - Warm, empowering coral/rose
   primary: {
     50: '#FFF5F6',
     100: '#FFE4E8',
@@ -16,8 +70,6 @@ export const COLORS = {
     800: '#9F1239',
     900: '#881337',
   },
-
-  // Secondary - Dreamy purple
   secondary: {
     50: '#FAF5FF',
     100: '#F3E8FF',
@@ -30,8 +82,6 @@ export const COLORS = {
     800: '#6B21A8',
     900: '#581C87',
   },
-
-  // Accent - Warm gold/amber for achievements
   accent: {
     50: '#FFFBEB',
     100: '#FEF3C7',
@@ -44,8 +94,6 @@ export const COLORS = {
     800: '#92400E',
     900: '#78350F',
   },
-
-  // Success - Fresh mint
   success: {
     50: '#ECFDF5',
     100: '#D1FAE5',
@@ -58,8 +106,6 @@ export const COLORS = {
     800: '#065F46',
     900: '#064E3B',
   },
-
-  // Neutral - Warm grays
   neutral: {
     0: '#FFFFFF',
     50: '#FAFAF9',
@@ -73,8 +119,6 @@ export const COLORS = {
     800: '#292524',
     900: '#1C1917',
   },
-
-  // Gradients
   gradients: {
     primary: ['#F43F5E', '#E11D48'],
     secondary: ['#A855F7', '#7C3AED'],
@@ -85,16 +129,12 @@ export const COLORS = {
     ocean: ['#06B6D4', '#3B82F6'],
     aurora: ['#A855F7', '#06B6D4', '#10B981'],
   },
-
-  // Glass effects
   glass: {
     light: 'rgba(255, 255, 255, 0.7)',
     medium: 'rgba(255, 255, 255, 0.5)',
     dark: 'rgba(255, 255, 255, 0.3)',
     border: 'rgba(255, 255, 255, 0.2)',
   },
-
-  // Semantic
   background: '#FFFBFA',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
@@ -103,8 +143,9 @@ export const COLORS = {
   info: '#3B82F6',
 }
 
-// DARK THEME COLORS (Premium screens - Welcome, Auth, etc.)
-
+// =============================================================================
+// DARK THEME (The "Obsidian" Look)
+// =============================================================================
 export const DARK = {
   // Backgrounds
   bg: {
@@ -112,6 +153,7 @@ export const DARK = {
     secondary: '#161B22',
     tertiary: '#1C2130',
     card: 'rgba(20, 22, 30, 0.6)',
+    elevated: '#242938', // Added for backward compatibility
   },
 
   // Text
@@ -122,30 +164,42 @@ export const DARK = {
     muted: '#475569',
   },
 
-  // Accent colors
+  // Brand Colors
   accent: {
     rose: '#F43F5E',
     roseDark: '#E11D48',
     gold: '#F59E0B',
     violet: '#8B5CF6',
+    emerald: '#10B981',
+    // Legacy support keys
+    primary: '#6C7CFF',
+    secondary: '#8B98FF',
+    glow: 'rgba(108, 124, 255, 0.4)',
   },
+
+  // Functional
   error: '#EF4444',
   success: '#10B981',
   info: '#3B82F6',
   warning: '#FBBF24',
-  // Borders & overlays
+
+  // Borders & Overlays
   border: {
     light: 'rgba(255, 255, 255, 0.1)',
     medium: 'rgba(255, 255, 255, 0.06)',
     accent: 'rgba(244, 63, 94, 0.3)',
+    // Legacy keys
+    primary: 'rgba(255, 255, 255, 0.08)',
+    secondary: 'rgba(255, 255, 255, 0.04)',
   },
 
   overlay: {
     light: 'rgba(255, 255, 255, 0.03)',
     medium: 'rgba(255, 255, 255, 0.06)',
+    heavy: 'rgba(0, 0, 0, 0.5)',
   },
 
-  // Badge styles
+  // Badge (RESTORED - This caused the crash)
   badge: {
     gold: {
       bg: 'rgba(245, 158, 11, 0.15)',
@@ -164,9 +218,11 @@ export const DARK = {
     bg: ['#0F1115', '#161B22', '#0F1115'],
     primary: ['#F43F5E', '#E11D48'],
     momentum: ['#F43F5E', '#F59E0B'],
+    gold: ['#F59E0B', '#D97706'],
+    ai: ['#A855F7', '#7C3AED'],
   },
 
-  // Glow effects
+  // Glow Effects
   glow: {
     rose: {
       shadowColor: '#F43F5E',
@@ -183,113 +239,18 @@ export const DARK = {
       elevation: 10,
     },
   },
-}
 
-// SPACING
-
-export const SPACING = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
-  '2xl': 24,
-  '3xl': 32,
-  '4xl': 40,
-  '5xl': 48,
-  '6xl': 64,
-}
-
-// RADIUS
-
-export const RADIUS = {
-  none: 0,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  '2xl': 28,
-  '3xl': 32,
-  full: 9999,
-}
-
-// FONTS
-
-export const FONTS = {
-  regular: 'Poppins_400Regular',
-  medium: 'Poppins_500Medium',
-  semiBold: 'Poppins_600SemiBold',
-  bold: 'Poppins_700Bold',
-}
-
-// TYPOGRAPHY
-
-export const TYPOGRAPHY = {
-  // Display
-  display: {
-    fontFamily: FONTS.bold,
-    fontSize: 40,
-    lineHeight: 48,
-    letterSpacing: -1,
-  },
-  // Headings
-  h1: {
-    fontFamily: FONTS.bold,
-    fontSize: 34,
-    lineHeight: 42,
-  },
-  h2: {
-    fontFamily: FONTS.bold,
-    fontSize: 24,
-    lineHeight: 32,
-  },
-  h3: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 20,
-    lineHeight: 28,
-  },
-  h4: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 18,
-    lineHeight: 24,
-  },
-  // Body
-  body: {
-    fontFamily: FONTS.regular,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  bodyMedium: {
-    fontFamily: FONTS.medium,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  bodySm: {
-    fontFamily: FONTS.regular,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  // Labels
-  label: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
-  caption: {
-    fontFamily: FONTS.regular,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  small: {
-    fontFamily: FONTS.medium,
-    fontSize: 12,
-    lineHeight: 16,
+  // Progress (Restored for legacy)
+  progress: {
+    primary: '#4FD1C5',
+    secondary: '#6EE7DB',
+    muted: 'rgba(79, 209, 197, 0.15)',
   },
 }
 
-// SHADOWS
-
+// =============================================================================
+// SHADOWS & ANIMATION
+// =============================================================================
 export const SHADOWS = {
   sm: {
     shadowColor: '#000',
@@ -335,8 +296,6 @@ export const SHADOWS = {
   }),
 }
 
-// ANIMATION CONFIGS
-
 export const SPRING_CONFIGS = {
   gentle: { damping: 20, stiffness: 90 },
   snappy: { damping: 15, stiffness: 150 },
@@ -352,51 +311,5 @@ export const TIMING_CONFIGS = {
   verySlow: { duration: 600 },
 }
 
-// to be removed in future refactors
-
-export const DARK_COLORS = {
-  // Backgrounds
-  background: {
-    primary: '#0F1115',
-    secondary: '#151A23',
-    tertiary: '#1C2130',
-    elevated: '#242938',
-  },
-
-  // Text on dark
-  text: {
-    primary: '#F5F7FA',
-    secondary: '#A0A6B4',
-    tertiary: '#6B7280',
-    muted: '#4B5163',
-  },
-
-  // Accent - Electric Indigo
-  accent: {
-    primary: '#6C7CFF',
-    secondary: '#8B98FF',
-    muted: 'rgba(108, 124, 255, 0.15)',
-    glow: 'rgba(108, 124, 255, 0.4)',
-  },
-
-  // Progress/Success - Soft Teal
-  progress: {
-    primary: '#4FD1C5',
-    secondary: '#6EE7DB',
-    muted: 'rgba(79, 209, 197, 0.15)',
-  },
-
-  // Borders for dark theme
-  border: {
-    primary: 'rgba(255, 255, 255, 0.08)',
-    secondary: 'rgba(255, 255, 255, 0.04)',
-    accent: 'rgba(108, 124, 255, 0.3)',
-  },
-
-  // Overlays for dark theme
-  overlay: {
-    light: 'rgba(255, 255, 255, 0.03)',
-    medium: 'rgba(255, 255, 255, 0.06)',
-    heavy: 'rgba(0, 0, 0, 0.5)',
-  },
-}
+// Backward Compatibility
+export const DARK_COLORS = DARK

@@ -10,14 +10,9 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withDelay,
-  withTiming,
-  runOnJS,
   SlideInUp,
   SlideOutUp,
+  Easing,
 } from 'react-native-reanimated'
 import { BlurView } from 'expo-blur'
 import * as Haptics from 'expo-haptics'
@@ -131,8 +126,8 @@ function ToastItem({
 
   return (
     <Animated.View
-      entering={SlideInUp.springify().damping(15)}
-      exiting={SlideOutUp.springify().damping(15)}
+      entering={SlideInUp.duration(350).easing(Easing.out(Easing.cubic))}
+      exiting={SlideOutUp.duration(250).easing(Easing.in(Easing.cubic))}
       style={styles.toast}
     >
       <BlurView intensity={80} tint='light' style={styles.blur}>

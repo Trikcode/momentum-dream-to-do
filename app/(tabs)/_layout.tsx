@@ -1,10 +1,25 @@
-// app/(tabs)/_layout.tsx
-import React from 'react'
-import { Tabs } from 'expo-router'
+import React, { useEffect } from 'react'
+import { Tabs, router } from 'expo-router'
 import { CustomTabBar } from '@/src/components/navigation/CustomTabBar'
 import { DARK } from '@/src/constants/theme'
+import { useAuthStore } from '@/src/store/authStore'
 
 export default function TabsLayout() {
+  const { session, isLoading, hasOnboarded } = useAuthStore()
+
+  useEffect(() => {
+    if (isLoading) return
+
+    if (!session) {
+      router.replace('/(auth)/welcome')
+      return
+    }
+
+    if (!hasOnboarded) {
+      router.replace('/(onboarding)/intro')
+    }
+  }, [session, isLoading, hasOnboarded])
+
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}

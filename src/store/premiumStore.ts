@@ -1,17 +1,21 @@
 // src/store/premiumStore.ts
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PurchasesPackage, PurchasesOffering, CustomerInfo } from 'react-native-purchases';
-import { revenueCatService, ENTITLEMENT_ID } from '@/src/lib/revenueCat';
+import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import {
+  PurchasesPackage,
+  PurchasesOffering,
+  CustomerInfo,
+} from 'react-native-purchases'
+import { revenueCatService, SubscriptionInfo } from '@/src/lib/revenueCat'
 
 export interface PremiumFeature {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  freeLimit?: number | string;
-  premiumValue: string;
+  id: string
+  name: string
+  description: string
+  icon: string
+  freeLimit?: number | string
+  premiumValue: string
 }
 
 export const PREMIUM_FEATURES: PremiumFeature[] = [
@@ -31,22 +35,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     freeLimit: 'None',
     premiumValue: 'Full Access',
   },
-  {
-    id: 'advanced_stats',
-    name: 'Advanced Insights',
-    description: 'Deep analytics and progress predictions',
-    icon: 'analytics',
-    freeLimit: 'Basic',
-    premiumValue: 'Advanced',
-  },
-  {
-    id: 'custom_themes',
-    name: 'Custom Themes',
-    description: 'Personalize your app appearance',
-    icon: 'color-palette',
-    freeLimit: 'None',
-    premiumValue: '10+ Themes',
-  },
+
   {
     id: 'priority_support',
     name: 'Priority Support',
@@ -63,38 +52,45 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     freeLimit: 'None',
     premiumValue: 'Full Export',
   },
-];
+]
 
 interface PremiumState {
   // Status
-  isPremium: boolean;
-  isLoading: boolean;
-  customerInfo: CustomerInfo | null;
-  
+  isPremium: boolean
+  isLoading: boolean
+  subscriptionInfo: SubscriptionInfo | null
+  customerInfo: CustomerInfo | null
+
+  // Trial
+  isTrialEligible: boolean
+  trialDuration: string | null // e.g., "7 days"
+
   // Offerings
-  offerings: PurchasesOffering | null;
-  selectedPackage: PurchasesPackage | null;
-  
+  offerings: PurchasesOffering | null
+  selectedPackage: PurchasesPackage | null
+  introEligibility: Record<string, boolean>
+
   // UI State
-  showPaywall: boolean;
-  showSuccess: boolean;
-  purchaseError: string | null;
-  
+  showPaywall: boolean
+  showSuccess: boolean
+  purchaseError: string | null
+
   // Actions
-  initialize: (userId?: string) => Promise<void>;
-  fetchOfferings: () => Promise<void>;
-  checkPremiumStatus: () => Promise<boolean>;
-  purchasePackage: (pkg: PurchasesPackage) => Promise<boolean>;
-  restorePurchases: () => Promise<boolean>;
-  setSelectedPackage: (pkg: PurchasesPackage | null) => void;
-  setShowPaywall: (show: boolean) => void;
-  setShowSuccess: (show: boolean) => void;
-  clearError: () => void;
-  
+  initialize: (userId?: string) => Promise<void>
+  fetchOfferings: () => Promise<void>
+  checkPremiumStatus: () => Promise<boolean>
+  purchasePackage: (pkg: PurchasesPackage) => Promise<boolean>
+  restorePurchases: () => Promise<boolean>
+  setSelectedPackage: (pkg: PurchasesPackage | null) => void
+  setShowPaywall: (show: boolean) => void
+  setShowSuccess: (show: boolean) => void
+  clearError: () => void
+  refreshSubscription: () => Promise<void>
+
   // Feature checks
-  canAccessFeature: (featureId: string) => boolean;
-  getDreamsLimit: () => number;
-  getRemainingDreams: (currentCount: number) => number;
+  canAccessFeature: (featureId: string) => boolean
+  getDreamsLimit: () => number
+  getRemainingDreams: (currentCount: number) => number
 }
 
 export const usePremiumStore = create<PremiumState>()(
@@ -103,122 +99,216 @@ export const usePremiumStore = create<PremiumState>()(
       // Initial state
       isPremium: false,
       isLoading: false,
+      subscriptionInfo: null,
       customerInfo: null,
+      isTrialEligible: false,
+      trialDuration: null,
       offerings: null,
       selectedPackage: null,
+      introEligibility: {},
       showPaywall: false,
       showSuccess: false,
       purchaseError: null,
 
       initialize: async (userId?: string) => {
         try {
-          set({ isLoading: true });
-          
-          await revenueCatService.initialize(userId);
-          
-          // Check premium status
-          const customerInfo = await revenueCatService.getCustomerInfo();
-          const isPremium = customerInfo?.entitlements.active[ENTITLEMENT_ID] !== undefined;
-          
-          set({
-            isPremium,
-            customerInfo,
-            isLoading: false,
-          });
+          set({ isLoading: true })
+
+          await revenueCatService.initialize(userId)
+
+          // If user is logged in, login to RevenueCat
+          if (userId) {
+            await revenueCatService.login(userId)
+          }
+
+          // Get customer info
+          const customerInfo = await revenueCatService.getCustomerInfo()
+
+          if (customerInfo) {
+            const subscriptionInfo =
+              revenueCatService.getSubscriptionInfo(customerInfo)
+            const isPremium = subscriptionInfo.isActive
+
+            set({
+              isPremium,
+              subscriptionInfo,
+              customerInfo,
+            })
+
+            // Sync to database
+            if (userId) {
+              await revenueCatService.syncWithDatabase(userId, customerInfo)
+            }
+          }
 
           // Fetch offerings in background
-          get().fetchOfferings();
+          get().fetchOfferings()
 
           // Listen for updates
-          revenueCatService.addCustomerInfoUpdateListener((info) => {
-            const isPremium = info.entitlements.active[ENTITLEMENT_ID] !== undefined;
-            set({ isPremium, customerInfo: info });
-          });
+          revenueCatService.addCustomerInfoUpdateListener(async (info) => {
+            const subscriptionInfo = revenueCatService.getSubscriptionInfo(info)
+            set({
+              isPremium: subscriptionInfo.isActive,
+              subscriptionInfo,
+              customerInfo: info,
+            })
 
+            // Sync to database
+            if (userId) {
+              await revenueCatService.syncWithDatabase(userId, info)
+            }
+          })
         } catch (error) {
-          console.error('Failed to initialize premium:', error);
-          set({ isLoading: false });
+          console.error('Failed to initialize premium:', error)
+        } finally {
+          set({ isLoading: false })
         }
       },
 
       fetchOfferings: async () => {
         try {
-          const offerings = await revenueCatService.getOfferings();
-          set({ offerings });
+          const offerings = await revenueCatService.getOfferings()
+          set({ offerings })
+
+          if (offerings) {
+            // Check trial eligibility for all products
+            const productIds = offerings.availablePackages.map(
+              (p) => p.product.identifier,
+            )
+            const eligibility =
+              await revenueCatService.getIntroEligibility(productIds)
+
+            // Check if any product has a trial
+            const hasTrialEligibility = Object.values(eligibility).some(
+              (e) => e,
+            )
+
+            // Get trial duration from first eligible product
+            let trialDuration: string | null = null
+            for (const pkg of offerings.availablePackages) {
+              if (
+                eligibility[pkg.product.identifier] &&
+                pkg.product.introPrice
+              ) {
+                const intro = pkg.product.introPrice
+                trialDuration = `${intro.periodNumberOfUnits} ${intro.periodUnit.toLowerCase()}`
+                if (intro.periodNumberOfUnits > 1) trialDuration += 's'
+                break
+              }
+            }
+
+            set({
+              introEligibility: eligibility,
+              isTrialEligible: hasTrialEligibility,
+              trialDuration,
+            })
+          }
         } catch (error) {
-          console.error('Failed to fetch offerings:', error);
+          console.error('Failed to fetch offerings:', error)
         }
       },
 
       checkPremiumStatus: async () => {
         try {
-          const isPremium = await revenueCatService.checkPremiumStatus();
-          set({ isPremium });
-          return isPremium;
+          const isPremium = await revenueCatService.checkPremiumStatus()
+          set({ isPremium })
+          return isPremium
         } catch (error) {
-          return false;
+          return false
         }
       },
 
       purchasePackage: async (pkg) => {
         try {
-          set({ isLoading: true, purchaseError: null });
-          
-          const result = await revenueCatService.purchasePackage(pkg);
-          
-          if (result.success) {
+          set({ isLoading: true, purchaseError: null })
+
+          const result = await revenueCatService.purchasePackage(pkg)
+
+          if (result.isCancelled) {
+            set({ isLoading: false })
+            return false
+          }
+
+          if (result.success && result.customerInfo) {
+            const subscriptionInfo = revenueCatService.getSubscriptionInfo(
+              result.customerInfo,
+            )
+
             set({
               isPremium: true,
+              subscriptionInfo,
               customerInfo: result.customerInfo,
               showPaywall: false,
               showSuccess: true,
               isLoading: false,
-            });
-            return true;
+            })
+            return true
           } else {
             set({
               purchaseError: result.error || 'Purchase failed',
               isLoading: false,
-            });
-            return false;
+            })
+            return false
           }
         } catch (error: any) {
           set({
             purchaseError: error.message || 'Purchase failed',
             isLoading: false,
-          });
-          return false;
+          })
+          return false
         }
       },
 
       restorePurchases: async () => {
         try {
-          set({ isLoading: true, purchaseError: null });
-          
-          const result = await revenueCatService.restorePurchases();
-          
-          if (result.success) {
+          set({ isLoading: true, purchaseError: null })
+
+          const result = await revenueCatService.restorePurchases()
+
+          if (result.success && result.customerInfo) {
+            const subscriptionInfo = revenueCatService.getSubscriptionInfo(
+              result.customerInfo,
+            )
+
             set({
               isPremium: true,
+              subscriptionInfo,
               customerInfo: result.customerInfo,
               showPaywall: false,
               showSuccess: true,
               isLoading: false,
-            });
-            return true;
+            })
+            return true
           } else {
             set({
               purchaseError: 'No previous purchases found',
               isLoading: false,
-            });
-            return false;
+            })
+            return false
           }
         } catch (error: any) {
           set({
             purchaseError: error.message || 'Failed to restore',
             isLoading: false,
-          });
-          return false;
+          })
+          return false
+        }
+      },
+
+      refreshSubscription: async () => {
+        try {
+          const customerInfo = await revenueCatService.getCustomerInfo()
+          if (customerInfo) {
+            const subscriptionInfo =
+              revenueCatService.getSubscriptionInfo(customerInfo)
+            set({
+              isPremium: subscriptionInfo.isActive,
+              subscriptionInfo,
+              customerInfo,
+            })
+          }
+        } catch (error) {
+          console.error('Error refreshing subscription:', error)
         }
       },
 
@@ -227,28 +317,21 @@ export const usePremiumStore = create<PremiumState>()(
       setShowSuccess: (show) => set({ showSuccess: show }),
       clearError: () => set({ purchaseError: null }),
 
-      // Feature access helpers
       canAccessFeature: (featureId) => {
-        const { isPremium } = get();
-        
-        // Features available to free users
-        const freeFeatures = ['basic_stats', 'limited_dreams'];
-        
-        if (freeFeatures.includes(featureId)) {
-          return true;
-        }
-        
-        return isPremium;
+        const { isPremium } = get()
+        const freeFeatures = ['basic_stats', 'limited_dreams']
+        if (freeFeatures.includes(featureId)) return true
+        return isPremium
       },
 
       getDreamsLimit: () => {
-        return get().isPremium ? Infinity : 3;
+        return get().isPremium ? Infinity : 3
       },
 
       getRemainingDreams: (currentCount) => {
-        const limit = get().getDreamsLimit();
-        if (limit === Infinity) return Infinity;
-        return Math.max(0, limit - currentCount);
+        const limit = get().getDreamsLimit()
+        if (limit === Infinity) return Infinity
+        return Math.max(0, limit - currentCount)
       },
     }),
     {
@@ -256,7 +339,8 @@ export const usePremiumStore = create<PremiumState>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         isPremium: state.isPremium,
+        subscriptionInfo: state.subscriptionInfo,
       }),
-    }
-  )
-);
+    },
+  ),
+)

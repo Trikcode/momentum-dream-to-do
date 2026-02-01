@@ -1,5 +1,4 @@
-// app/(tabs)/profile.tsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -8,6 +7,9 @@ import {
   Pressable,
   Switch,
   Alert,
+  ActivityIndicator,
+  Platform,
+  Linking,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -15,14 +17,94 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
+import DateTimePicker from '@react-native-community/datetimepicker'
+
 import { useAuthStore } from '@/src/store/authStore'
 import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
-import { LANGUAGE } from '@/src/constants/language'
+import { useNotificationStore } from '@/src/store/notificationStore'
+import { usePremiumStore } from '@/src/store/premiumStore'
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets()
   const { profile, signOut } = useAuthStore()
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const {
+    isEnabled,
+    isLoading,
+    preferences,
+    enableNotifications,
+    disableNotifications,
+    updatePreference,
+    sendTestNotification,
+  } = useNotificationStore()
+
+  const { isPremium } = usePremiumStore()
+
+  const [showTimePicker, setShowTimePicker] = useState(false)
+
+  const handleToggleNotifications = async (value: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+
+    if (value) {
+      const success = await enableNotifications()
+      if (!success) {
+        Alert.alert(
+          'Permission Required',
+          'Please enable notifications in your device settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        )
+      }
+    } else {
+      Alert.alert(
+        'Disable Notifications?',
+        "You won't receive daily reminders or streak alerts.",
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: disableNotifications,
+          },
+        ],
+      )
+    }
+  }
+  const handleTestNotification = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    await sendTestNotification()
+    Alert.alert(
+      'Test Sent! 🧪',
+      'You should receive a test notification in about 2 seconds.',
+    )
+  }
+
+  const handleTimeChange = async (event: any, selectedDate?: Date) => {
+    setShowTimePicker(Platform.OS === 'ios')
+    if (selectedDate && event.type !== 'dismissed') {
+      const hours = selectedDate.getHours().toString().padStart(2, '0')
+      const minutes = selectedDate.getMinutes().toString().padStart(2, '0')
+      const timeString = `${hours}:${minutes}`
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+      await updatePreference('daily_reminder_time', timeString)
+    }
+  }
+
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(':').map(Number)
+    const date = new Date()
+    date.setHours(hours, minutes)
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  }
+
+  const getTimeAsDate = (timeString: string) => {
+    const [hours, minutes] = timeString.split(':').map(Number)
+    const date = new Date()
+    date.setHours(hours, minutes, 0, 0)
+    return date
+  }
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -31,6 +113,7 @@ export default function ProfileScreen() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
+          await disableNotifications()
           await signOut()
           router.replace('/(auth)/welcome')
         },
@@ -44,25 +127,11 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       {/* Background */}
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
           colors={DARK.gradients.bg as [string, string, string]}
           style={StyleSheet.absoluteFill}
         />
-        {/* Ambient Glow */}
-        <View
-          style={{
-            position: 'absolute',
-            top: -100,
-            right: -100,
-            width: 400,
-            height: 400,
-            borderRadius: 200,
-            backgroundColor: DARK.accent.violet,
-            opacity: 0.15,
-            filter: 'blur(80px)',
-          }}
-        />
+        <View style={styles.glowSpot} />
       </View>
 
       <ScrollView
@@ -78,11 +147,8 @@ export default function ProfileScreen() {
           entering={FadeInDown.duration(500)}
           style={styles.profileHeader}
         >
-          {/* Avatar */}
           <View style={styles.avatarContainer}>
-            {/* Glow Ring */}
             <View style={styles.avatarGlow} />
-
             <LinearGradient
               colors={DARK.gradients.primary as [string, string]}
               style={styles.avatar}
@@ -91,8 +157,6 @@ export default function ProfileScreen() {
                 {firstName.charAt(0).toUpperCase()}
               </Text>
             </LinearGradient>
-
-            {/* Level Badge */}
             <View style={styles.levelBadge}>
               <Text style={styles.levelText}>
                 {profile?.current_level || 1}
@@ -103,11 +167,10 @@ export default function ProfileScreen() {
           <Text style={styles.userName}>{profile?.full_name || 'Dreamer'}</Text>
           <Text style={styles.userEmail}>{profile?.email}</Text>
 
-          {/* Quick stats */}
           <View style={styles.quickStats}>
             <QuickStat
               value={profile?.current_streak || 0}
-              label='Momentum'
+              label='Streak'
               icon='flame'
               color={DARK.accent.rose}
             />
@@ -121,72 +184,144 @@ export default function ProfileScreen() {
             <View style={styles.statDivider} />
             <QuickStat
               value={profile?.current_level || 1}
-              label={LANGUAGE.chapter.name}
-              icon='book'
+              label='Level'
+              icon='star'
               color={DARK.accent.violet}
             />
           </View>
         </Animated.View>
 
-        {/* Settings Sections */}
         <Animated.View entering={FadeInUp.delay(200).duration(500)}>
-          {/* Premium Banner */}
-          <Pressable style={styles.premiumCard}>
-            <LinearGradient
-              colors={[DARK.accent.gold, '#B45309']}
-              style={styles.premiumGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+          {!isPremium && (
+            <Pressable
+              style={styles.premiumCard}
+              onPress={() => router.push('/(modals)/premium')}
             >
-              <View style={styles.premiumContent}>
-                <View style={styles.premiumIcon}>
-                  <Ionicons name='diamond' size={20} color={DARK.accent.gold} />
+              <LinearGradient
+                colors={[DARK.accent.gold, '#B45309']}
+                style={styles.premiumGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.premiumContent}>
+                  <View style={styles.premiumIcon}>
+                    <Ionicons
+                      name='diamond'
+                      size={20}
+                      color={DARK.accent.gold}
+                    />
+                  </View>
+                  <View style={styles.premiumText}>
+                    <Text style={styles.premiumTitle}>Upgrade to Premium</Text>
+                    <Text style={styles.premiumSubtitle}>
+                      Unlock unlimited dreams & more
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name='chevron-forward'
+                    size={20}
+                    color='rgba(255,255,255,0.7)'
+                  />
                 </View>
-                <View style={styles.premiumText}>
-                  <Text style={styles.premiumTitle}>Upgrade to Premium</Text>
-                  <Text style={styles.premiumSubtitle}>
-                    Unlock unlimited dreams & AI coaching
-                  </Text>
-                </View>
-                <Ionicons
-                  name='chevron-forward'
-                  size={20}
-                  color='rgba(255,255,255,0.7)'
-                />
-              </View>
-            </LinearGradient>
-          </Pressable>
+              </LinearGradient>
+            </Pressable>
+          )}
 
-          {/* Account Section */}
+          <SettingsSection title='Notifications'>
+            <SettingsRow
+              icon='notifications'
+              label='Push Notifications'
+              sublabel={isEnabled ? 'Enabled' : 'Disabled'}
+              rightElement={
+                isLoading ? (
+                  <ActivityIndicator size='small' color={DARK.accent.rose} />
+                ) : (
+                  <Switch
+                    value={isEnabled}
+                    onValueChange={handleToggleNotifications}
+                    trackColor={{
+                      false: 'rgba(255,255,255,0.1)',
+                      true: DARK.accent.rose,
+                    }}
+                    thumbColor='#FFF'
+                  />
+                )
+              }
+            />
+
+            {isEnabled && (
+              <>
+                <SettingsRow
+                  icon='sunny'
+                  label='Daily Reminder'
+                  rightElement={
+                    <Switch
+                      value={preferences.daily_reminder}
+                      onValueChange={(v) =>
+                        updatePreference('daily_reminder', v)
+                      }
+                      trackColor={{
+                        false: 'rgba(255,255,255,0.1)',
+                        true: DARK.accent.rose,
+                      }}
+                      thumbColor='#FFF'
+                    />
+                  }
+                />
+
+                {preferences.daily_reminder && (
+                  <SettingsRow
+                    icon='time'
+                    label='Reminder Time'
+                    value={formatTime(preferences.daily_reminder_time)}
+                    onPress={() => setShowTimePicker(true)}
+                  />
+                )}
+
+                <SettingsRow
+                  icon='flame'
+                  label='Streak Alerts'
+                  rightElement={
+                    <Switch
+                      value={preferences.streak_alerts}
+                      onValueChange={(v) =>
+                        updatePreference('streak_alerts', v)
+                      }
+                      trackColor={{
+                        false: 'rgba(255,255,255,0.1)',
+                        true: DARK.accent.rose,
+                      }}
+                      thumbColor='#FFF'
+                    />
+                  }
+                />
+
+                <SettingsRow
+                  icon='trophy'
+                  label='Achievement Alerts'
+                  rightElement={
+                    <Switch
+                      value={preferences.achievement_alerts}
+                      onValueChange={(v) =>
+                        updatePreference('achievement_alerts', v)
+                      }
+                      trackColor={{
+                        false: 'rgba(255,255,255,0.1)',
+                        true: DARK.accent.rose,
+                      }}
+                      thumbColor='#FFF'
+                    />
+                  }
+                />
+              </>
+            )}
+          </SettingsSection>
+
           <SettingsSection title='Account'>
             <SettingsRow
               icon='person'
               label='Edit Profile'
-              onPress={() => console.log('Edit profile')} // TODO: Create Edit Profile screen
-            />
-            <SettingsRow
-              icon='notifications'
-              label='Notifications'
-              rightElement={
-                <Switch
-                  value={notificationsEnabled}
-                  onValueChange={(value) => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                    setNotificationsEnabled(value)
-                  }}
-                  trackColor={{
-                    false: 'rgba(255,255,255,0.1)',
-                    true: DARK.accent.rose,
-                  }}
-                  thumbColor='#FFF'
-                />
-              }
-            />
-            <SettingsRow
-              icon='time'
-              label='Daily Reminder'
-              value='9:00 AM'
-              onPress={() => console.log('Set reminder')}
+              onPress={() => router.push('/(modals)/edit-profile')}
             />
           </SettingsSection>
 
@@ -195,17 +330,12 @@ export default function ProfileScreen() {
             <SettingsRow
               icon='help-circle'
               label='Help Center'
-              onPress={() => console.log('Help')}
+              onPress={() => router.push('/(modals)/help-center')}
             />
             <SettingsRow
               icon='chatbubble'
               label='Send Feedback'
-              onPress={() => console.log('Feedback')}
-            />
-            <SettingsRow
-              icon='star'
-              label='Rate Momentum'
-              onPress={() => console.log('Rate')}
+              onPress={() => router.push('/(modals)/feedback')}
             />
           </SettingsSection>
 
@@ -214,12 +344,7 @@ export default function ProfileScreen() {
             <SettingsRow
               icon='document-text'
               label='Privacy Policy'
-              onPress={() => console.log('Privacy')}
-            />
-            <SettingsRow
-              icon='shield-checkmark'
-              label='Terms of Service'
-              onPress={() => console.log('Terms')}
+              onPress={() => router.push('/(modals)/privacy')}
             />
             <SettingsRow
               icon='information-circle'
@@ -227,7 +352,6 @@ export default function ProfileScreen() {
               value='1.0.0'
             />
           </SettingsSection>
-
           {/* Sign Out */}
           <Pressable style={styles.signOutButton} onPress={handleSignOut}>
             <Ionicons name='log-out-outline' size={20} color='#EF4444' />
@@ -235,43 +359,36 @@ export default function ProfileScreen() {
           </Pressable>
         </Animated.View>
 
+        {/* Time Picker */}
+        {showTimePicker && (
+          <DateTimePicker
+            value={getTimeAsDate(preferences.daily_reminder_time)}
+            mode='time'
+            is24Hour={false}
+            display='spinner'
+            onChange={handleTimeChange}
+            themeVariant='dark'
+          />
+        )}
+
         <View style={{ height: 120 }} />
       </ScrollView>
     </View>
   )
 }
 
-// ============================================================================
-// HELPER COMPONENTS
-// ============================================================================
-
-function QuickStat({
-  value,
-  label,
-  icon,
-  color,
-}: {
-  value: number
-  label: string
-  icon: string
-  color: string
-}) {
+// Helper Components
+function QuickStat({ value, label, icon, color }: any) {
   return (
     <View style={styles.quickStat}>
-      <Ionicons name={icon as any} size={18} color={color} />
+      <Ionicons name={icon} size={18} color={color} />
       <Text style={styles.quickStatValue}>{value.toLocaleString()}</Text>
       <Text style={styles.quickStatLabel}>{label}</Text>
     </View>
   )
 }
 
-function SettingsSection({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
+function SettingsSection({ title, children }: any) {
   return (
     <View style={styles.settingsSection}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -280,12 +397,19 @@ function SettingsSection({
   )
 }
 
-function SettingsRow({ icon, label, value, onPress, rightElement }: any) {
+function SettingsRow({
+  icon,
+  label,
+  sublabel,
+  value,
+  onPress,
+  rightElement,
+}: any) {
   return (
     <Pressable
       style={({ pressed }) => [
         styles.settingsRow,
-        pressed && { backgroundColor: 'rgba(255,255,255,0.05)' },
+        pressed && onPress && { backgroundColor: 'rgba(255,255,255,0.05)' },
       ]}
       onPress={() => {
         if (onPress) {
@@ -299,7 +423,10 @@ function SettingsRow({ icon, label, value, onPress, rightElement }: any) {
         <View style={styles.settingsIcon}>
           <Ionicons name={icon} size={18} color={DARK.text.secondary} />
         </View>
-        <Text style={styles.settingsLabel}>{label}</Text>
+        <View>
+          <Text style={styles.settingsLabel}>{label}</Text>
+          {sublabel && <Text style={styles.settingsSublabel}>{sublabel}</Text>}
+        </View>
       </View>
 
       {rightElement || (
@@ -329,6 +456,16 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: SPACING['4xl'],
   },
+  glowSpot: {
+    position: 'absolute',
+    top: -100,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: DARK.accent.violet,
+    opacity: 0.12,
+  },
 
   // Header
   profileHeader: {
@@ -350,14 +487,13 @@ const styles = StyleSheet.create({
   },
   avatarGlow: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 50,
+    top: -5,
+    left: -5,
+    right: -5,
+    bottom: -5,
+    borderRadius: 55,
     backgroundColor: DARK.accent.rose,
-    opacity: 0.3,
-    filter: 'blur(20px)',
+    opacity: 0.2,
   },
   avatarText: {
     fontFamily: FONTS.bold,
@@ -476,6 +612,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: DARK.text.primary,
   },
+  settingsSublabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: DARK.text.tertiary,
+    marginTop: 2,
+  },
   settingsRowRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -484,6 +626,44 @@ const styles = StyleSheet.create({
   settingsValue: {
     fontFamily: FONTS.regular,
     fontSize: 14,
+    color: DARK.text.tertiary,
+  },
+
+  // Test button
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+  },
+  testButtonText: {
+    fontFamily: FONTS.medium,
+    fontSize: 14,
+    color: DARK.accent.violet,
+  },
+
+  // Debug
+  debugSection: {
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+  },
+  debugTitle: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 12,
+    color: DARK.accent.violet,
+    marginBottom: 4,
+  },
+  debugText: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
     color: DARK.text.tertiary,
   },
 
@@ -536,7 +716,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)', // Red border
+    borderColor: 'rgba(239, 68, 68, 0.2)',
     backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   signOutText: {

@@ -1,9 +1,8 @@
 // src/components/home/AICoachFab.tsx
 import React, { useEffect } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View, Text } from 'react-native'
 import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,32 +10,42 @@ import Animated, {
   withSequence,
   withTiming,
   withSpring,
+  interpolate,
+  Easing,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { DARK, RADIUS, SHADOWS, SPACING } from '@/src/constants/theme'
+import { DARK, SPACING } from '@/src/constants/theme'
 
 export function AICoachFab() {
   const glowScale = useSharedValue(1)
-  const glowOpacity = useSharedValue(0.5)
+  const glowOpacity = useSharedValue(0.4)
   const pressScale = useSharedValue(1)
+  const pulseRing = useSharedValue(0)
 
   useEffect(() => {
-    // Breathing animation
+    // Breathing glow
     glowScale.value = withRepeat(
       withSequence(
-        withTiming(1.3, { duration: 2500 }),
-        withTiming(1, { duration: 2500 }),
+        withTiming(1.4, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true,
     )
     glowOpacity.value = withRepeat(
       withSequence(
-        withTiming(0.2, { duration: 2500 }),
-        withTiming(0.5, { duration: 2500 }),
+        withTiming(0.2, { duration: 2000 }),
+        withTiming(0.5, { duration: 2000 }),
       ),
       -1,
       true,
+    )
+
+    // Pulse ring animation
+    pulseRing.value = withRepeat(
+      withTiming(1, { duration: 3000, easing: Easing.out(Easing.ease) }),
+      -1,
+      false,
     )
   }, [])
 
@@ -47,6 +56,11 @@ export function AICoachFab() {
 
   const buttonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.value }],
+  }))
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulseRing.value, [0, 0.5, 1], [0.6, 0.2, 0]),
+    transform: [{ scale: interpolate(pulseRing.value, [0, 1], [1, 1.8]) }],
   }))
 
   const handlePressIn = () => {
@@ -64,7 +78,10 @@ export function AICoachFab() {
 
   return (
     <View style={styles.container}>
-      {/* Outer Glow Ring */}
+      {/* Pulse Ring */}
+      <Animated.View style={[styles.pulseRing, pulseStyle]} />
+
+      {/* Glow */}
       <Animated.View style={[styles.glow, glowStyle]} />
 
       <Pressable
@@ -74,12 +91,16 @@ export function AICoachFab() {
       >
         <Animated.View style={[styles.button, buttonStyle]}>
           <LinearGradient
-            colors={[DARK.accent.violet, '#7C3AED']}
+            colors={['#A855F7', '#7C3AED', '#6D28D9']}
             style={styles.gradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Ionicons name='sparkles' size={24} color='#FFF' />
+            {/* Custom AI Icon - Stylized "AI" text */}
+            <View style={styles.iconContainer}>
+              <Text style={styles.aiText}>AI</Text>
+              <View style={styles.sparkle} />
+            </View>
           </LinearGradient>
         </Animated.View>
       </Pressable>
@@ -90,30 +111,33 @@ export function AICoachFab() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 150, // Sits above the Tab Bar
+    bottom: 150,
     right: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 50,
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#A855F7',
   },
   glow: {
     position: 'absolute',
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: DARK.accent.violet,
-    shadowColor: DARK.accent.violet,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 20,
-    elevation: 10,
+    backgroundColor: '#A855F7',
   },
   button: {
-    shadowColor: '#000',
+    shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
   },
   gradient: {
     width: 56,
@@ -122,6 +146,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFF',
+    letterSpacing: -1,
+  },
+  sparkle: {
+    position: 'absolute',
+    top: -2,
+    right: -6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FCD34D',
+    shadowColor: '#FCD34D',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
   },
 })

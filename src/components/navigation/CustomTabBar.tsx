@@ -1,25 +1,22 @@
 import React, { useEffect } from 'react'
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native'
+import { View, StyleSheet, Pressable, Dimensions } from 'react-native'
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { BlurView } from 'expo-blur'
-import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
-  FadeIn,
+  interpolate,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import {
-  DARK,
-  FONTS,
-  SPACING,
-  RADIUS,
-  SPRING_CONFIGS,
-} from '@/src/constants/theme'
+import { DARK, SPACING, SPRING_CONFIGS } from '@/src/constants/theme'
+
+// -----------------------------------------------------------------------------
+// CONFIG
+// -----------------------------------------------------------------------------
 
 interface TabConfig {
   name: string
@@ -31,8 +28,8 @@ interface TabConfig {
 const TAB_CONFIG: Record<string, TabConfig> = {
   index: {
     name: 'index',
-    icon: 'flash-outline',
-    iconFocused: 'flash',
+    icon: 'sunny-outline', // Updated icon (Sun = Today/Brightness)
+    iconFocused: 'sunny',
     label: 'Today',
   },
   dreams: {
@@ -55,6 +52,10 @@ const TAB_CONFIG: Record<string, TabConfig> = {
   },
 }
 
+// -----------------------------------------------------------------------------
+// MAIN COMPONENT
+// -----------------------------------------------------------------------------
+
 export function CustomTabBar({
   state,
   descriptors,
@@ -63,71 +64,66 @@ export function CustomTabBar({
   const insets = useSafeAreaInsets()
 
   return (
-    <View
-      style={[styles.container, { paddingBottom: Math.max(insets.bottom, 20) }]}
-    >
-      {Platform.OS === 'ios' ? (
-        <BlurView intensity={30} tint='dark' style={styles.blurContainer}>
-          <TabContent state={state} navigation={navigation} />
-        </BlurView>
-      ) : (
-        <View style={[styles.blurContainer, styles.androidFallback]}>
-          <TabContent state={state} navigation={navigation} />
+    <View style={styles.container}>
+      <BlurView
+        intensity={90}
+        tint='dark'
+        style={[styles.blurContainer, { paddingBottom: insets.bottom }]}
+      >
+        {/* Top Border Line for definition */}
+        <View style={styles.topBorder} />
+
+        <View style={styles.tabsRow}>
+          {state.routes.map((route: any, index: number) => {
+            const isFocused = state.index === index
+            const tab = TAB_CONFIG[route.name]
+
+            if (!tab) return null
+
+            return (
+              <TabButton
+                key={route.key}
+                tab={tab}
+                isFocused={isFocused}
+                onPress={() => {
+                  const event = navigation.emit({
+                    type: 'tabPress',
+                    target: route.key,
+                    canPreventDefault: true,
+                  })
+
+                  if (!isFocused && !event.defaultPrevented) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    navigation.navigate(route.name)
+                  }
+                }}
+              />
+            )
+          })}
         </View>
-      )}
+      </BlurView>
     </View>
   )
 }
 
-function TabContent({ state, navigation }: { state: any; navigation: any }) {
-  return (
-    <View style={styles.tabsRow}>
-      {state.routes.map((route: any, index: number) => {
-        const isFocused = state.index === index
-        const tab = TAB_CONFIG[route.name]
+// -----------------------------------------------------------------------------
+// INDIVIDUAL TAB BUTTON
+// -----------------------------------------------------------------------------
 
-        if (!tab) return null
-
-        return (
-          <TabButton
-            key={route.key}
-            tab={tab}
-            isFocused={isFocused}
-            onPress={() => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              })
-
-              if (!isFocused && !event.defaultPrevented) {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                navigation.navigate(route.name)
-              }
-            }}
-          />
-        )
-      })}
-    </View>
-  )
-}
-
-interface TabButtonProps {
+function TabButton({
+  tab,
+  isFocused,
+  onPress,
+}: {
   tab: TabConfig
   isFocused: boolean
   onPress: () => void
-}
-
-function TabButton({ tab, isFocused, onPress }: TabButtonProps) {
+}) {
   const scale = useSharedValue(1)
-  const iconY = useSharedValue(0)
+  const animValue = useSharedValue(0) // 0 to 1 based on focus
 
   useEffect(() => {
-    if (isFocused) {
-      iconY.value = withSpring(-2, SPRING_CONFIGS.bouncy)
-    } else {
-      iconY.value = withSpring(0)
-    }
+    animValue.value = withTiming(isFocused ? 1 : 0, { duration: 300 })
   }, [isFocused])
 
   const handlePressIn = () => {
@@ -138,17 +134,24 @@ function TabButton({ tab, isFocused, onPress }: TabButtonProps) {
     scale.value = withSpring(1, SPRING_CONFIGS.snappy)
   }
 
-  const animatedIconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateY: iconY.value }],
-  }))
+  // Icon floats up slightly when active
+  const animatedIconStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(animValue.value, [0, 1], [0, -4])
+    return {
+      transform: [{ scale: scale.value }, { translateY }],
+    }
+  })
 
-  // Label fades in/out and moves slightly
-  const animatedLabelStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(isFocused ? 1 : 0.5, { duration: 200 }),
-    transform: [
-      { translateY: withTiming(isFocused ? 0 : 2, { duration: 200 }) },
-    ],
-  }))
+  // Dot scales up and gains opacity
+  const dotStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: withSpring(isFocused ? 1 : 0) }],
+      opacity: animValue.value,
+    }
+  })
+
+  // Active color logic
+  const iconColor = isFocused ? '#FFFFFF' : 'rgba(255,255,255,0.4)'
 
   return (
     <Pressable
@@ -157,42 +160,26 @@ function TabButton({ tab, isFocused, onPress }: TabButtonProps) {
       onPressOut={handlePressOut}
       style={styles.tabButton}
     >
-      <View style={styles.iconContainer}>
-        {isFocused && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            style={styles.activePill}
-          >
-            <LinearGradient
-              colors={DARK.gradients.primary as [string, string]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-          </Animated.View>
-        )}
-
+      <View style={styles.innerContainer}>
+        {/* Icon */}
         <Animated.View style={animatedIconStyle}>
           <Ionicons
             name={isFocused ? tab.iconFocused : tab.icon}
-            size={22}
-            color={isFocused ? '#FFF' : DARK.text.secondary}
+            size={26} // Slightly larger for tapability
+            color={iconColor}
           />
         </Animated.View>
-      </View>
 
-      <Animated.Text
-        style={[
-          styles.label,
-          animatedLabelStyle,
-          isFocused && styles.labelFocused,
-        ]}
-      >
-        {tab.label}
-      </Animated.Text>
+        {/* Active Dot Indicator */}
+        <Animated.View style={[styles.activeDot, dotStyle]} />
+      </View>
     </Pressable>
   )
 }
+
+// -----------------------------------------------------------------------------
+// STYLES
+// -----------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: {
@@ -200,61 +187,51 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    // Ensure this sits above everything else
+    width: '100%',
     zIndex: 100,
-    elevation: 20,
+    elevation: 20, // Shadow for Android
   },
   blurContainer: {
     width: '100%',
-    borderRadius: RADIUS['2xl'],
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
-    backgroundColor: 'rgba(0,0,0,0.3)', // Fallback tint for blur
+    backgroundColor: 'rgba(10, 12, 16, 0.85)', // Dark semi-transparent
   },
-  androidFallback: {
-    backgroundColor: '#1E232E',
-    opacity: 0.98,
+  topBorder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   tabsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12, // Fixed height padding
-    paddingHorizontal: SPACING.xs,
+    paddingVertical: 12, // Comfortable touch area
+    paddingHorizontal: SPACING.md,
+    height: 60, // Fixed height for consistency
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    height: '100%',
   },
-  iconContainer: {
-    width: 48,
-    height: 32,
+  innerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 4,
+    height: '100%',
+    width: '100%',
   },
-  activePill: {
-    ...StyleSheet.absoluteFillObject,
-    ...DARK.glow.rose,
-  },
-  label: {
-    fontSize: 10,
-    fontFamily: FONTS.medium,
-    color: DARK.text.secondary,
-  },
-  labelFocused: {
-    color: '#FFF',
-    fontFamily: FONTS.semiBold,
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: DARK.accent.rose,
+    position: 'absolute',
+    bottom: 4, // Positions the dot near the bottom of the tab area
+    shadowColor: DARK.accent.rose,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
 })

@@ -1,4 +1,3 @@
-// app/_layout.tsx
 import { useEffect, useState } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
@@ -18,8 +17,15 @@ import { CelebrationOrchestrator } from '@/src/components/celebrations/Celebrati
 import { useAuthStore } from '@/src/store/authStore'
 import { usePremiumStore } from '@/src/store/premiumStore'
 import { COLORS } from '@/src/constants/theme'
+import { initSupabaseAppStateHandler } from '@/src/lib/supabase'
+import { useNotificationSetup } from '@/src/hooks/useNotificationSetup'
 
 SplashScreen.preventAutoHideAsync()
+
+function NotificationHandler() {
+  useNotificationSetup()
+  return null
+}
 
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false)
@@ -32,6 +38,10 @@ export default function RootLayout() {
     Poppins_600SemiBold,
     Poppins_700Bold,
   })
+
+  useEffect(() => {
+    initSupabaseAppStateHandler()
+  }, [])
 
   useEffect(() => {
     async function prepare() {
@@ -66,7 +76,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ToastProvider>
-          <StatusBar style='dark' />
+          <NotificationHandler />
+          <StatusBar style='light' />
           <OfflineBar />
           <Stack
             screenOptions={{

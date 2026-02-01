@@ -39,7 +39,7 @@ import {
   DreamCategory,
 } from '@/src/constants/dreamCategories'
 import { PowerMoveCard } from '@/src/components/home/PowerMoveCard'
-import { useAuthStore } from '@/src/store/useStore'
+import { useAuthStore } from '@/src/store/authStore'
 
 const { width } = Dimensions.get('window')
 
@@ -308,12 +308,11 @@ export default function DreamDetailModal() {
             </View>
           ) : (
             <>
-              {/* Pending Actions */}
               {pendingActions.map((action, index) => (
                 <Animated.View
                   key={action.id}
                   entering={FadeInUp.delay(300 + index * 50)}
-                  layout={Layout.springify()}
+                  // layout={Layout.springify()}
                 >
                   <PowerMoveCard
                     id={action.id}
@@ -324,10 +323,10 @@ export default function DreamDetailModal() {
                     difficulty={action.difficulty}
                     onComplete={completeAction}
                     onSkip={skipAction}
+                    showHint={index === 0}
                   />
                 </Animated.View>
               ))}
-
               {/* Completed Actions (Smaller/Dimmed) */}
               {completedActions.length > 0 && (
                 <View style={{ marginTop: 20 }}>
@@ -408,7 +407,6 @@ const styles = StyleSheet.create({
     height: 300,
     borderRadius: 150,
     opacity: 0.2,
-    filter: 'blur(80px)',
   },
 
   // Header

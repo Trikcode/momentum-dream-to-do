@@ -2,34 +2,46 @@
   "expo": {
     "name": "Momentum",
     "slug": "momentum",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "momentum",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFBFA"
+      "backgroundColor": "#0F1115"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.trikcode.momentum",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.558924029307-hvcv53ad816c1vpj3hl2fevlnq698b4b"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FFFBFA"
+        "backgroundColor": "#0F1115"
       },
-      "package": "com.trikcode.momentum"
+      "package": "com.trikcode.momentum",
+      "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {
@@ -37,7 +49,12 @@
           "color": "#F43F5E"
         }
       ],
-      "@react-native-google-signin/google-signin"
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.558924029307-hvcv53ad816c1vpj3hl2fevlnq698b4b"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

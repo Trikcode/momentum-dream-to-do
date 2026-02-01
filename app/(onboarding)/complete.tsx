@@ -33,11 +33,7 @@ import { Button } from '@/src/components/ui/Button' // Assuming this supports va
 import { useAuthStore } from '@/src/store/authStore'
 import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 
-const { width } = Dimensions.get('window')
-
-// ============================================================================
 // HELPER COMPONENTS
-// ============================================================================
 
 const StatItem = ({ icon, value, label, color, delay }: any) => (
   <Animated.View
@@ -59,27 +55,26 @@ const StatItem = ({ icon, value, label, color, delay }: any) => (
 
 const VerticalDivider = () => <View style={styles.statDivider} />
 
-// ============================================================================
 // MAIN SCREEN
-// ============================================================================
 
 export default function CompleteScreen() {
   const insets = useSafeAreaInsets()
-  const { profile, refreshProfile, setHasOnboarded } = useAuthStore()
+  const profile = useAuthStore((s) => s.profile)
+  const completeOnboarding = useAuthStore((s) => s.completeOnboarding)
 
-  // Glow Animation for the checkmark background
   const glowScale = useSharedValue(1)
   const glowOpacity = useSharedValue(0.3)
 
   useEffect(() => {
-    // 1. Success Haptics
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    ;(async () => {
+      try {
+        await completeOnboarding()
+      } catch (e) {
+        console.warn('[Complete] completeOnboarding failed:', e)
+      }
+    })()
 
-    // 2. Data Logic
-    refreshProfile()
-    setHasOnboarded(true)
-
-    // 3. Ambient Animation
     glowScale.value = withRepeat(
       withSequence(
         withTiming(1.2, { duration: 2000 }),
@@ -110,6 +105,10 @@ export default function CompleteScreen() {
   }))
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Dreamer'
+
+  const dreamsCount = 1
+  const momentumDays = profile?.current_streak ?? 0
+  const xp = profile?.total_xp ?? 0
 
   return (
     <View style={styles.container}>
@@ -176,7 +175,7 @@ export default function CompleteScreen() {
           <View style={styles.statsContent}>
             <StatItem
               icon='sparkles'
-              value='1'
+              value={String(dreamsCount)}
               label='Dream'
               color={DARK.accent.rose}
               delay={1000}
@@ -184,16 +183,16 @@ export default function CompleteScreen() {
             <VerticalDivider />
             <StatItem
               icon='flame'
-              value='1'
-              label='Streak'
+              value={String(momentumDays)}
+              label='Days'
               color={DARK.accent.gold}
               delay={1100}
             />
             <VerticalDivider />
             <StatItem
               icon='trophy'
-              value='50'
-              label='XP Earned'
+              value={String(xp)}
+              label='XP'
               color={DARK.accent.violet}
               delay={1200}
             />
@@ -237,7 +236,7 @@ const styles = StyleSheet.create({
     height: 400,
     backgroundColor: DARK.accent.rose,
     opacity: 0.15,
-    filter: 'blur(80px)', // Web support
+    // Web support
   },
   content: {
     flex: 1,
@@ -258,7 +257,6 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 100,
     backgroundColor: DARK.accent.rose,
-    filter: 'blur(40px)',
   },
 
   // Typography

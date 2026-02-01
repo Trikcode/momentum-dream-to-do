@@ -27,21 +27,13 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated'
 import { PurchasesPackage, PACKAGE_TYPE } from 'react-native-purchases'
+import * as Haptics from 'expo-haptics'
 
-// Components
 import { PlanCard } from '@/src/components/premium/PlanCard'
 import { FeatureComparison } from '@/src/components/premium/FeatureComparison'
 import { SuccessModal } from '@/src/components/premium/SuccessModal'
 import { usePremiumStore } from '@/src/store/premiumStore'
 import { DARK, FONTS, SPACING, RADIUS, SHADOWS } from '@/src/constants/theme'
-import * as Haptics from 'expo-haptics'
-
-// Mocking useHaptics for now if not available, or import it
-const triggerHaptic = (type: string) => {
-  if (type === 'celebration')
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-  else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-}
 
 const { width } = Dimensions.get('window')
 
@@ -54,6 +46,10 @@ export default function PremiumScreen() {
     isLoading,
     purchaseError,
     showSuccess,
+    isTrialEligible,
+    trialDuration,
+    introEligibility,
+    subscriptionInfo,
     setSelectedPackage,
     purchasePackage,
     restorePurchases,
@@ -89,10 +85,12 @@ export default function PremiumScreen() {
   }, [])
 
   useEffect(() => {
-    if (purchaseError)
+    if (purchaseError) {
       Alert.alert('Error', purchaseError, [{ text: 'OK', onPress: clearError }])
+    }
   }, [purchaseError])
 
+  // Auto-select yearly package
   useEffect(() => {
     if (offerings?.availablePackages && !selectedPackage) {
       const yearlyPkg = offerings.availablePackages.find(
@@ -104,15 +102,19 @@ export default function PremiumScreen() {
 
   const handlePurchase = async () => {
     if (!selectedPackage) return
-    triggerHaptic('tap')
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     const success = await purchasePackage(selectedPackage)
-    if (success) triggerHaptic('celebration')
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    }
   }
 
   const handleRestore = async () => {
-    triggerHaptic('tap')
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     const success = await restorePurchases()
-    if (success) triggerHaptic('celebration')
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    }
   }
 
   const handleClose = () => {
@@ -123,48 +125,54 @@ export default function PremiumScreen() {
   const diamondStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: diamondFloat.value }],
   }))
-  const glowStyle = useAnimatedStyle(() => ({ opacity: glowPulse.value }))
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowPulse.value,
+  }))
 
   const packages = offerings?.availablePackages || []
+
+  // Get CTA text based on trial eligibility
+  const getCtaText = () => {
+    if (!selectedPackage) return 'Select a Plan'
+
+    const hasTrialForSelected =
+      introEligibility[selectedPackage.product.identifier]
+
+    if (hasTrialForSelected && selectedPackage.product.introPrice) {
+      const intro = selectedPackage.product.introPrice
+      return `Start Free ${intro.periodNumberOfUnits}-${intro.periodUnit.toLowerCase()} Trial`
+    }
+
+    return `Start Premium ${selectedPackage.product.priceString}`
+  }
+
+  // Get subtitle text
+  const getSubtitleText = () => {
+    if (!selectedPackage) return ''
+
+    const hasTrialForSelected =
+      introEligibility[selectedPackage.product.identifier]
+
+    if (hasTrialForSelected && selectedPackage.product.introPrice) {
+      return `Then ${selectedPackage.product.priceString}/${selectedPackage.packageType === PACKAGE_TYPE.ANNUAL ? 'year' : 'month'}`
+    }
+
+    return 'Cancel anytime'
+  }
 
   return (
     <View style={styles.container}>
       {/* Background */}
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: '#000' }} />
         <LinearGradient
-          colors={['#1F1205', '#000', '#1F0510']} // Deep Gold/Dark/Deep Rose
+          colors={['#1F1205', '#000', '#1F0510']}
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         />
-        {/* Glow Spots */}
-        <View
-          style={{
-            position: 'absolute',
-            top: -100,
-            left: -50,
-            width: 300,
-            height: 300,
-            borderRadius: 150,
-            backgroundColor: DARK.accent.gold,
-            opacity: 0.15,
-            filter: 'blur(80px)',
-          }}
-        />
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            right: -50,
-            width: 300,
-            height: 300,
-            borderRadius: 150,
-            backgroundColor: DARK.accent.rose,
-            opacity: 0.1,
-            filter: 'blur(80px)',
-          }}
-        />
+        <View style={[styles.glowSpot, styles.glowSpot1]} />
+        <View style={[styles.glowSpot, styles.glowSpot2]} />
       </View>
 
       {/* Close Button */}
@@ -181,7 +189,7 @@ export default function PremiumScreen() {
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 120 },
+          { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 140 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -202,11 +210,24 @@ export default function PremiumScreen() {
             </Animated.View>
           </View>
 
-          <Text style={styles.title}>Unlock Limitless Potential</Text>
+          <Text style={styles.title}>Unlock Your Full Potential</Text>
           <Text style={styles.subtitle}>
             Unlimited dreams, AI coaching, and advanced insights to accelerate
             your growth.
           </Text>
+
+          {/* Trial Badge */}
+          {isTrialEligible && trialDuration && (
+            <Animated.View
+              entering={FadeIn.delay(400)}
+              style={styles.trialBadge}
+            >
+              <Ionicons name='gift' size={16} color={DARK.accent.gold} />
+              <Text style={styles.trialBadgeText}>
+                {trialDuration.toUpperCase()} FREE TRIAL
+              </Text>
+            </Animated.View>
+          )}
         </Animated.View>
 
         {/* Plans */}
@@ -221,6 +242,7 @@ export default function PremiumScreen() {
                 pkg={pkg}
                 isSelected={selectedPackage?.identifier === pkg.identifier}
                 isPopular={pkg.packageType === PACKAGE_TYPE.ANNUAL}
+                hasFreeTrial={introEligibility[pkg.product.identifier]}
                 onSelect={() => setSelectedPackage(pkg)}
               />
             ))
@@ -241,13 +263,32 @@ export default function PremiumScreen() {
           <FeatureComparison />
         </Animated.View>
 
+        {/* Guarantee */}
+        <Animated.View
+          entering={FadeInUp.delay(550)}
+          style={styles.guaranteeCard}
+        >
+          <Ionicons
+            name='shield-checkmark'
+            size={24}
+            color={DARK.accent.emerald}
+          />
+          <View style={styles.guaranteeContent}>
+            <Text style={styles.guaranteeTitle}>100% Money-Back Guarantee</Text>
+            <Text style={styles.guaranteeText}>
+              Not satisfied? Get a full refund within 7 days, no questions
+              asked.
+            </Text>
+          </View>
+        </Animated.View>
+
         {/* Testimonial */}
         <Animated.View
           entering={FadeInUp.delay(600)}
           style={styles.testimonialCard}
         >
           <FontAwesome6
-            name='quote-outline'
+            name='quote-left'
             size={24}
             color={DARK.accent.gold}
             style={{ opacity: 0.5 }}
@@ -269,11 +310,13 @@ export default function PremiumScreen() {
 
         {/* Restore */}
         <Pressable onPress={handleRestore} style={styles.restoreButton}>
-          <Text style={styles.restoreText}>Restore Purchases</Text>
+          <Text style={styles.restoreText}>Already purchased? Restore</Text>
         </Pressable>
 
         <Text style={styles.legal}>
-          Recurring billing. Cancel anytime in settings.
+          Payment will be charged to your App Store or Google Play account.
+          Subscription automatically renews unless cancelled at least 24 hours
+          before the end of the current period.
         </Text>
       </ScrollView>
 
@@ -309,20 +352,20 @@ export default function PremiumScreen() {
               ) : (
                 <>
                   <Ionicons name='diamond' size={20} color='#FFF' />
-                  <Text style={styles.purchaseText}>
-                    Start Premium {selectedPackage?.product.priceString}
-                  </Text>
+                  <Text style={styles.purchaseText}>{getCtaText()}</Text>
                 </>
               )}
             </LinearGradient>
           </Pressable>
-          <Text style={styles.cancelAnytime}>7-day money-back guarantee</Text>
+
+          <Text style={styles.cancelAnytime}>{getSubtitleText()}</Text>
         </View>
       </Animated.View>
 
       {/* Success Modal */}
       {showSuccess && (
         <SuccessModal
+          isTrial={subscriptionInfo?.isTrial}
           onDismiss={() => {
             setShowSuccess(false)
             setShowPaywall(false)
@@ -336,18 +379,42 @@ export default function PremiumScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
+
+  glowSpot: {
+    position: 'absolute',
+    borderRadius: 150,
+  },
+  glowSpot1: {
+    top: -100,
+    left: -50,
+    width: 300,
+    height: 300,
+    backgroundColor: DARK.accent.gold,
+    opacity: 0.15,
+  },
+  glowSpot2: {
+    bottom: 0,
+    right: -50,
+    width: 300,
+    height: 300,
+    backgroundColor: DARK.accent.rose,
+    opacity: 0.1,
+  },
+
   closeButton: { position: 'absolute', right: SPACING.md, zIndex: 100 },
   closeButtonInner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.lg },
 
+  // Header
   header: { alignItems: 'center', marginBottom: SPACING.xl },
   diamondContainer: {
     width: 120,
@@ -362,7 +429,6 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 70,
     backgroundColor: DARK.accent.gold,
-    filter: 'blur(40px)',
   },
   diamondIcon: {
     width: 90,
@@ -374,7 +440,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: FONTS.bold,
-    fontSize: 28,
+    fontSize: 26,
     color: DARK.text.primary,
     textAlign: 'center',
     marginBottom: SPACING.sm,
@@ -387,10 +453,32 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  plansSection: { marginBottom: SPACING.xl },
-  loadingPlans: { alignItems: 'center', padding: SPACING.xl, gap: SPACING.md },
-  loadingText: { color: DARK.text.muted },
+  // Trial Badge
+  trialBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    borderRadius: RADIUS.full,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  trialBadgeText: {
+    fontFamily: FONTS.bold,
+    fontSize: 12,
+    color: DARK.accent.gold,
+    letterSpacing: 0.5,
+  },
 
+  // Plans
+  plansSection: { marginBottom: SPACING.xl, gap: SPACING.sm },
+  loadingPlans: { alignItems: 'center', padding: SPACING.xl, gap: SPACING.md },
+  loadingText: { color: DARK.text.muted, fontFamily: FONTS.regular },
+
+  // Features
   featuresSection: { marginBottom: SPACING.xl },
   sectionTitle: {
     fontFamily: FONTS.semiBold,
@@ -400,11 +488,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Guarantee
+  guaranteeCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.md,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderRadius: RADIUS.xl,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  guaranteeContent: { flex: 1 },
+  guaranteeTitle: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 14,
+    color: DARK.accent.emerald,
+    marginBottom: 4,
+  },
+  guaranteeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 13,
+    color: DARK.text.secondary,
+    lineHeight: 18,
+  },
+
+  // Testimonial
   testimonialCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: RADIUS.xl,
     padding: SPACING.lg,
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
   },
@@ -427,27 +542,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { fontWeight: 'bold', color: '#000' },
-  testimonialName: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  testimonialRole: { color: DARK.accent.gold, fontSize: 12 },
+  testimonialName: { color: '#FFF', fontFamily: FONTS.semiBold, fontSize: 14 },
+  testimonialRole: {
+    color: DARK.accent.gold,
+    fontSize: 12,
+    fontFamily: FONTS.regular,
+  },
 
+  // Restore
   restoreButton: {
     alignItems: 'center',
     padding: SPACING.md,
-    marginBottom: SPACING.xs,
   },
   restoreText: {
     fontFamily: FONTS.medium,
     fontSize: 14,
     color: DARK.text.tertiary,
+    textDecorationLine: 'underline',
   },
   legal: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: 10,
     color: DARK.text.muted,
     textAlign: 'center',
+    lineHeight: 14,
     marginBottom: 20,
   },
 
+  // Bottom CTA
   bottomCTA: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   ctaBorder: {
     position: 'absolute',
@@ -461,7 +583,6 @@ const styles = StyleSheet.create({
   purchaseButton: {
     borderRadius: RADIUS.lg,
     overflow: 'hidden',
-    ...DARK.glow.gold,
   },
   purchaseGradient: {
     flexDirection: 'row',

@@ -51,7 +51,6 @@ export const LANGUAGE = {
     reached: 'Horizon Reached',
   },
 
-  // Time-based mantras (instead of "Good morning")
   mantras: {
     morning: [
       'Rise and make it happen',

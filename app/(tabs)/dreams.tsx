@@ -1,4 +1,3 @@
-// app/(tabs)/dreams.tsx
 import React, { useEffect } from 'react'
 import {
   View,
@@ -22,12 +21,11 @@ import Animated, {
   withDelay,
   Easing,
   useAnimatedStyle,
+  withSpring,
 } from 'react-native-reanimated'
-import { BlurView } from 'expo-blur'
 import * as Haptics from 'expo-haptics'
 
 // Components
-import { DreamOrb } from '@/src/components/dreams/DreamOrb'
 import { GlassCard } from '@/src/components/shared/GlassCard'
 import { Button } from '@/src/components/ui/Button'
 import { useDreamStore } from '@/src/store/dreamStore'
@@ -37,7 +35,14 @@ import {
   DreamCategory,
 } from '@/src/constants/dreamCategories'
 
+// Dimensions for the Grid
 const { width } = Dimensions.get('window')
+const GAP = SPACING.md
+const CARD_WIDTH = (width - SPACING.lg * 2 - GAP) / 2
+
+// -----------------------------------------------------------------------------
+// HELPERS
+// -----------------------------------------------------------------------------
 
 const getCategoryById = (
   categoryId: string | null | undefined,
@@ -48,9 +53,13 @@ const getCategoryById = (
   )
 }
 
+// -----------------------------------------------------------------------------
+// COMPONENT: BACKGROUND BLOB (Ambience)
+// -----------------------------------------------------------------------------
+
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   const scale = useSharedValue(1)
-  const translateY = useSharedValue(0)
+  const opacity = useSharedValue(0.15)
 
   useEffect(() => {
     scale.value = withDelay(
@@ -58,24 +67,10 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
       withRepeat(
         withSequence(
           withTiming(1.2, {
-            duration: 4000,
-            easing: Easing.inOut(Easing.ease),
-          }),
-          withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-        ),
-        -1,
-        true,
-      ),
-    )
-    translateY.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(-30, {
             duration: 6000,
             easing: Easing.inOut(Easing.ease),
           }),
-          withTiming(0, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         true,
@@ -84,7 +79,8 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   }, [])
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateY: translateY.value }],
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
   }))
 
   return (
@@ -98,14 +94,116 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           height: size,
           borderRadius: size / 2,
           backgroundColor: color,
-          opacity: 0.2,
-          filter: 'blur(60px)',
         },
         style,
       ]}
     />
   )
 }
+
+// COMPONENT: ACTIVE DREAM CARD (The New Design)
+const ActiveDreamCard = ({ dream, index, onPress }: any) => {
+  const category = getCategoryById(dream.category_id)
+  const scale = useSharedValue(1)
+
+  // Calculate Progress
+  const progress =
+    dream.total_actions > 0
+      ? (dream.completed_actions ?? 0) / dream.total_actions
+      : 0
+  const percentage = Math.round(progress * 100)
+
+  // Press Animation
+  const handlePressIn = () => {
+    scale.value = withSpring(0.96)
+  }
+  const handlePressOut = () => {
+    scale.value = withSpring(1)
+  }
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }))
+
+  return (
+    <Animated.View entering={FadeInUp.delay(100 + index * 100).springify()}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        <Animated.View style={[styles.cardContainer, animatedStyle]}>
+          {/* Subtle Glass Gradient Background */}
+          <LinearGradient
+            colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {/* Border (Simulated via view or nested gradient) */}
+          <View style={styles.cardBorder} />
+
+          {/* Card Content */}
+          <View style={styles.cardContent}>
+            {/* Header: Icon */}
+            <View style={styles.cardHeader}>
+              <View
+                style={[
+                  styles.iconBox,
+                  { backgroundColor: category.color + '20' },
+                ]}
+              >
+                <Ionicons
+                  name={category.icon as any}
+                  size={20}
+                  color={category.color}
+                />
+              </View>
+              {/* Optional Glow Dot */}
+              <View
+                style={[styles.glowDot, { backgroundColor: category.color }]}
+              />
+            </View>
+
+            {/* Title */}
+            <View style={styles.titleContainer}>
+              <Text style={styles.cardTitle} numberOfLines={3}>
+                {dream.title}
+              </Text>
+            </View>
+
+            {/* Footer: Progress */}
+            <View style={styles.cardFooter}>
+              <View style={styles.progressLabels}>
+                <Text style={styles.percentageText}>{percentage}%</Text>
+                <Text style={styles.stepsText}>
+                  {dream.completed_actions}/{dream.total_actions}
+                </Text>
+              </View>
+
+              <View style={styles.progressBarBg}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${percentage}%`,
+                      backgroundColor: category.color,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
+  )
+}
+
+// -----------------------------------------------------------------------------
+// MAIN SCREEN
+// -----------------------------------------------------------------------------
 
 export default function DreamsScreen() {
   const insets = useSafeAreaInsets()
@@ -116,6 +214,7 @@ export default function DreamsScreen() {
   }, [])
 
   const handleDreamPress = (dreamId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     router.push(`/(modals)/dream-detail?id=${dreamId}`)
   }
 
@@ -132,14 +231,16 @@ export default function DreamsScreen() {
       {/* Background Ambience */}
       <View style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
+        {/* Subtle global gradient */}
         <LinearGradient
-          colors={DARK.gradients.bg as [string, string, string]}
+          colors={['#0F1115', '#161B22', '#0F1115']}
           style={StyleSheet.absoluteFill}
         />
+        {/* Animated Blobs */}
         <BreathingBlob
           color={DARK.accent.rose}
           size={300}
-          top={-50}
+          top={-80}
           left={-80}
         />
         <BreathingBlob
@@ -147,7 +248,7 @@ export default function DreamsScreen() {
           size={250}
           top={400}
           left={width - 150}
-          delay={1000}
+          delay={2000}
         />
       </View>
 
@@ -159,7 +260,8 @@ export default function DreamsScreen() {
         <View>
           <Text style={styles.title}>Your Dreams</Text>
           <Text style={styles.subtitle}>
-            {activeDreams.length} active · {completedDreams.length} achieved
+            {activeDreams.length} in progress · {completedDreams.length}{' '}
+            achieved
           </Text>
         </View>
 
@@ -181,28 +283,15 @@ export default function DreamsScreen() {
         {activeDreams.length > 0 ? (
           <>
             {/* Active Dreams Grid */}
-            <View style={styles.orbsGrid}>
-              {activeDreams.map((dream, index) => {
-                const category = getCategoryById(dream.category_id)
-                return (
-                  <Animated.View
-                    key={dream.id}
-                    entering={FadeInUp.delay(200 + index * 100).springify()}
-                  >
-                    <DreamOrb
-                      id={dream.id}
-                      title={dream.title}
-                      category={category}
-                      progress={dream.progress_percent ?? 0}
-                      completedActions={dream.completed_actions ?? 0}
-                      totalActions={dream.total_actions ?? 0}
-                      isActive={true}
-                      onPress={() => handleDreamPress(dream.id)}
-                      index={index}
-                    />
-                  </Animated.View>
-                )
-              })}
+            <View style={styles.grid}>
+              {activeDreams.map((dream, index) => (
+                <ActiveDreamCard
+                  key={dream.id}
+                  dream={dream}
+                  index={index}
+                  onPress={() => handleDreamPress(dream.id)}
+                />
+              ))}
             </View>
 
             {/* Completed section */}
@@ -211,7 +300,7 @@ export default function DreamsScreen() {
                 entering={FadeInUp.delay(600).duration(500)}
                 style={styles.completedSection}
               >
-                <Text style={styles.completedTitle}>Achieved Dreams ✨</Text>
+                <Text style={styles.completedTitle}>Trophy Room 🏆</Text>
                 {completedDreams.map((dream) => (
                   <CompletedDreamCard
                     key={dream.id}
@@ -232,7 +321,11 @@ export default function DreamsScreen() {
   )
 }
 
-// Completed Card
+// -----------------------------------------------------------------------------
+// SUB-COMPONENTS
+// -----------------------------------------------------------------------------
+
+// Completed Card (Uses the existing GlassCard)
 function CompletedDreamCard({ dream, onPress }: any) {
   const category = getCategoryById(dream.category_id)
   const completedDate = dream.completed_at
@@ -272,20 +365,18 @@ function EmptyDreams({ onCreatePress }: { onCreatePress: () => void }) {
         style={styles.emptyContent}
       >
         <View style={styles.emptyIcon}>
-          {/* Glow */}
           <View
             style={{
               position: 'absolute',
               width: 100,
               height: 100,
               backgroundColor: DARK.accent.violet,
-              opacity: 0.4,
+              opacity: 0.2,
               borderRadius: 50,
-              filter: 'blur(30px)',
             }}
           />
           <LinearGradient
-            colors={DARK.gradients.bg as [string, string, string]}
+            colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
             style={styles.emptyIconGradient}
           >
             <Ionicons name='planet' size={48} color='#FFF' />
@@ -294,11 +385,12 @@ function EmptyDreams({ onCreatePress }: { onCreatePress: () => void }) {
 
         <Text style={styles.emptyTitle}>No dreams yet</Text>
         <Text style={styles.emptySubtitle}>
-          Create your first dream and start turning it into reality.
+          "The future belongs to those who believe in the beauty of their
+          dreams."
         </Text>
 
         <Button
-          title='Create Your First Dream'
+          title='Design Your Future'
           onPress={onCreatePress}
           size='lg'
           icon={<Ionicons name='sparkles' size={20} color='#FFF' />}
@@ -308,6 +400,10 @@ function EmptyDreams({ onCreatePress }: { onCreatePress: () => void }) {
     </View>
   )
 }
+
+// -----------------------------------------------------------------------------
+// STYLES
+// -----------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: {
@@ -335,7 +431,7 @@ const styles = StyleSheet.create({
   addButton: {
     shadowColor: DARK.accent.rose,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
@@ -345,7 +441,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    ...DARK.glow.rose,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   scrollView: {
     flex: 1,
@@ -354,10 +451,94 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
   },
-  orbsGrid: {
+
+  // Grid System
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: GAP,
+  },
+
+  // Active Dream Card
+  cardContainer: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH * 1.25, // Aspect ratio roughly 4:5
+    borderRadius: RADIUS.xl,
+    overflow: 'hidden',
+    backgroundColor: '#181B25', // Fallback
+    marginBottom: SPACING.xs,
+  },
+  cardBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: RADIUS.xl,
+  },
+  cardContent: {
+    flex: 1,
+    padding: SPACING.md,
     justifyContent: 'space-between',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    opacity: 0.8,
+    shadowColor: '#FFF',
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+  },
+  titleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    marginVertical: SPACING.sm,
+  },
+  cardTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 17,
+    color: DARK.text.primary,
+    lineHeight: 22,
+    letterSpacing: -0.3,
+  },
+  cardFooter: {
+    gap: 6,
+  },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  percentageText: {
+    fontFamily: FONTS.bold,
+    fontSize: 14,
+    color: '#FFF',
+  },
+  stepsText: {
+    fontFamily: FONTS.medium,
+    fontSize: 11,
+    color: DARK.text.tertiary,
+  },
+  progressBarBg: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
 
   // Completed Section
@@ -406,7 +587,7 @@ const styles = StyleSheet.create({
   // Empty State
   emptyContainer: {
     flex: 1,
-    paddingTop: 80,
+    paddingTop: 60,
     alignItems: 'center',
   },
   emptyContent: {

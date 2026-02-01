@@ -12,11 +12,15 @@ export default function Index() {
 
     if (!session) {
       router.replace('/(auth)/welcome')
-    } else if (!hasOnboarded) {
-      router.replace('/(onboarding)/intro')
-    } else {
-      router.replace('/(tabs)')
+      return
     }
+
+    if (!hasOnboarded) {
+      router.replace('/(onboarding)/intro')
+      return
+    }
+
+    router.replace('/(tabs)')
   }, [session, isLoading, hasOnboarded])
 
   return (
