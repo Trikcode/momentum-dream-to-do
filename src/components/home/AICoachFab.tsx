@@ -111,7 +111,7 @@ export function AICoachFab() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 150,
+    bottom: 120,
     right: SPACING.lg,
     alignItems: 'center',
     justifyContent: 'center',

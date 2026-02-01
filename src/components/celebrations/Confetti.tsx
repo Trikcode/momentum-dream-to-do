@@ -1,4 +1,3 @@
-// src/components/celebrations/Confetti.tsx
 import React, { useEffect } from 'react'
 import { View, StyleSheet, Dimensions } from 'react-native'
 import Animated, {
@@ -9,23 +8,18 @@ import Animated, {
   withSequence,
   withRepeat,
   Easing,
-  runOnJS,
 } from 'react-native-reanimated'
-import { COLORS } from '@/src/constants/theme'
+import { DARK } from '@/src/constants/theme'
 
 const { width, height } = Dimensions.get('window')
 
+// BRAND COLORS for Confetti
 const CONFETTI_COLORS = [
-  COLORS.primary[400],
-  COLORS.primary[500],
-  COLORS.secondary[400],
-  COLORS.secondary[500],
-  COLORS.accent[400],
-  COLORS.accent[500],
-  COLORS.success[400],
-  '#FFD700',
-  '#FF6B6B',
-  '#4ECDC4',
+  DARK.accent.rose,
+  DARK.accent.gold,
+  DARK.accent.violet,
+  DARK.accent.emerald,
+  '#FFF', // White pop
 ]
 
 interface ConfettiPieceProps {
@@ -40,15 +34,17 @@ function ConfettiPiece({ index, startDelay }: ConfettiPieceProps) {
   const opacity = useSharedValue(1)
   const scale = useSharedValue(1)
 
+  // Randomize physics
   const startX = Math.random() * width
-  const endX = startX + (Math.random() - 0.5) * 200
-  const duration = 2500 + Math.random() * 1500
-  const size = 8 + Math.random() * 8
+  const endX = startX + (Math.random() - 0.5) * 150
+  const duration = 2000 + Math.random() * 1000
+  const size = 6 + Math.random() * 6
   const color =
     CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)]
   const isCircle = Math.random() > 0.5
 
   useEffect(() => {
+    // Fall down
     translateY.value = withDelay(
       startDelay,
       withTiming(height + 100, {
@@ -57,6 +53,7 @@ function ConfettiPiece({ index, startDelay }: ConfettiPieceProps) {
       }),
     )
 
+    // Sway side to side
     translateX.value = withDelay(
       startDelay,
       withSequence(
@@ -65,26 +62,20 @@ function ConfettiPiece({ index, startDelay }: ConfettiPieceProps) {
       ),
     )
 
+    // Spin
     rotate.value = withDelay(
       startDelay,
       withRepeat(
-        withTiming(360, { duration: 1000, easing: Easing.linear }),
+        withTiming(360, { duration: 800, easing: Easing.linear }),
         -1,
         false,
       ),
     )
 
+    // Fade out at end
     opacity.value = withDelay(
-      startDelay + duration - 500,
-      withTiming(0, { duration: 500 }),
-    )
-
-    scale.value = withDelay(
-      startDelay,
-      withSequence(
-        withTiming(1.2, { duration: 200 }),
-        withTiming(1, { duration: 200 }),
-      ),
+      startDelay + duration - 400,
+      withTiming(0, { duration: 400 }),
     )
   }, [])
 
@@ -104,7 +95,7 @@ function ConfettiPiece({ index, startDelay }: ConfettiPieceProps) {
         styles.confettiPiece,
         {
           width: size,
-          height: isCircle ? size : size * 2,
+          height: isCircle ? size : size * 2.5, // Rectangles are longer
           backgroundColor: color,
           borderRadius: isCircle ? size / 2 : 2,
         },
@@ -138,7 +129,7 @@ export function Confetti({
         <ConfettiPiece
           key={index}
           index={index}
-          startDelay={Math.random() * 500}
+          startDelay={Math.random() * 400} // Tighter burst
         />
       ))}
     </View>

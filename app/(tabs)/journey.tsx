@@ -6,10 +6,19 @@ import {
   StyleSheet,
   RefreshControl,
   Text,
-  Pressable,
+  Dimensions,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated'
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
 import { Ionicons } from '@expo/vector-icons'
@@ -18,14 +27,42 @@ import { useAuthStore } from '@/src/store/authStore'
 import { useDreamStore } from '@/src/store/dreamStore'
 import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 
+const { width } = Dimensions.get('window')
+
+// ============================================================================
+// ANIMATED ATMOSPHERE
+// ============================================================================
+const GlowOrb = ({ color, style }: any) => {
+  const scale = useSharedValue(1)
+
+  useEffect(() => {
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.2, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      true,
+    )
+  }, [])
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }))
+
+  return (
+    <Animated.View style={[style, animatedStyle, { backgroundColor: color }]} />
+  )
+}
+
 export default function JourneyScreen() {
   const insets = useSafeAreaInsets()
   const [refreshing, setRefreshing] = useState(false)
 
-  const { profile } = useAuthStore()
-  const { dreams } = useDreamStore()
+  const { profile, refreshProfile } = useAuthStore()
+  const { dreams, fetchDreams } = useDreamStore()
 
-  // Calculate stats from real data
+  // Real stats
   const stats = {
     totalXP: profile?.total_xp ?? 0,
     currentStreak: profile?.current_streak ?? 0,
@@ -39,7 +76,7 @@ export default function JourneyScreen() {
     ),
   }
 
-  // Calculate chapter/level progress
+  // Level Logic
   const xpForNextLevel = Math.pow(stats.currentLevel + 1, 2) * 100
   const levelProgress = Math.min(
     (stats.totalXP % xpForNextLevel) / xpForNextLevel,
@@ -48,28 +85,30 @@ export default function JourneyScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await useAuthStore.getState().refreshProfile()
-    await useDreamStore.getState().fetchDreams()
+    await Promise.all([refreshProfile(), fetchDreams()])
     setRefreshing(false)
   }
 
   return (
     <View style={styles.container}>
-      {/* Background */}
-      <LinearGradient
-        colors={DARK.gradients.bg as [string, string, string]}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* Ambient glow */}
-      <View style={styles.glowSpot1} />
-      <View style={styles.glowSpot2} />
+      {/* BACKGROUND */}
+      <View style={StyleSheet.absoluteFill}>
+        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
+        <LinearGradient
+          colors={[DARK.bg.primary, '#181220', DARK.bg.primary]}
+          style={StyleSheet.absoluteFill}
+        />
+        <GlowOrb color={DARK.accent.rose} style={styles.orb1} />
+        <GlowOrb color={DARK.accent.violet} style={styles.orb2} />
+        {/* Texture */}
+        <BlurView intensity={40} tint='dark' style={StyleSheet.absoluteFill} />
+      </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + SPACING.md },
+          { paddingTop: insets.top + SPACING.lg },
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -80,16 +119,16 @@ export default function JourneyScreen() {
           />
         }
       >
-        {/* Header */}
+        {/* HEADER */}
         <Animated.View
           entering={FadeInDown.duration(500)}
           style={styles.header}
         >
-          <Text style={styles.title}>Your Journey</Text>
-          <Text style={styles.subtitle}>Every step builds momentum</Text>
+          <Text style={styles.title}>Your Legacy</Text>
+          <Text style={styles.subtitle}>Every step builds your story.</Text>
         </Animated.View>
 
-        {/* Level Card */}
+        {/* 1. LEVEL CARD */}
         <Animated.View entering={FadeInUp.delay(200)}>
           <LevelCard
             level={stats.currentLevel}
@@ -99,12 +138,12 @@ export default function JourneyScreen() {
           />
         </Animated.View>
 
-        {/* Main Stats */}
+        {/* 2. STATS GRID */}
         <Animated.View entering={FadeInUp.delay(300)} style={styles.statsGrid}>
           <StatCard
             icon='flash'
             value={stats.totalPowerMoves}
-            label='Power Moves'
+            label='Moves Made'
             color={DARK.accent.rose}
           />
           <StatCard
@@ -117,18 +156,18 @@ export default function JourneyScreen() {
           <StatCard
             icon='planet'
             value={stats.activeDreams}
-            label='Active Dreams'
+            label='Active Missions'
             color={DARK.accent.violet}
           />
           <StatCard
             icon='trophy'
             value={stats.completedDreams}
-            label='Achieved'
-            color='#10B981'
+            label='Victories'
+            color='#10B981' // Emerald
           />
         </Animated.View>
 
-        {/* Streak Highlight (if active) */}
+        {/* 3. STREAK CARD */}
         {stats.currentStreak > 0 && (
           <Animated.View entering={FadeInUp.delay(400)}>
             <StreakCard
@@ -138,7 +177,7 @@ export default function JourneyScreen() {
           </Animated.View>
         )}
 
-        {/* Motivation Section */}
+        {/* 4. MOTIVATION */}
         <Animated.View entering={FadeInUp.delay(500)} style={styles.section}>
           <MotivationCard stats={stats} />
         </Animated.View>
@@ -149,56 +188,56 @@ export default function JourneyScreen() {
   )
 }
 
-// =============================================================================
-// LEVEL CARD
-// =============================================================================
-function LevelCard({
-  level,
-  currentXP,
-  xpForNext,
-  progress,
-}: {
-  level: number
-  currentXP: number
-  xpForNext: number
-  progress: number
-}) {
+// -----------------------------------------------------------------------------
+// COMPONENTS
+// -----------------------------------------------------------------------------
+
+function LevelCard({ level, currentXP, xpForNext, progress }: any) {
   return (
     <View style={styles.levelCard}>
+      {/* Glass & Gradient */}
       <BlurView intensity={20} tint='dark' style={StyleSheet.absoluteFill} />
-      <View style={styles.levelCardBorder} />
+      <LinearGradient
+        colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <View style={styles.cardBorder} />
 
       <View style={styles.levelContent}>
-        {/* Level Badge */}
+        {/* Badge */}
         <View style={styles.levelBadge}>
           <LinearGradient
-            colors={DARK.gradients.primary as [string, string]}
+            colors={[DARK.accent.violet, DARK.accent.rose]}
             style={styles.levelBadgeGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
             <Ionicons name='star' size={20} color='#FFF' />
             <Text style={styles.levelNumber}>{level}</Text>
           </LinearGradient>
         </View>
 
-        {/* Progress Section */}
-        <View style={styles.levelProgress}>
+        {/* Info */}
+        <View style={styles.levelInfo}>
           <View style={styles.levelHeader}>
             <Text style={styles.levelTitle}>Chapter {level}</Text>
             <Text style={styles.levelXP}>
-              <Text style={styles.levelXPCurrent}>{currentXP}</Text>
-              <Text style={styles.levelXPTotal}> / {xpForNext} XP</Text>
+              <Text style={styles.xpCurrent}>{currentXP}</Text>
+              <Text style={styles.xpTotal}> / {xpForNext} XP</Text>
             </Text>
           </View>
 
-          {/* Progress Bar */}
-          <View style={styles.progressTrack}>
+          {/* Bar */}
+          <View style={styles.track}>
             <LinearGradient
-              colors={DARK.gradients.primary as [string, string]}
+              colors={[DARK.accent.violet, DARK.accent.rose]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[
-                styles.progressFill,
-                { width: `${Math.max(progress * 100, 3)}%` },
+                styles.fill,
+                { width: `${Math.max(progress * 100, 5)}%` },
               ]}
             />
           </View>
@@ -212,77 +251,58 @@ function LevelCard({
   )
 }
 
-// =============================================================================
-// STAT CARD
-// =============================================================================
-function StatCard({
-  icon,
-  value,
-  label,
-  color,
-  sublabel,
-}: {
-  icon: string
-  value: number
-  label: string
-  color: string
-  sublabel?: string
-}) {
+function StatCard({ icon, value, label, color, sublabel }: any) {
   return (
     <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: `${color}15` }]}>
-        <Ionicons name={icon as any} size={22} color={color} />
+      <View
+        style={[
+          styles.statIconBox,
+          { backgroundColor: color + '15', borderColor: color + '30' },
+        ]}
+      >
+        <Ionicons name={icon} size={20} color={color} />
       </View>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-      {sublabel && <Text style={styles.statSublabel}>{sublabel}</Text>}
+      {sublabel && <Text style={styles.statSub}>{sublabel}</Text>}
     </View>
   )
 }
 
-// =============================================================================
-// STREAK CARD
-// =============================================================================
-function StreakCard({
-  currentStreak,
-  longestStreak,
-}: {
-  currentStreak: number
-  longestStreak: number
-}) {
+function StreakCard({ currentStreak, longestStreak }: any) {
   const isPersonalBest = currentStreak >= longestStreak && currentStreak > 1
 
   return (
     <View style={styles.streakCard}>
       <LinearGradient
-        colors={['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.05)']}
+        colors={[DARK.accent.gold + '20', 'transparent']}
         style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
       />
-      <View style={styles.streakCardBorder} />
+      <View
+        style={[styles.cardBorder, { borderColor: DARK.accent.gold + '40' }]}
+      />
 
       <View style={styles.streakContent}>
-        <View style={styles.streakIconWrapper}>
-          <Ionicons name='flame' size={28} color={DARK.accent.gold} />
+        <View style={styles.fireContainer}>
+          <Ionicons name='flame' size={32} color={DARK.accent.gold} />
         </View>
 
-        <View style={styles.streakTextWrapper}>
-          <View style={styles.streakTitleRow}>
-            <Text style={styles.streakTitle}>{currentStreak} day streak!</Text>
+        <View style={styles.streakTextContainer}>
+          <View style={styles.streakRow}>
+            <Text style={styles.streakTitle}>{currentStreak} Day Streak</Text>
             {isPersonalBest && (
-              <View style={styles.personalBestBadge}>
+              <View style={styles.pbBadge}>
                 <Ionicons name='trophy' size={10} color={DARK.accent.gold} />
-                <Text style={styles.personalBestText}>Best!</Text>
+                <Text style={styles.pbText}>NEW RECORD</Text>
               </View>
             )}
           </View>
-          <Text style={styles.streakSubtext}>
-            {currentStreak === 1
-              ? "You're building momentum!"
-              : currentStreak < 7
-                ? 'Keep the fire burning!'
-                : currentStreak < 30
-                  ? "You're on fire! 🔥"
-                  : 'Unstoppable! 💪'}
+          <Text style={styles.streakDesc}>
+            {currentStreak < 7
+              ? "You're building heat. Keep going!"
+              : 'You are unstoppable. 🔥'}
           </Text>
         </View>
       </View>
@@ -290,89 +310,56 @@ function StreakCard({
   )
 }
 
-// =============================================================================
-// MOTIVATION CARD
-// =============================================================================
-function MotivationCard({ stats }: { stats: any }) {
-  const getMessage = () => {
-    if (stats.totalPowerMoves === 0) {
-      return {
-        icon: 'rocket',
-        title: 'Ready to start?',
-        message:
-          'Complete your first power move today and begin building momentum.',
-      }
-    }
-    if (stats.currentStreak === 0) {
-      return {
-        icon: 'flame-outline',
-        title: 'Restart your streak',
-        message: 'One power move today brings you back on track.',
-      }
-    }
-    if (stats.currentStreak >= 7) {
-      return {
-        icon: 'star',
-        title: 'Amazing consistency!',
-        message: `${stats.currentStreak} days strong. You're proving what's possible.`,
-      }
-    }
-    return {
-      icon: 'sparkles',
-      title: 'Keep going!',
-      message: 'Every small action compounds into big results.',
-    }
-  }
-
-  const msg = getMessage()
-
+function MotivationCard({ stats }: any) {
   return (
     <View style={styles.motivationCard}>
       <View style={styles.motivationIcon}>
-        <Ionicons name={msg.icon as any} size={24} color={DARK.accent.rose} />
+        <Ionicons name='rocket-outline' size={24} color={DARK.accent.rose} />
       </View>
-      <View style={styles.motivationContent}>
-        <Text style={styles.motivationTitle}>{msg.title}</Text>
-        <Text style={styles.motivationText}>{msg.message}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.motivationTitle}>Momentum Builder</Text>
+        <Text style={styles.motivationText}>
+          "Consistency is the bridge between goals and accomplishment."
+        </Text>
       </View>
     </View>
   )
 }
 
-// =============================================================================
+// -----------------------------------------------------------------------------
 // STYLES
-// =============================================================================
+// -----------------------------------------------------------------------------
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: DARK.bg.primary,
   },
-  glowSpot1: {
-    position: 'absolute',
-    top: -80,
-    right: -80,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: DARK.accent.rose,
-    opacity: 0.1,
-  },
-  glowSpot2: {
-    position: 'absolute',
-    bottom: 200,
-    left: -100,
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: DARK.accent.violet,
-    opacity: 0.08,
-  },
-  scrollView: {
-    flex: 1,
-  },
+  scrollView: { flex: 1 },
   scrollContent: {
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING['4xl'],
+  },
+
+  // Ambience
+  orb1: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    opacity: 0.15,
+    filter: 'blur(80px)',
+  },
+  orb2: {
+    position: 'absolute',
+    bottom: 100,
+    left: -80,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    opacity: 0.1,
+    filter: 'blur(90px)',
   },
 
   // Header
@@ -381,13 +368,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: FONTS.bold,
-    fontSize: 28,
-    color: DARK.text.primary,
+    fontSize: 32,
+    color: '#FFF',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: 16,
     color: DARK.text.secondary,
     marginTop: 4,
   },
@@ -398,41 +385,42 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: SPACING.lg,
     backgroundColor: 'rgba(255,255,255,0.03)',
+    minHeight: 100,
   },
-  levelCardBorder: {
+  cardBorder: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: RADIUS.xl,
   },
   levelContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.md,
+    padding: SPACING.lg,
     gap: SPACING.md,
   },
   levelBadge: {
-    shadowColor: DARK.accent.rose,
+    shadowColor: DARK.accent.violet,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   levelBadgeGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   levelNumber: {
     fontFamily: FONTS.bold,
-    fontSize: 14,
+    fontSize: 16,
     color: '#FFF',
     marginTop: 2,
   },
-  levelProgress: {
-    flex: 1,
-  },
+  levelInfo: { flex: 1 },
   levelHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -440,39 +428,34 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   levelTitle: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 15,
-    color: DARK.text.primary,
-  },
-  levelXP: {
-    fontFamily: FONTS.regular,
-    fontSize: 12,
-  },
-  levelXPCurrent: {
-    color: DARK.text.primary,
     fontFamily: FONTS.bold,
+    fontSize: 16,
+    color: '#FFF',
   },
-  levelXPTotal: {
+  levelXP: { fontSize: 12 },
+  xpCurrent: {
+    fontFamily: FONTS.bold,
+    color: '#FFF',
+  },
+  xpTotal: {
+    fontFamily: FONTS.medium,
     color: DARK.text.muted,
   },
-  progressTrack: {
+  track: {
     height: 6,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 3,
     overflow: 'hidden',
+    marginBottom: 6,
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
+  fill: { height: '100%', borderRadius: 3 },
   levelSubtext: {
-    fontFamily: FONTS.medium,
     fontSize: 11,
     color: DARK.text.tertiary,
-    marginTop: 6,
+    fontFamily: FONTS.medium,
   },
 
-  // Stats Grid
+  // Stats
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -480,135 +463,120 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   statCard: {
-    width: '48%',
+    width: '48%', // Slightly less than half for gap
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
   },
-  statIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.sm,
+    borderWidth: 1,
   },
   statValue: {
     fontFamily: FONTS.bold,
     fontSize: 24,
-    color: DARK.text.primary,
+    color: '#FFF',
+    marginBottom: 2,
   },
   statLabel: {
-    fontFamily: FONTS.medium,
     fontSize: 12,
     color: DARK.text.secondary,
-    marginTop: 2,
+    fontFamily: FONTS.medium,
   },
-  statSublabel: {
-    fontFamily: FONTS.regular,
+  statSub: {
     fontSize: 10,
     color: DARK.text.muted,
-    marginTop: 2,
+    marginTop: 4,
   },
 
-  // Streak Card
+  // Streak
   streakCard: {
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     marginBottom: SPACING.lg,
-  },
-  streakCardBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.2)',
-    borderRadius: RADIUS.xl,
+    backgroundColor: 'rgba(245, 158, 11, 0.05)',
   },
   streakContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.md,
+    padding: SPACING.lg,
     gap: SPACING.md,
   },
-  streakIconWrapper: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  fireContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: 'rgba(245, 158, 11, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  streakTextWrapper: {
-    flex: 1,
-  },
-  streakTitleRow: {
+  streakTextContainer: { flex: 1 },
+  streakRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: 8,
+    marginBottom: 4,
   },
   streakTitle: {
+    fontSize: 18,
     fontFamily: FONTS.bold,
-    fontSize: 16,
-    color: DARK.text.primary,
+    color: '#FFF',
   },
-  personalBestBadge: {
+  pbBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    gap: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: RADIUS.sm,
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderRadius: 4,
   },
-  personalBestText: {
-    fontFamily: FONTS.bold,
+  pbText: {
     fontSize: 9,
+    fontFamily: FONTS.bold,
     color: DARK.accent.gold,
   },
-  streakSubtext: {
-    fontFamily: FONTS.regular,
+  streakDesc: {
     fontSize: 13,
     color: DARK.text.secondary,
-    marginTop: 2,
+    fontFamily: FONTS.regular,
   },
 
-  // Motivation Card
-  section: {
-    marginTop: SPACING.md,
-  },
+  // Motivation
+  section: { marginTop: SPACING.md },
   motivationCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(244, 63, 94, 0.06)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: RADIUS.xl,
-    padding: SPACING.md,
+    padding: SPACING.lg,
     gap: SPACING.md,
     borderWidth: 1,
-    borderColor: 'rgba(244, 63, 94, 0.1)',
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   motivationIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(244, 63, 94, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  motivationContent: {
-    flex: 1,
+    paddingTop: 2,
   },
   motivationTitle: {
-    fontFamily: FONTS.semiBold,
     fontSize: 14,
-    color: DARK.text.primary,
+    fontFamily: FONTS.bold,
+    color: DARK.text.secondary,
     marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   motivationText: {
-    fontFamily: FONTS.regular,
-    fontSize: 13,
-    color: DARK.text.secondary,
-    lineHeight: 18,
+    fontSize: 15,
+    fontFamily: FONTS.medium,
+    color: '#FFF',
+    fontStyle: 'italic',
+    lineHeight: 22,
   },
 })

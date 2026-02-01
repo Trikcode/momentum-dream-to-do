@@ -1,3 +1,4 @@
+// app/(modals)/new-dream.tsx
 import React, { useState, useRef } from 'react'
 import {
   View,
@@ -8,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  Dimensions,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -50,11 +52,11 @@ export default function NewDreamModal() {
 
   const handleCreate = async () => {
     if (!title.trim()) {
-      showToast({ type: 'error', title: 'Please enter a dream title' })
+      showToast({ type: 'error', title: 'Please name your dream' })
       return
     }
     if (!selectedCategory) {
-      showToast({ type: 'error', title: 'Please select a category' })
+      showToast({ type: 'error', title: 'Select a category' })
       return
     }
     if (!canCreate) {
@@ -75,8 +77,8 @@ export default function NewDreamModal() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       showToast({
         type: 'success',
-        title: 'Dream created!',
-        message: 'Let’s build some momentum.',
+        title: 'Mission Initialized',
+        message: 'Let’s make it happen.',
       })
       router.back()
     } catch (error) {
@@ -87,17 +89,13 @@ export default function NewDreamModal() {
   }
 
   const onDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false)
-    }
-    if (selectedDate) {
-      setTargetDate(selectedDate)
-    }
+    if (Platform.OS === 'android') setShowDatePicker(false)
+    if (selectedDate) setTargetDate(selectedDate)
   }
 
   return (
     <View style={styles.container}>
-      {/* Background Ambience */}
+      {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
@@ -122,7 +120,7 @@ export default function NewDreamModal() {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: insets.bottom + 140 }, // Added extra padding here to clear the button
+            { paddingBottom: insets.bottom + 140 },
           ]}
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
@@ -137,7 +135,7 @@ export default function NewDreamModal() {
                 <Ionicons name='flash' size={14} color={DARK.accent.rose} />
               </View>
               <Text style={styles.limitText}>
-                {activeDreams}/{dreamsLimit} active dreams used
+                {activeDreams}/{dreamsLimit} active missions used
               </Text>
               <Pressable
                 onPress={() => {
@@ -146,14 +144,14 @@ export default function NewDreamModal() {
                 }}
                 style={styles.upgradeBtn}
               >
-                <Text style={styles.upgradeLink}>Unlock Unlimited</Text>
+                <Text style={styles.upgradeLink}>Unlock</Text>
               </Pressable>
             </Animated.View>
           )}
 
-          {/* Title Input */}
+          {/* 1. TITLE INPUT */}
           <Animated.View entering={FadeInUp.delay(200)}>
-            <Text style={styles.label}>Name your dream</Text>
+            <Text style={styles.label}>Name your mission</Text>
             <View
               style={[
                 styles.inputWrapper,
@@ -167,7 +165,7 @@ export default function NewDreamModal() {
               />
               <TextInput
                 style={styles.titleInput}
-                placeholder='e.g., Run a Marathon, Visit Japan...'
+                placeholder='e.g., Run a Marathon, Build a App...'
                 placeholderTextColor={DARK.text.muted}
                 value={title}
                 onChangeText={setTitle}
@@ -180,9 +178,9 @@ export default function NewDreamModal() {
             </View>
           </Animated.View>
 
-          {/* Category Selection */}
+          {/* 2. CATEGORIES */}
           <Animated.View entering={FadeInUp.delay(300)}>
-            <Text style={styles.label}>Choose a category</Text>
+            <Text style={styles.label}>Select Category</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -208,7 +206,7 @@ export default function NewDreamModal() {
                   >
                     <Ionicons
                       name={category.icon.name as any}
-                      size={16}
+                      size={14}
                       color={isSelected ? '#FFF' : category.color}
                     />
                     <Text
@@ -225,10 +223,10 @@ export default function NewDreamModal() {
             </ScrollView>
           </Animated.View>
 
-          {/* Description */}
+          {/* 3. DESCRIPTION */}
           <Animated.View entering={FadeInUp.delay(400)}>
             <Text style={styles.label}>
-              Why it matters <Text style={styles.optional}>(Optional)</Text>
+              Your "Why" <Text style={styles.optional}>(Optional)</Text>
             </Text>
             <View
               style={[
@@ -243,7 +241,7 @@ export default function NewDreamModal() {
               />
               <TextInput
                 style={styles.descriptionInput}
-                placeholder='Connect with your "Why"...'
+                placeholder='Why does this matter to you?'
                 placeholderTextColor={DARK.text.muted}
                 value={description}
                 onChangeText={setDescription}
@@ -256,86 +254,83 @@ export default function NewDreamModal() {
             </View>
           </Animated.View>
 
-          {/* Target Date */}
+          {/* 4. DATE PICKER */}
           <Animated.View entering={FadeInUp.delay(500)}>
             <Text style={styles.label}>
-              Target Date <Text style={styles.optional}>(Optional)</Text>
+              Deadline <Text style={styles.optional}>(Optional)</Text>
             </Text>
 
-            <View style={styles.dateContainer}>
-              <Pressable
-                onPress={() => setShowDatePicker(!showDatePicker)}
-                style={[
-                  styles.dateButton,
-                  showDatePicker && { borderColor: DARK.accent.rose },
-                ]}
-              >
-                <View style={styles.dateIconBox}>
+            <Pressable
+              onPress={() => setShowDatePicker(!showDatePicker)}
+              style={[
+                styles.dateButton,
+                showDatePicker && { borderColor: DARK.accent.rose },
+              ]}
+            >
+              <View style={styles.dateIconBox}>
+                <Ionicons
+                  name='calendar-outline'
+                  size={20}
+                  color={targetDate ? DARK.accent.rose : DARK.text.secondary}
+                />
+              </View>
+              <View style={styles.dateInfo}>
+                <Text style={styles.dateLabel}>Target Completion</Text>
+                <Text
+                  style={[
+                    styles.dateValue,
+                    !targetDate && { color: DARK.text.muted },
+                  ]}
+                >
+                  {targetDate
+                    ? format(targetDate, 'MMM d, yyyy')
+                    : 'No deadline set'}
+                </Text>
+              </View>
+              {targetDate ? (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    setTargetDate(null)
+                  }}
+                >
                   <Ionicons
-                    name='calendar-outline'
+                    name='close-circle'
                     size={20}
-                    color={targetDate ? DARK.accent.rose : DARK.text.secondary}
-                  />
-                </View>
-                <View style={styles.dateInfo}>
-                  <Text style={styles.dateLabel}>Deadline</Text>
-                  <Text
-                    style={[
-                      styles.dateValue,
-                      !targetDate && { color: DARK.text.muted },
-                    ]}
-                  >
-                    {targetDate
-                      ? format(targetDate, 'MMMM d, yyyy')
-                      : 'Set a date'}
-                  </Text>
-                </View>
-                {targetDate ? (
-                  <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation()
-                      setTargetDate(null)
-                    }}
-                  >
-                    <Ionicons
-                      name='close-circle'
-                      size={20}
-                      color={DARK.text.muted}
-                    />
-                  </Pressable>
-                ) : (
-                  <Ionicons
-                    name='chevron-down'
-                    size={16}
                     color={DARK.text.muted}
                   />
-                )}
-              </Pressable>
-
-              {/* iOS Inline Picker / Android Dialog Trigger */}
-              {(showDatePicker ||
-                (Platform.OS === 'ios' && showDatePicker)) && (
-                <Animated.View
-                  entering={FadeInUp}
-                  style={styles.datePickerContainer}
-                >
-                  <DateTimePicker
-                    value={targetDate || new Date()}
-                    mode='date'
-                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                    themeVariant='dark'
-                    accentColor={DARK.accent.rose}
-                    minimumDate={new Date()}
-                    onChange={onDateChange}
-                    style={styles.datePicker}
-                  />
-                </Animated.View>
+                </Pressable>
+              ) : (
+                <Ionicons
+                  name='chevron-down'
+                  size={16}
+                  color={DARK.text.muted}
+                />
               )}
-            </View>
+            </Pressable>
+
+            {/* iOS Picker / Android Logic */}
+            {showDatePicker && Platform.OS === 'ios' && (
+              <Animated.View
+                entering={FadeInUp}
+                style={styles.datePickerContainer}
+              >
+                <DateTimePicker
+                  value={targetDate || new Date()}
+                  mode='date'
+                  display='inline'
+                  themeVariant='dark'
+                  accentColor={DARK.accent.rose}
+                  minimumDate={new Date()}
+                  onChange={onDateChange}
+                  style={styles.datePicker}
+                />
+              </Animated.View>
+            )}
           </Animated.View>
         </ScrollView>
 
-        {/* Bottom Floating Dock */}
+        {/* BOTTOM DOCK */}
         <Animated.View
           entering={FadeInUp.delay(600)}
           style={[
@@ -350,20 +345,15 @@ export default function NewDreamModal() {
           />
           <View style={styles.dockBorder} />
 
-          {/* Subtle gradient on top of dock for blending */}
-          <LinearGradient
-            colors={['rgba(255,255,255,0.05)', 'transparent']}
-            style={{ height: 1, width: '100%' }}
-          />
-
           <View style={styles.dockContent}>
             <Button
-              title={canCreate ? 'Create Dream' : 'Upgrade to Create'}
+              title={canCreate ? 'Initialize Mission' : 'Upgrade to Create'}
               onPress={handleCreate}
               isLoading={isLoading}
               disabled={!title.trim() || !selectedCategory}
               fullWidth
               size='lg'
+              variant={canCreate ? 'primary' : 'secondary'}
               icon={
                 <Ionicons
                   name={canCreate ? 'rocket' : 'lock-closed'}
@@ -371,7 +361,6 @@ export default function NewDreamModal() {
                   color='#FFF'
                 />
               }
-              iconPosition='left'
             />
           </View>
         </Animated.View>
@@ -401,16 +390,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontFamily: FONTS.semiBold,
+    fontFamily: FONTS.bold,
     fontSize: 16,
-    color: DARK.text.primary,
+    color: '#FFF',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: SPACING.lg,
-  },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: SPACING.lg },
 
   // Limit Card
   limitCard: {
@@ -451,34 +436,37 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
+    fontFamily: FONTS.bold,
+    fontSize: 13,
     color: DARK.text.secondary,
     marginBottom: SPACING.sm,
-    marginTop: SPACING.md,
+    marginTop: SPACING.lg,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   optional: {
     fontFamily: FONTS.regular,
     color: DARK.text.muted,
-    fontSize: 12,
+    fontSize: 11,
+    textTransform: 'none',
   },
 
-  // Input Styles
+  // Inputs
   inputWrapper: {
     borderRadius: RADIUS.lg,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   inputFocused: {
     borderColor: DARK.accent.rose,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   titleInput: {
     fontFamily: FONTS.semiBold,
     fontSize: 20,
-    color: DARK.text.primary,
+    color: '#FFF',
     minHeight: 70,
     padding: SPACING.md,
     textAlignVertical: 'top',
@@ -486,7 +474,7 @@ const styles = StyleSheet.create({
   descriptionInput: {
     fontFamily: FONTS.regular,
     fontSize: 16,
-    color: DARK.text.primary,
+    color: '#FFF',
     minHeight: 100,
     padding: SPACING.md,
   },
@@ -499,7 +487,7 @@ const styles = StyleSheet.create({
     color: DARK.text.muted,
   },
 
-  // Categories
+  // Category Chips
   categoriesScroll: {
     gap: 8,
     paddingVertical: 4,
@@ -510,7 +498,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.full,
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
@@ -521,19 +509,16 @@ const styles = StyleSheet.create({
     color: DARK.text.secondary,
   },
 
-  // Date Section
-  dateContainer: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: RADIUS.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
+  // Date
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.md,
     gap: SPACING.md,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   dateIconBox: {
     width: 36,
@@ -543,37 +528,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dateInfo: {
-    flex: 1,
-  },
+  dateInfo: { flex: 1 },
   dateLabel: {
     fontFamily: FONTS.regular,
     fontSize: 12,
     color: DARK.text.muted,
   },
   dateValue: {
-    fontFamily: FONTS.medium,
+    fontFamily: FONTS.bold,
     fontSize: 15,
-    color: DARK.text.primary,
+    color: '#FFF',
     marginTop: 2,
   },
   datePickerContainer: {
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.md,
+    paddingTop: SPACING.md,
   },
   datePicker: {
-    height: 300,
+    height: 320,
   },
 
-  // Bottom Dock
+  // Dock
   bottomDock: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    overflow: 'hidden',
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
-    overflow: 'hidden',
   },
   dockBorder: {
     position: 'absolute',

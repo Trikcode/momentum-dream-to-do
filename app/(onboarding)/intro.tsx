@@ -8,8 +8,6 @@ import {
   FlatList,
   Pressable,
   StatusBar,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   Platform,
 } from 'react-native'
 import { router } from 'expo-router'
@@ -24,63 +22,231 @@ import Animated, {
   interpolate,
   Extrapolation,
   withTiming,
-  withSpring,
   withRepeat,
   withSequence,
   withDelay,
   Easing,
   FadeIn,
   FadeInDown,
+  useAnimatedProps,
 } from 'react-native-reanimated'
+import Svg, {
+  Circle,
+  Path,
+  Defs,
+  LinearGradient as SvgGradient,
+  Stop,
+  G,
+} from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 
 const { width, height } = Dimensions.get('window')
 
-// TYPES & DATA
+// ============================================================================
+// 1. CUSTOM ABSTRACT VISUALS (Replaces Generic Icons)
+// ============================================================================
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle)
+const AnimatedPath = Animated.createAnimatedComponent(Path)
+
+// Visual 1: The North Star (Focus/Direction)
+const FocusVisual = ({ color }: { color: string }) => {
+  const pulse = useSharedValue(1)
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1.1, { duration: 2000 }),
+        withTiming(1, { duration: 2000 }),
+      ),
+      -1,
+      true,
+    )
+  }, [])
+
+  const pulseProps = useAnimatedProps(() => ({
+    r: 10 * pulse.value,
+    opacity: interpolate(pulse.value, [1, 1.1], [0.8, 0.4]),
+  }))
+
+  return (
+    <Svg width={120} height={120} viewBox='0 0 120 120'>
+      <Defs>
+        <SvgGradient id='focusGrad' x1='0' y1='0' x2='1' y2='1'>
+          <Stop offset='0' stopColor={color} stopOpacity='1' />
+          <Stop offset='1' stopColor='#FFF' stopOpacity='0.2' />
+        </SvgGradient>
+      </Defs>
+      {/* Outer Rings - Target */}
+      <Circle
+        cx='60'
+        cy='60'
+        r='45'
+        stroke={color}
+        strokeWidth='1'
+        strokeOpacity='0.2'
+        strokeDasharray='4 4'
+      />
+      <Circle
+        cx='60'
+        cy='60'
+        r='30'
+        stroke={color}
+        strokeWidth='2'
+        strokeOpacity='0.5'
+      />
+
+      {/* Center Core */}
+      <Circle cx='60' cy='60' r='8' fill='url(#focusGrad)' />
+      <AnimatedCircle cx='60' cy='60' fill={color} animatedProps={pulseProps} />
+
+      {/* Crosshairs */}
+      <Path
+        d='M 60 10 L 60 20 M 60 100 L 60 110 M 10 60 L 20 60 M 100 60 L 110 60'
+        stroke={color}
+        strokeWidth='2'
+        strokeLinecap='round'
+      />
+    </Svg>
+  )
+}
+
+// Visual 2: The Ascent (Growth/Steps)
+const AscentVisual = ({ color }: { color: string }) => {
+  const progress = useSharedValue(0)
+  useEffect(() => {
+    progress.value = withRepeat(
+      withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    )
+  }, [])
+
+  return (
+    <Svg width={120} height={120} viewBox='0 0 120 120'>
+      <Defs>
+        <SvgGradient id='ascentGrad' x1='0' y1='1' x2='1' y2='0'>
+          <Stop offset='0' stopColor={color} stopOpacity='0.2' />
+          <Stop offset='1' stopColor={color} stopOpacity='1' />
+        </SvgGradient>
+      </Defs>
+
+      {/* Connecting Line */}
+      <Path
+        d='M 30 90 C 50 90, 50 60, 90 30'
+        stroke={color}
+        strokeWidth='2'
+        strokeOpacity='0.3'
+        fill='none'
+      />
+
+      {/* Steps */}
+      <Circle cx='30' cy='90' r='6' fill={color} fillOpacity='0.4' />
+      <Circle cx='60' cy='60' r='8' fill={color} fillOpacity='0.7' />
+      <Circle cx='90' cy='30' r='12' fill='url(#ascentGrad)' />
+
+      {/* Glow Effect under top circle */}
+      <Circle cx='90' cy='30' r='20' fill={color} fillOpacity='0.15' />
+    </Svg>
+  )
+}
+
+const RadianceVisual = ({ color }: { color: string }) => {
+  const rotate = useSharedValue(0)
+  useEffect(() => {
+    rotate.value = withRepeat(
+      withTiming(360, { duration: 20000, easing: Easing.linear }),
+      -1,
+      false,
+    )
+  }, [])
+
+  const spinProps = useAnimatedProps(() => ({
+    transform: [{ rotate: `${rotate.value}deg` }],
+  }))
+
+  return (
+    <Svg width={120} height={120} viewBox='0 0 120 120'>
+      {/* Rays */}
+      <AnimatedPath
+        d='M60 20 L60 10 M60 110 L60 100 M20 60 L10 60 M110 60 L100 60 M32 32 L25 25 M88 88 L95 95 M32 88 L25 95 M88 32 L95 25'
+        stroke={color}
+        strokeWidth='2'
+        strokeLinecap='round'
+        opacity='0.5'
+        animatedProps={spinProps}
+      />
+
+      {/* Core Shape (Diamond) */}
+      <Path
+        d='M 60 30 L 90 60 L 60 90 L 30 60 Z'
+        fill={color}
+        fillOpacity='0.1'
+        stroke={color}
+        strokeWidth='1'
+      />
+      <Path d='M 60 45 L 75 60 L 60 75 L 45 60 Z' fill={color} />
+
+      {/* Orbital ring */}
+      <Circle
+        cx='60'
+        cy='60'
+        r='35'
+        stroke={color}
+        strokeWidth='0.5'
+        strokeOpacity='0.3'
+      />
+    </Svg>
+  )
+}
+
+// ============================================================================
+// DATA & TYPES
+// ============================================================================
 
 interface SlideData {
   id: string
   title: string
   highlight: string
   description: string
-  icon: keyof typeof Ionicons.glyphMap
+  VisualComponent: React.FC<any>
   color: string
 }
 
 const SLIDES: SlideData[] = [
   {
     id: '1',
-    title: 'Dream Big,',
-    highlight: 'Start Small',
+    title: 'Design Your',
+    highlight: 'Direction',
     description:
-      'Turn your biggest ambitions into achievable daily actions. Every giant leap begins with a single step.',
-    icon: 'sparkles',
+      'Turn vague dreams into laser-focused daily actions. Know exactly where you are going.',
+    VisualComponent: FocusVisual,
     color: DARK.accent.rose,
   },
   {
     id: '2',
     title: 'Build Unstoppable',
-    highlight: 'Habits',
+    highlight: 'Momentum',
     description:
-      'Stack micro-wins every day. Watch your streaks grow and momentum build effortlessly.',
-    icon: 'flame',
+      'Consistency compounds. Stack small wins every day to create massive, effortless growth.',
+    VisualComponent: AscentVisual,
     color: DARK.accent.gold,
   },
   {
     id: '3',
-    title: 'Celebrate Your',
-    highlight: 'Wins',
+    title: 'Unlock Your',
+    highlight: 'Potential',
     description:
-      'Level up your life. Earn badges, track progress, and see how far you have come.',
-    icon: 'trophy',
+      'Celebrate meaningful victories. See how far you have come and expand what is possible.',
+    VisualComponent: RadianceVisual,
     color: DARK.accent.violet,
   },
 ]
 
+// ============================================================================
 // COMPONENTS
+// ============================================================================
 
-// Reusing the Blob from Welcome screen for consistency
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   const scale = useSharedValue(1)
   const translateY = useSharedValue(0)
@@ -132,6 +298,7 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           borderRadius: size / 2,
           backgroundColor: color,
           opacity: 0.4,
+          filter: 'blur(50px)', // Web support
         },
         animatedStyle,
       ]}
@@ -139,7 +306,6 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   )
 }
 
-// Individual Slide Component
 const IntroSlide = ({
   item,
   index,
@@ -149,28 +315,26 @@ const IntroSlide = ({
   index: number
   scrollX: any
 }) => {
-  // Parallax Animations
   const contentStyle = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * width, index * width, (index + 1) * width]
 
+    // Subtle Parallax
     const opacity = interpolate(
       scrollX.value,
       inputRange,
       [0, 1, 0],
       Extrapolation.CLAMP,
     )
-
     const scale = interpolate(
       scrollX.value,
       inputRange,
-      [0.5, 1, 0.5],
+      [0.8, 1, 0.8],
       Extrapolation.CLAMP,
     )
-
     const translateY = interpolate(
       scrollX.value,
       inputRange,
-      [50, 0, 50],
+      [20, 0, 20],
       Extrapolation.CLAMP,
     )
 
@@ -180,17 +344,20 @@ const IntroSlide = ({
     }
   })
 
+  const Visual = item.VisualComponent
+
   return (
     <View style={styles.slideContainer}>
       <Animated.View style={[styles.slideContent, contentStyle]}>
-        {/* Icon Container with Glass Effect */}
-        <View style={styles.iconContainer}>
-          <View style={[styles.iconGlow, { backgroundColor: item.color }]} />
-          <BlurView intensity={40} tint='dark' style={styles.iconGlass}>
-            <Ionicons name={item.icon} size={64} color={item.color} />
-          </BlurView>
-          {/* Decorative ring */}
-          <View style={[styles.iconBorder, { borderColor: item.color }]} />
+        {/* Abstract Visual Container */}
+        <View style={styles.visualContainer}>
+          <View style={[styles.visualGlow, { backgroundColor: item.color }]} />
+
+          <View style={styles.visualBorder}>
+            <BlurView intensity={30} tint='dark' style={styles.visualGlass}>
+              <Visual color={item.color} />
+            </BlurView>
+          </View>
         </View>
 
         {/* Text Content */}
@@ -206,36 +373,27 @@ const IntroSlide = ({
     </View>
   )
 }
-// Add this component before Paginator
+
 const PaginatorDot = ({ index, scrollX }: { index: number; scrollX: any }) => {
   const animatedDotStyle = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * width, index * width, (index + 1) * width]
-
     const dotWidth = interpolate(
       scrollX.value,
       inputRange,
       [8, 24, 8],
       Extrapolation.CLAMP,
     )
-
     const opacity = interpolate(
       scrollX.value,
       inputRange,
       [0.3, 1, 0.3],
       Extrapolation.CLAMP,
     )
-
-    return {
-      width: dotWidth,
-      opacity,
-      backgroundColor: DARK.text.primary,
-    }
+    return { width: dotWidth, opacity, backgroundColor: DARK.text.primary }
   })
-
   return <Animated.View style={[styles.dot, animatedDotStyle]} />
 }
 
-// Replace existing Paginator with this
 const Paginator = ({ data, scrollX }: { data: SlideData[]; scrollX: any }) => {
   return (
     <View style={styles.paginatorContainer}>
@@ -246,7 +404,9 @@ const Paginator = ({ data, scrollX }: { data: SlideData[]; scrollX: any }) => {
   )
 }
 
+// ============================================================================
 // MAIN SCREEN
+// ============================================================================
 
 export default function IntroScreen() {
   const insets = useSafeAreaInsets()
@@ -272,7 +432,6 @@ export default function IntroScreen() {
 
   const handleFinish = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    // Navigate to next onboarding step (e.g., Pick Dreams)
     router.push('/(onboarding)/pick-dreams')
   }
 
@@ -291,7 +450,7 @@ export default function IntroScreen() {
     <View style={styles.container}>
       <StatusBar barStyle='light-content' />
 
-      {/* BACKGROUND LAYER */}
+      {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
@@ -320,7 +479,7 @@ export default function IntroScreen() {
         )}
       </View>
 
-      {/* HEADER (SKIP BUTTON) */}
+      {/* HEADER */}
       <View style={[styles.header, { marginTop: insets.top }]}>
         <Animated.View entering={FadeIn.delay(500)}>
           {currentIndex < SLIDES.length - 1 && (
@@ -331,7 +490,7 @@ export default function IntroScreen() {
         </Animated.View>
       </View>
 
-      {/* SLIDES */}
+      {/* CAROUSEL */}
       <Animated.FlatList
         ref={flatListRef}
         data={SLIDES}
@@ -349,7 +508,7 @@ export default function IntroScreen() {
         viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
       />
 
-      {/* BOTTOM SECTION */}
+      {/* CONTROLS */}
       <View
         style={[styles.bottomContainer, { paddingBottom: insets.bottom + 20 }]}
       >
@@ -368,10 +527,10 @@ export default function IntroScreen() {
                   colors={DARK.gradients.primary as [string, string]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={styles.gradient}
+                  style={StyleSheet.absoluteFill}
                 />
                 <Text style={styles.buttonText}>
-                  {currentIndex === SLIDES.length - 1 ? "Let's Go" : 'Next'}
+                  {currentIndex === SLIDES.length - 1 ? "Let's Go" : 'Continue'}
                 </Text>
                 <Ionicons
                   name='arrow-forward'
@@ -388,7 +547,9 @@ export default function IntroScreen() {
   )
 }
 
+// ============================================================================
 // STYLES
+// ============================================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -412,7 +573,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.medium,
   },
 
-  // Slide Styles
+  // Slide Layout
   slideContainer: {
     width,
     alignItems: 'center',
@@ -421,40 +582,41 @@ const styles = StyleSheet.create({
   slideContent: {
     width: width * 0.85,
     alignItems: 'center',
-    marginBottom: 80, // Space for bottom container
+    marginBottom: 80,
   },
 
-  // Icon Styles
-  iconContainer: {
-    width: 160,
-    height: 160,
+  // Visual Container (The Custom Icon Area)
+  visualContainer: {
+    width: 200,
+    height: 200,
     marginBottom: SPACING['4xl'],
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconGlow: {
+  visualGlow: {
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    opacity: 0.5,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    opacity: 0.25,
+    filter: 'blur(20px)',
   },
-  iconGlass: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  visualBorder: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  iconBorder: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 1,
-    opacity: 0.3,
+  visualGlass: {
+    width: 160,
+    height: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.02)',
   },
 
   // Typography
@@ -476,10 +638,10 @@ const styles = StyleSheet.create({
     color: DARK.text.secondary,
     textAlign: 'center',
     lineHeight: 24,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.sm,
   },
 
-  // Bottom Area
+  // Controls
   bottomContainer: {
     position: 'absolute',
     bottom: 0,
@@ -489,8 +651,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING['2xl'],
     gap: SPACING.xl,
   },
-
-  // Pagination
   paginatorContainer: {
     flexDirection: 'row',
     height: 10,
@@ -500,8 +660,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-
-  // Button
   buttonWrapper: {
     width: '100%',
   },
@@ -512,10 +670,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    ...DARK.glow.rose, // From theme.ts
-  },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
+    shadowColor: DARK.accent.rose,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   buttonText: {
     color: 'white',

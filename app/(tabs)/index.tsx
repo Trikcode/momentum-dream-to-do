@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+// app/(tabs)/index.tsx
+import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
   ScrollView,
@@ -8,37 +9,78 @@ import {
   Pressable,
   Dimensions,
   StatusBar,
+  Platform,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated'
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import { format } from 'date-fns'
+
+// Logic
 import { useRequestNotificationPermission } from '@/src/hooks/useNotificationSetup'
-
-// Components
-import { PowerMoveCard } from '@/src/components/home/PowerMoveCard'
-
-// Stores & Constants
 import { useAuthStore } from '@/src/store/authStore'
 import { useDreamStore } from '@/src/store/dreamStore'
 import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
-import { LANGUAGE, getMantra } from '@/src/constants/language'
+import { getMantra } from '@/src/constants/language'
 import {
   DREAM_CATEGORIES,
   DreamCategory,
 } from '@/src/constants/dreamCategories'
-import { format } from 'date-fns'
+
+// Components
+import { PowerMoveCard } from '@/src/components/home/PowerMoveCard'
 import { AICoachFab } from '@/src/components/home/AICoachFab'
 
-// HELPERS
+const { width } = Dimensions.get('window')
+
+// ============================================================================
+// HELPER: ATMOSPHERIC GLOW (Subtle background blob)
+// ============================================================================
+const AtmosphericGlow = () => {
+  const scale = useSharedValue(1)
+
+  useEffect(() => {
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.2, { duration: 8000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 8000, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      true,
+    )
+  }, [])
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }))
+
+  return <Animated.View style={[styles.atmosphericGlow, animatedStyle]} />
+}
+
+// ============================================================================
+// HELPER: CATEGORY LOOKUP
+// ============================================================================
 const getCategoryBySlug = (slug: string | null | undefined): DreamCategory => {
   if (!slug) return DREAM_CATEGORIES[0]
   return DREAM_CATEGORIES.find((c) => c.slug === slug) ?? DREAM_CATEGORIES[0]
 }
 
+// ============================================================================
+// MAIN SCREEN
+// ============================================================================
 export default function HomeScreen() {
   const insets = useSafeAreaInsets()
   const [refreshing, setRefreshing] = useState(false)
@@ -55,37 +97,38 @@ export default function HomeScreen() {
     skipAction,
   } = useDreamStore()
 
+  // Initial Load
   useEffect(() => {
-    fetchDreams()
-    fetchTodayActions()
+    loadData()
+  }, [])
+
+  const loadData = useCallback(async () => {
+    await Promise.all([fetchDreams(), fetchTodayActions()])
     setMantra(getMantra())
   }, [])
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await Promise.all([fetchDreams(), fetchTodayActions()])
+    await loadData()
     setRefreshing(false)
   }
 
-  // Get primary active dream
+  // --- DATA DERIVATION ---
   const activeDreams = dreams.filter((d) => d.status === 'active')
-  const primaryDream = activeDreams[0] // First active dream is primary
-
-  // Filter actions for primary dream (or all if showing all)
+  const primaryDream = activeDreams[0]
   const pendingActions = todayActions.filter((a) => !a.is_completed)
   const completedCount = todayActions.filter((a) => a.is_completed).length
   const totalCount = todayActions.length
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'Dreamer'
-  const today = format(new Date(), 'EEEE, MMM d')
+  const todayDate = format(new Date(), 'EEEE, MMM d')
 
+  // --- HANDLERS ---
   const handleAddPowerMove = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    if (primaryDream) {
-      router.push(`/(modals)/new-action?dreamId=${primaryDream.id}`)
-    } else {
-      router.push('/(modals)/new-action')
-    }
+    primaryDream
+      ? router.push(`/(modals)/new-action?dreamId=${primaryDream.id}`)
+      : router.push('/(modals)/new-action')
   }
 
   const handleViewDream = () => {
@@ -106,17 +149,19 @@ export default function HomeScreen() {
 
       {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
+        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={DARK.gradients.bg as [string, string, string]}
+          colors={[DARK.bg.primary, '#12121A', DARK.bg.primary]}
           style={StyleSheet.absoluteFill}
         />
+        <AtmosphericGlow />
       </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + SPACING.md },
+          { paddingTop: insets.top + SPACING.lg },
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -124,67 +169,81 @@ export default function HomeScreen() {
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={DARK.accent.rose}
+            progressViewOffset={insets.top + 20}
           />
         }
       >
-        {/* GREETING HEADER */}
+        {/* 1. EDITORIAL HEADER */}
         <Animated.View entering={FadeInDown.delay(100)} style={styles.header}>
-          <Text style={styles.date}>{today}</Text>
-          <View style={styles.greetingRow}>
-            <Text style={styles.greeting}>Hello, </Text>
-            <Text style={[styles.greeting, { color: DARK.accent.rose }]}>
-              {firstName}
-            </Text>
+          <View style={styles.dateBadge}>
+            <Text style={styles.dateText}>{todayDate}</Text>
           </View>
-          <Text style={styles.mantra}>"{mantra}"</Text>
+
+          <View style={styles.greetingContainer}>
+            <Text style={styles.greetingPrefix}>Good morning,</Text>
+            <Text style={styles.greetingName}>{firstName}.</Text>
+          </View>
+
+          <View style={styles.mantraContainer}>
+            <View style={styles.mantraLine} />
+            <Text style={styles.mantraText}>{mantra}</Text>
+          </View>
         </Animated.View>
 
-        {/* ACTIVE DREAM FOCUS CARD */}
-        {primaryDream ? (
-          <Animated.View entering={FadeInDown.delay(200)}>
+        {/* 2. HERO CARD (Active Dream) */}
+        <Animated.View
+          entering={FadeInDown.delay(200)}
+          style={styles.heroSection}
+        >
+          {primaryDream ? (
             <ActiveDreamCard
               dream={primaryDream}
               onPress={handleViewDream}
               otherDreamsCount={activeDreams.length - 1}
             />
-          </Animated.View>
-        ) : (
-          <Animated.View entering={FadeInDown.delay(200)}>
+          ) : (
             <NoDreamCard onPress={handleCreateDream} />
-          </Animated.View>
-        )}
+          )}
+        </Animated.View>
 
-        {/* POWER MOVES SECTION */}
+        {/* 3. DAILY ACTIONS */}
         {primaryDream && (
-          <View style={styles.section}>
+          <View style={styles.actionsSection}>
             <Animated.View
               entering={FadeInDown.delay(300)}
               style={styles.sectionHeader}
             >
               <View>
-                <Text style={styles.sectionTitle}>Today's Power Moves</Text>
+                <Text style={styles.sectionTitle}>Today's Momentum</Text>
                 <Text style={styles.sectionSubtitle}>
-                  Steps to make it happen
+                  Small moves, massive impact.
                 </Text>
               </View>
               {totalCount > 0 && (
-                <View style={styles.countBadge}>
-                  <Text style={styles.countText}>
+                <View style={styles.progressBadge}>
+                  <Text style={styles.progressBadgeText}>
                     {completedCount}/{totalCount}
                   </Text>
                 </View>
               )}
             </Animated.View>
 
-            {pendingActions.length === 0 && totalCount === 0 ? (
+            {/* Empty State */}
+            {pendingActions.length === 0 && totalCount === 0 && (
               <Animated.View entering={FadeInUp.delay(400)}>
-                <EmptyActions onAdd={handleAddPowerMove} />
+                <EmptyActionsCard onAdd={handleAddPowerMove} />
               </Animated.View>
-            ) : pendingActions.length === 0 ? (
+            )}
+
+            {/* All Done State */}
+            {pendingActions.length === 0 && totalCount > 0 && (
               <Animated.View entering={FadeInUp.delay(400)}>
                 <AllDoneCard onAddMore={handleAddPowerMove} />
               </Animated.View>
-            ) : (
+            )}
+
+            {/* List */}
+            {pendingActions.length > 0 && (
               <View style={styles.actionsList}>
                 {pendingActions.map((action, index) => {
                   const category = getCategoryBySlug(
@@ -193,7 +252,7 @@ export default function HomeScreen() {
                   return (
                     <Animated.View
                       key={action.id}
-                      entering={FadeInDown.delay(400 + index * 80)}
+                      entering={FadeInDown.delay(400 + index * 60)}
                     >
                       <PowerMoveCard
                         id={action.id}
@@ -210,18 +269,19 @@ export default function HomeScreen() {
                   )
                 })}
 
-                {/* Add More Button */}
-                <Animated.View entering={FadeInUp.delay(500)}>
+                <Animated.View
+                  entering={FadeInUp.delay(500 + pendingActions.length * 50)}
+                >
                   <Pressable
                     onPress={handleAddPowerMove}
                     style={styles.addMoreButton}
                   >
                     <Ionicons
-                      name='add'
-                      size={18}
+                      name='add-circle-outline'
+                      size={20}
                       color={DARK.text.secondary}
                     />
-                    <Text style={styles.addMoreText}>Add Power Move</Text>
+                    <Text style={styles.addMoreText}>Add another move</Text>
                   </Pressable>
                 </Animated.View>
               </View>
@@ -229,68 +289,107 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
+
       <AICoachFab />
     </View>
   )
 }
 
 // =============================================================================
-// ACTIVE DREAM CARD
+// SUB-COMPONENT: ACTIVE DREAM CARD (Premium Feel)
 // =============================================================================
-function ActiveDreamCard({
-  dream,
-  onPress,
-  otherDreamsCount,
-}: {
-  dream: any
-  onPress: () => void
-  otherDreamsCount: number
-}) {
+function ActiveDreamCard({ dream, onPress, otherDreamsCount }: any) {
   const progress =
     dream.total_actions > 0
       ? (dream.completed_actions ?? 0) / dream.total_actions
       : 0
 
-  return (
-    <Pressable onPress={onPress} style={styles.dreamCard}>
-      <BlurView intensity={20} tint='dark' style={StyleSheet.absoluteFill} />
-      <View style={styles.dreamCardBorder} />
+  const category = getCategoryBySlug(dream.category?.slug)
 
-      <View style={styles.dreamCardContent}>
-        <View style={styles.dreamCardHeader}>
-          <View style={styles.focusBadge}>
-            <Ionicons name='flash' size={12} color={DARK.accent.gold} />
-            <Text style={styles.focusText}>YOUR FOCUS</Text>
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.cardContainer,
+        pressed && { transform: [{ scale: 0.99 }] },
+      ]}
+    >
+      <BlurView intensity={30} tint='dark' style={StyleSheet.absoluteFill} />
+
+      {/* Dynamic colored glow based on category */}
+      <LinearGradient
+        colors={[category.color + '20', 'transparent']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+
+      <View
+        style={[styles.cardBorder, { borderColor: category.color + '40' }]}
+      />
+
+      <View style={styles.cardContent}>
+        {/* Header */}
+        <View style={styles.cardTopRow}>
+          <View
+            style={[
+              styles.categoryPill,
+              {
+                backgroundColor: category.color + '20',
+                borderColor: category.color + '30',
+              },
+            ]}
+          >
+            <Ionicons
+              name={category.icon as any}
+              size={10}
+              color={category.color}
+            />
+            <Text style={[styles.categoryPillText, { color: category.color }]}>
+              PRIMARY FOCUS
+            </Text>
           </View>
           {otherDreamsCount > 0 && (
-            <Text style={styles.otherDreams}>+{otherDreamsCount} more</Text>
+            <Text style={styles.moreDreamsText}>+{otherDreamsCount} more</Text>
           )}
         </View>
 
-        <Text style={styles.dreamTitle} numberOfLines={2}>
+        {/* Title */}
+        <Text style={styles.cardTitle} numberOfLines={2}>
           {dream.title}
         </Text>
 
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
+        {/* Progress */}
+        <View style={styles.progressSection}>
+          <View style={styles.track}>
             <View
               style={[
-                styles.progressFill,
-                { width: `${Math.max(progress * 100, 2)}%` },
+                styles.fill,
+                {
+                  width: `${Math.max(progress * 100, 5)}%`,
+                  backgroundColor: category.color,
+                },
               ]}
             />
           </View>
-          <Text style={styles.progressText}>
-            {dream.completed_actions ?? 0}/{dream.total_actions ?? 0} moves
-          </Text>
+          <View style={styles.progressLabels}>
+            <Text style={styles.progressSubtext}>
+              {Math.round(progress * 100)}% Momentum
+            </Text>
+            <Text style={styles.progressSubtext}>
+              {dream.completed_actions}/{dream.total_actions} moves
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.dreamCardFooter}>
-          <Text style={styles.viewDreamText}>View Dream</Text>
-          <Ionicons name='chevron-forward' size={16} color={DARK.accent.rose} />
+        {/* Action Row */}
+        <View style={styles.cardFooter}>
+          <Text style={[styles.viewLink, { color: category.color }]}>
+            View Dashboard
+          </Text>
+          <Ionicons name='arrow-forward' size={14} color={category.color} />
         </View>
       </View>
     </Pressable>
@@ -298,24 +397,30 @@ function ActiveDreamCard({
 }
 
 // =============================================================================
-// NO DREAM CARD (First time / No active dreams)
+// SUB-COMPONENT: NO DREAM CARD
 // =============================================================================
 function NoDreamCard({ onPress }: { onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.noDreamCard}>
+    <Pressable onPress={onPress} style={styles.cardContainer}>
       <BlurView intensity={20} tint='dark' style={StyleSheet.absoluteFill} />
-      <View style={styles.dreamCardBorder} />
+      <View style={styles.cardBorder} />
 
-      <View style={styles.noDreamContent}>
-        <View style={styles.noDreamIcon}>
-          <Ionicons name='sparkles' size={32} color={DARK.accent.rose} />
+      <View
+        style={[
+          styles.cardContent,
+          { alignItems: 'center', paddingVertical: SPACING.xl },
+        ]}
+      >
+        <View style={styles.emptyStateIcon}>
+          <Ionicons name='telescope' size={32} color={DARK.accent.rose} />
         </View>
-        <Text style={styles.noDreamTitle}>What's your dream?</Text>
-        <Text style={styles.noDreamSubtitle}>
-          Set a goal and we'll help you break it into daily actions
+        <Text style={styles.emptyStateTitle}>No active focus</Text>
+        <Text style={styles.emptyStateDesc}>
+          Choose a dream to start building momentum.
         </Text>
-        <View style={styles.createDreamButton}>
-          <Text style={styles.createDreamText}>Create Your Dream</Text>
+
+        <View style={styles.primaryBtn}>
+          <Text style={styles.primaryBtnText}>Design Your Dream</Text>
           <Ionicons name='arrow-forward' size={16} color='#FFF' />
         </View>
       </View>
@@ -323,46 +428,56 @@ function NoDreamCard({ onPress }: { onPress: () => void }) {
   )
 }
 
-function EmptyActions({ onAdd }: { onAdd: () => void }) {
+// =============================================================================
+// SUB-COMPONENT: EMPTY ACTIONS
+// =============================================================================
+function EmptyActionsCard({ onAdd }: { onAdd: () => void }) {
   return (
-    <View style={styles.emptyActions}>
-      <View style={styles.emptyIcon}>
-        <Ionicons name='flash-outline' size={28} color={DARK.text.muted} />
+    <View style={styles.dashedCard}>
+      <View style={styles.dashedContent}>
+        <Text style={styles.dashedTitle}>Ready to begin?</Text>
+        <Text style={styles.dashedDesc}>
+          Add your first power move for today.
+        </Text>
+        <Pressable onPress={onAdd} style={styles.miniBtn}>
+          <Ionicons name='add' size={16} color='#FFF' />
+          <Text style={styles.miniBtnText}>Add Move</Text>
+        </Pressable>
       </View>
-      <Text style={styles.emptyTitle}>No power moves yet</Text>
-      <Text style={styles.emptySubtitle}>
-        Add your first action to start building momentum
-      </Text>
-      <Pressable onPress={onAdd} style={styles.addButton}>
-        <LinearGradient
-          colors={DARK.gradients.primary as [string, string]}
-          style={styles.addButtonGradient}
-        >
-          <Ionicons name='add' size={20} color='#FFF' />
-          <Text style={styles.addButtonText}>Add Power Move</Text>
-        </LinearGradient>
-      </Pressable>
     </View>
   )
 }
 
-// =============================================================================
-// ALL DONE CARD
-// =============================================================================
 function AllDoneCard({ onAddMore }: { onAddMore: () => void }) {
   return (
-    <View style={styles.allDoneCard}>
-      <View style={styles.allDoneIcon}>
-        <Ionicons name='trophy' size={32} color={DARK.accent.gold} />
+    <View style={styles.celebrationCard}>
+      <LinearGradient
+        colors={[DARK.accent.gold + '15', 'transparent']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <View style={styles.cardBorder} />
+
+      <View
+        style={[
+          styles.cardContent,
+          { flexDirection: 'row', alignItems: 'center', gap: 16 },
+        ]}
+      >
+        <View style={styles.trophyIcon}>
+          <Ionicons name='trophy' size={24} color={DARK.accent.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.celebrationTitle}>Unstoppable.</Text>
+          <Text style={styles.celebrationDesc}>
+            You've completed everything today.
+          </Text>
+        </View>
+        <Pressable onPress={onAddMore} style={styles.iconBtn}>
+          <Ionicons name='add' size={24} color={DARK.text.primary} />
+        </Pressable>
       </View>
-      <Text style={styles.allDoneTitle}>You crushed it! 🔥</Text>
-      <Text style={styles.allDoneSubtitle}>
-        All power moves complete for today
-      </Text>
-      <Pressable onPress={onAddMore} style={styles.addBonusButton}>
-        <Ionicons name='add' size={16} color={DARK.accent.rose} />
-        <Text style={styles.addBonusText}>Add bonus move</Text>
-      </Pressable>
     </View>
   )
 }
@@ -382,311 +497,306 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING['4xl'],
   },
+  atmosphericGlow: {
+    position: 'absolute',
+    top: -100,
+    left: -50,
+    width: width,
+    height: 400,
+    backgroundColor: DARK.accent.rose,
+    opacity: 0.15,
+    filter: 'blur(80px)', // Web
+    borderRadius: 200,
+  },
 
   // Header
   header: {
     marginBottom: SPACING.xl,
   },
-  date: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 12,
-    color: DARK.text.tertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: SPACING.xs,
+  dateBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.sm,
   },
-  greetingRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  greeting: {
-    fontFamily: FONTS.bold,
-    fontSize: 28,
-    color: DARK.text.primary,
-  },
-  mantra: {
-    fontFamily: FONTS.regular,
-    fontSize: 14,
+  dateText: {
     color: DARK.text.secondary,
+    fontSize: 12,
+    fontFamily: FONTS.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  greetingContainer: {
+    marginBottom: SPACING.md,
+  },
+  greetingPrefix: {
+    color: DARK.text.secondary,
+    fontSize: 20,
+    fontFamily: FONTS.regular,
+  },
+  greetingName: {
+    color: DARK.text.primary,
+    fontSize: 34,
+    fontFamily: FONTS.bold,
+    lineHeight: 40,
+  },
+  mantraContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  mantraLine: {
+    width: 2,
+    height: '100%',
+    backgroundColor: DARK.accent.rose,
+    borderRadius: 1,
+  },
+  mantraText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.6)',
     fontStyle: 'italic',
-    marginTop: SPACING.xs,
+    fontSize: 14,
+    fontFamily: FONTS.regular,
   },
 
-  // Dream Card
-  dreamCard: {
+  // Hero Section (Dream Card)
+  heroSection: {
+    marginBottom: SPACING['2xl'],
+  },
+  cardContainer: {
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    marginBottom: SPACING.xl,
+    backgroundColor: 'rgba(20, 20, 25, 0.6)',
+    minHeight: 180,
   },
-  dreamCardBorder: {
+  cardBorder: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: RADIUS.xl,
   },
-  dreamCardContent: {
+  cardContent: {
     padding: SPACING.lg,
   },
-  dreamCardHeader: {
+  cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
-  focusBadge: {
+  categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    paddingHorizontal: SPACING.sm,
+    gap: 6,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: RADIUS.sm,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
   },
-  focusText: {
-    fontFamily: FONTS.bold,
+  categoryPillText: {
     fontSize: 10,
-    color: DARK.accent.gold,
-    letterSpacing: 1,
+    fontFamily: FONTS.bold,
+    letterSpacing: 0.5,
   },
-  otherDreams: {
-    fontFamily: FONTS.medium,
+  moreDreamsText: {
     fontSize: 12,
     color: DARK.text.muted,
+    fontFamily: FONTS.medium,
   },
-  dreamTitle: {
+  cardTitle: {
+    fontSize: 22,
     fontFamily: FONTS.bold,
-    fontSize: 20,
-    color: DARK.text.primary,
-    marginBottom: SPACING.md,
-    lineHeight: 26,
+    color: '#FFF',
+    marginBottom: SPACING.lg,
+    lineHeight: 30,
   },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    marginBottom: SPACING.md,
+  progressSection: {
+    marginBottom: SPACING.lg,
   },
-  progressBar: {
-    flex: 1,
-    height: 6,
+  track: {
+    height: 4,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 3,
+    borderRadius: 2,
+    marginBottom: 8,
     overflow: 'hidden',
   },
-  progressFill: {
+  fill: {
     height: '100%',
-    backgroundColor: DARK.accent.rose,
-    borderRadius: 3,
+    borderRadius: 2,
   },
-  progressText: {
-    fontFamily: FONTS.medium,
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressSubtext: {
     fontSize: 12,
-    color: DARK.text.secondary,
+    color: 'rgba(255,255,255,0.5)',
+    fontFamily: FONTS.medium,
   },
-  dreamCardFooter: {
+  cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
-  viewDreamText: {
+  viewLink: {
+    fontSize: 14,
     fontFamily: FONTS.semiBold,
-    fontSize: 13,
-    color: DARK.accent.rose,
   },
 
-  // No Dream Card
-  noDreamCard: {
-    borderRadius: RADIUS.xl,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    marginBottom: SPACING.xl,
-  },
-  noDreamContent: {
-    padding: SPACING.xl,
-    alignItems: 'center',
-  },
-  noDreamIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(244, 63, 94, 0.15)',
-    alignItems: 'center',
+  // Empty State Specifics
+  emptyStateIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
     justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: SPACING.md,
   },
-  noDreamTitle: {
+  emptyStateTitle: {
+    fontSize: 18,
     fontFamily: FONTS.bold,
-    fontSize: 20,
-    color: DARK.text.primary,
-    marginBottom: SPACING.xs,
+    color: '#FFF',
+    marginBottom: 4,
   },
-  noDreamSubtitle: {
-    fontFamily: FONTS.regular,
+  emptyStateDesc: {
     fontSize: 14,
     color: DARK.text.secondary,
     textAlign: 'center',
     marginBottom: SPACING.lg,
   },
-  createDreamButton: {
+  primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: 8,
     backgroundColor: DARK.accent.rose,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: RADIUS.full,
   },
-  createDreamText: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 14,
+  primaryBtnText: {
     color: '#FFF',
+    fontFamily: FONTS.bold,
+    fontSize: 14,
   },
 
-  // Section
-  section: {
-    marginTop: SPACING.md,
+  // Actions Section
+  actionsSection: {
+    gap: SPACING.md,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: SPACING.md,
+    marginBottom: 4,
   },
   sectionTitle: {
-    fontFamily: FONTS.bold,
     fontSize: 18,
-    color: DARK.text.primary,
+    fontFamily: FONTS.bold,
+    color: '#FFF',
   },
   sectionSubtitle: {
-    fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: 14,
     color: DARK.text.secondary,
-    marginTop: 2,
+    fontFamily: FONTS.regular,
   },
-  countBadge: {
+  progressBadge: {
     backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: SPACING.sm + 2,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+  },
+  progressBadgeText: {
+    fontSize: 12,
+    color: '#FFF',
+    fontFamily: FONTS.medium,
+  },
+
+  // Empty Actions Dashed
+  dashedCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderStyle: 'dashed',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  dashedContent: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  dashedTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.semiBold,
+    color: '#FFF',
+  },
+  dashedDesc: {
+    fontSize: 14,
+    color: DARK.text.secondary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  miniBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: RADIUS.full,
   },
-  countText: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 12,
-    color: DARK.text.secondary,
+  miniBtnText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontFamily: FONTS.medium,
   },
+
+  // Celebration Card
+  celebrationCard: {
+    borderRadius: RADIUS.lg,
+    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+    overflow: 'hidden',
+  },
+  trophyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  celebrationTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.bold,
+    color: '#FFF',
+  },
+  celebrationDesc: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+  },
+
+  // List
   actionsList: {
     gap: SPACING.sm,
   },
-
-  // Add More Button
   addMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.xs,
-    paddingVertical: SPACING.md,
-    marginTop: SPACING.xs,
+    gap: 8,
+    paddingVertical: SPACING.lg,
+    opacity: 0.7,
   },
   addMoreText: {
-    fontFamily: FONTS.medium,
     fontSize: 14,
     color: DARK.text.secondary,
-  },
-
-  // Empty Actions
-  emptyActions: {
-    alignItems: 'center',
-    paddingVertical: SPACING.xl,
-    paddingHorizontal: SPACING.lg,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    borderStyle: 'dashed',
-  },
-  emptyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-  },
-  emptyTitle: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 16,
-    color: DARK.text.primary,
-    marginBottom: SPACING.xs,
-  },
-  emptySubtitle: {
-    fontFamily: FONTS.regular,
-    fontSize: 13,
-    color: DARK.text.secondary,
-    textAlign: 'center',
-    marginBottom: SPACING.lg,
-  },
-  addButton: {
-    borderRadius: RADIUS.full,
-    overflow: 'hidden',
-  },
-  addButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
-  },
-  addButtonText: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 14,
-    color: '#FFF',
-  },
-
-  // All Done
-  allDoneCard: {
-    alignItems: 'center',
-    paddingVertical: SPACING.xl,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  allDoneIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-  },
-  allDoneTitle: {
-    fontFamily: FONTS.bold,
-    fontSize: 18,
-    color: DARK.text.primary,
-    marginBottom: SPACING.xs,
-  },
-  allDoneSubtitle: {
-    fontFamily: FONTS.regular,
-    fontSize: 13,
-    color: DARK.text.secondary,
-    marginBottom: SPACING.lg,
-  },
-  addBonusButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  addBonusText: {
     fontFamily: FONTS.medium,
-    fontSize: 13,
-    color: DARK.text.secondary,
   },
 })

@@ -1,3 +1,4 @@
+// app/(onboarding)/pick-dreams.tsx
 import React, { useState, useEffect } from 'react'
 import {
   View,
@@ -34,32 +35,71 @@ import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 const { width, height } = Dimensions.get('window')
 const CARD_WIDTH = (width - SPACING.lg * 2 - SPACING.md) / 2
 
+// ============================================================================
+// DATA (STRICT: Original IDs kept for Database Compatibility)
+// ============================================================================
 const CATEGORIES = [
   {
     id: 'health',
     label: 'Fitness & Health',
     icon: 'fitness',
     color: '#F43F5E',
+    desc: 'Energy & Vitality',
   },
-  { id: 'career', label: 'Career & Biz', icon: 'briefcase', color: '#3B82F6' },
-  { id: 'wealth', label: 'Wealth', icon: 'wallet', color: '#F59E0B' },
-  { id: 'mind', label: 'Mindfulness', icon: 'leaf', color: '#10B981' },
-  { id: 'skills', label: 'New Skills', icon: 'school', color: '#8B5CF6' },
-  { id: 'travel', label: 'Travel', icon: 'airplane', color: '#06B6D4' },
+  {
+    id: 'career',
+    label: 'Career & Biz',
+    icon: 'briefcase',
+    color: '#3B82F6',
+    desc: 'Growth & Impact',
+  },
+  {
+    id: 'wealth',
+    label: 'Wealth',
+    icon: 'wallet',
+    color: '#F59E0B',
+    desc: 'Financial Freedom',
+  },
+  {
+    id: 'mind',
+    label: 'Mindfulness',
+    icon: 'leaf',
+    color: '#10B981',
+    desc: 'Inner Peace',
+  },
+  {
+    id: 'skills',
+    label: 'New Skills',
+    icon: 'school',
+    color: '#8B5CF6',
+    desc: 'Learning & Mastery',
+  },
+  {
+    id: 'travel',
+    label: 'Travel',
+    icon: 'airplane',
+    color: '#06B6D4',
+    desc: 'Exploration',
+  },
   {
     id: 'relationships',
     label: 'Relationships',
     icon: 'heart',
     color: '#EC4899',
+    desc: 'Deep Connection',
   },
   {
     id: 'creativity',
     label: 'Creativity',
     icon: 'color-palette',
     color: '#F97316',
+    desc: 'Art & Expression',
   },
 ]
 
+// ============================================================================
+// AMBIENT BACKGROUND
+// ============================================================================
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   const scale = useSharedValue(1)
   const translateY = useSharedValue(0)
@@ -70,10 +110,10 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
       withRepeat(
         withSequence(
           withTiming(1.2, {
-            duration: 4000,
+            duration: 6000,
             easing: Easing.inOut(Easing.ease),
           }),
-          withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         true,
@@ -84,10 +124,10 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
       withRepeat(
         withSequence(
           withTiming(-30, {
-            duration: 6000,
+            duration: 8000,
             easing: Easing.inOut(Easing.ease),
           }),
-          withTiming(0, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: 8000, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         true,
@@ -110,7 +150,8 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           height: size,
           borderRadius: size / 2,
           backgroundColor: color,
-          opacity: 0.4,
+          opacity: 0.3,
+          filter: 'blur(50px)', // Web/Expo 50+
         },
         style,
       ]}
@@ -119,41 +160,56 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
 }
 
 // ============================================================================
-// COMPONENT: CATEGORY CARD
+// COMPONENT: DREAM CARD (The "Alive" Component)
 // ============================================================================
-const CategoryCard = ({ item, isSelected, onToggle, index }: any) => {
+const DreamCard = ({ item, isSelected, onToggle, index }: any) => {
   const scale = useSharedValue(1)
-  const selectionProgress = useSharedValue(isSelected ? 1 : 0)
+  const progress = useSharedValue(isSelected ? 1 : 0)
 
   useEffect(() => {
-    selectionProgress.value = withTiming(isSelected ? 1 : 0, { duration: 300 })
+    progress.value = withTiming(isSelected ? 1 : 0, {
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+    })
   }, [isSelected])
 
-  const animatedStyle = useAnimatedStyle(() => {
+  // Card Styles
+  const animatedCardStyle = useAnimatedStyle(() => {
     const borderColor = interpolateColor(
-      selectionProgress.value,
+      progress.value,
       [0, 1],
-      ['rgba(255,255,255,0.1)', item.color],
+      ['rgba(255,255,255,0.08)', item.color],
     )
-
-    const bgOpacity = interpolate(selectionProgress.value, [0, 1], [0.03, 0.15])
+    const backgroundColor = interpolateColor(
+      progress.value,
+      [0, 1],
+      ['rgba(20, 20, 30, 0.4)', 'rgba(20, 20, 30, 0.8)'], // Subtle darken on select
+    )
 
     return {
       transform: [{ scale: scale.value }],
       borderColor,
-      backgroundColor: `rgba(255,255,255, ${bgOpacity})`,
+      backgroundColor,
     }
   })
 
+  // Icon Animation
   const iconStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(selectionProgress.value, [0, 1], [0.5, 1]),
-    transform: [
-      { scale: interpolate(selectionProgress.value, [0, 1], [1, 1.1]) },
-    ],
+    transform: [{ scale: interpolate(progress.value, [0, 1], [1, 1.15]) }],
+    opacity: interpolate(progress.value, [0, 1], [0.6, 1]),
+  }))
+
+  // Text Animation
+  const textStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      progress.value,
+      [0, 1],
+      [DARK.text.secondary, '#FFF'],
+    ),
   }))
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.95)
+    scale.value = withSpring(0.96)
   }
   const handlePressOut = () => {
     scale.value = withSpring(1)
@@ -165,42 +221,56 @@ const CategoryCard = ({ item, isSelected, onToggle, index }: any) => {
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >
-      <Animated.View style={[styles.card, animatedStyle]}>
-        {/* Glow Background when selected */}
-        {isSelected && (
-          <View style={[styles.cardGlow, { backgroundColor: item.color }]} />
-        )}
-
-        <View
-          style={[
-            styles.iconCircle,
-            {
-              backgroundColor: isSelected
-                ? item.color
-                : 'rgba(255,255,255,0.05)',
-            },
-          ]}
-        >
-          <Ionicons
-            name={item.icon}
-            size={24}
-            color={isSelected ? '#FFF' : item.color}
+      <Animated.View style={[styles.card, animatedCardStyle]}>
+        {/* Inner Glow when selected */}
+        <Animated.View style={[styles.cardGlow, { opacity: progress }]}>
+          <LinearGradient
+            colors={[item.color, 'transparent']}
+            style={[StyleSheet.absoluteFill, { opacity: 0.15 }]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           />
+        </Animated.View>
+
+        {/* Header (Icon + Check) */}
+        <View style={styles.cardHeader}>
+          <Animated.View
+            style={[
+              styles.iconContainer,
+              {
+                borderColor: isSelected ? item.color : 'rgba(255,255,255,0.1)',
+                backgroundColor: isSelected
+                  ? item.color + '20'
+                  : 'rgba(255,255,255,0.03)',
+              },
+            ]}
+          >
+            <Animated.View style={iconStyle}>
+              <Ionicons
+                name={item.icon}
+                size={22}
+                color={isSelected ? item.color : 'rgba(255,255,255,0.6)'}
+              />
+            </Animated.View>
+          </Animated.View>
+
+          {isSelected && (
+            <Animated.View
+              entering={FadeIn.duration(300)}
+              style={[styles.checkBadge, { backgroundColor: item.color }]}
+            >
+              <Ionicons name='checkmark' size={10} color='#FFF' />
+            </Animated.View>
+          )}
         </View>
 
-        <Animated.Text style={[styles.cardLabel, iconStyle]}>
-          {item.label}
-        </Animated.Text>
-
-        {/* Checkmark Badge */}
-        {isSelected && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            style={[styles.checkBadge, { backgroundColor: item.color }]}
-          >
-            <Ionicons name='checkmark' size={12} color='#FFF' />
-          </Animated.View>
-        )}
+        {/* Footer (Text) */}
+        <View>
+          <Animated.Text style={[styles.cardLabel, textStyle]}>
+            {item.label}
+          </Animated.Text>
+          <Text style={styles.cardDesc}>{item.desc}</Text>
+        </View>
       </Animated.View>
     </Pressable>
   )
@@ -217,7 +287,7 @@ export default function PickDreamsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((i) => i !== id)
-      if (prev.length >= 3) return [...prev.slice(1), id] // Replace oldest
+      if (prev.length >= 3) return [...prev.slice(1), id] // Keep max 3, rotate
       return [...prev, id]
     })
   }
@@ -239,25 +309,26 @@ export default function PickDreamsScreen() {
       <View style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={DARK.gradients.bg as [string, string, string]}
+          colors={[DARK.bg.primary, '#12121a', DARK.bg.primary]}
           style={StyleSheet.absoluteFill}
         />
         <BreathingBlob
           color={DARK.accent.rose}
           size={300}
-          top={-50}
+          top={-60}
           left={-100}
         />
         <BreathingBlob
-          color='#3B82F6'
-          size={250}
+          color='#4F46E5'
+          size={280}
           top={height * 0.4}
-          left={width * 0.6}
+          left={width * 0.5}
           delay={1000}
         />
+
         {Platform.OS === 'ios' && (
           <BlurView
-            intensity={60}
+            intensity={40}
             tint='dark'
             style={StyleSheet.absoluteFill}
           />
@@ -266,31 +337,34 @@ export default function PickDreamsScreen() {
 
       {/* HEADER */}
       <View style={[styles.header, { marginTop: insets.top }]}>
-        <View style={styles.progressBar}>
-          <View style={styles.progressFill} />
+        <View style={styles.progressContainer}>
+          <View style={styles.progressTrack} />
+          <Animated.View style={[styles.progressFill, { width: '33%' }]} />
         </View>
-        <Animated.View entering={FadeInDown.delay(200)}>
+
+        <Animated.View entering={FadeInDown.delay(200).springify()}>
           <Text style={styles.headerTitle}>
-            Focus your <Text style={{ color: DARK.accent.gold }}>energy</Text>
+            Where will you{'\n'}
+            <Text style={{ color: DARK.accent.gold }}>direct your power?</Text>
           </Text>
           <Text style={styles.headerSubtitle}>
-            Select up to 3 areas to transform.
+            Select up to 3 focus areas to start.
           </Text>
         </Animated.View>
       </View>
 
-      {/* GRID */}
+      {/* CONTENT GRID */}
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.gridContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.grid}>
           {CATEGORIES.map((cat, index) => (
             <Animated.View
               key={cat.id}
-              entering={FadeInDown.delay(300 + index * 50).springify()}
+              entering={FadeInDown.delay(300 + index * 40).springify()}
             >
-              <CategoryCard
+              <DreamCard
                 item={cat}
                 index={index}
                 isSelected={selected.includes(cat.id)}
@@ -301,29 +375,36 @@ export default function PickDreamsScreen() {
         </View>
       </ScrollView>
 
-      {/* BOTTOM DOCK */}
+      {/* FLOATING DOCK */}
       <Animated.View
-        entering={FadeInDown.delay(800)}
-        style={[styles.bottomDock, { paddingBottom: insets.bottom + 10 }]}
+        entering={FadeInDown.delay(800).springify()}
+        style={[styles.floatingDockContainer, { bottom: insets.bottom + 10 }]}
       >
-        <BlurView intensity={80} tint='dark' style={StyleSheet.absoluteFill} />
+        <BlurView intensity={50} tint='dark' style={StyleSheet.absoluteFill} />
         <View style={styles.dockBorder} />
 
-        <View style={styles.dockContent}>
-          <View style={styles.selectionCount}>
-            <Text style={styles.countText}>
-              <Text style={{ color: DARK.accent.rose, fontFamily: FONTS.bold }}>
+        <View style={styles.dockInner}>
+          {/* Counter */}
+          <View style={styles.counterBadge}>
+            <Text style={styles.counterText}>
+              <Text
+                style={{
+                  color: selected.length > 0 ? DARK.accent.rose : '#666',
+                  fontFamily: FONTS.bold,
+                }}
+              >
                 {selected.length}
-              </Text>{' '}
-              / 3 selected
+              </Text>
+              <Text style={{ color: '#666' }}> / 3</Text>
             </Text>
           </View>
 
+          {/* Action */}
           <Pressable
             onPress={handleContinue}
             disabled={selected.length === 0}
             style={[
-              styles.continueButton,
+              styles.dockButton,
               { opacity: selected.length === 0 ? 0.5 : 1 },
             ]}
           >
@@ -337,8 +418,8 @@ export default function PickDreamsScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             />
-            <Text style={styles.buttonText}>Continue</Text>
-            <Ionicons name='arrow-forward' size={18} color='#FFF' />
+            <Text style={styles.dockButtonText}>Confirm Focus</Text>
+            <Ionicons name='arrow-forward' size={16} color='#FFF' />
           </Pressable>
         </View>
       </Animated.View>
@@ -361,35 +442,41 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg,
     zIndex: 10,
   },
-  progressBar: {
+  progressContainer: {
     height: 4,
     width: 60,
+    marginBottom: SPACING.lg,
+    position: 'relative',
+  },
+  progressTrack: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 2,
-    marginBottom: SPACING.lg,
-    overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    width: '30%', // Step 1
     backgroundColor: DARK.accent.rose,
+    borderRadius: 2,
   },
   headerTitle: {
     fontSize: 28,
     fontFamily: FONTS.bold,
-    color: DARK.text.primary,
+    color: '#FFF',
+    lineHeight: 36,
     marginBottom: SPACING.xs,
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 16,
     fontFamily: FONTS.regular,
     color: DARK.text.secondary,
+    lineHeight: 24,
   },
 
   // Grid
-  scrollContent: {
+  gridContent: {
     paddingHorizontal: SPACING.lg,
-    paddingBottom: 140, // Space for dock
+    paddingBottom: 120, // Clear the dock
   },
   grid: {
     flexDirection: 'row',
@@ -401,92 +488,97 @@ const styles = StyleSheet.create({
   // Card
   card: {
     width: CARD_WIDTH,
-    height: CARD_WIDTH * 1.1,
+    height: CARD_WIDTH * 1.25, // Elegant vertical aspect ratio
     borderRadius: RADIUS['2xl'],
     padding: SPACING.md,
     justifyContent: 'space-between',
     borderWidth: 1,
     overflow: 'hidden',
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   cardGlow: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.15,
   },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  checkBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardLabel: {
     fontSize: 15,
-    fontFamily: FONTS.semiBold,
-    color: DARK.text.primary,
+    fontFamily: FONTS.bold,
+    marginBottom: 4,
   },
-  checkBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+  cardDesc: {
+    fontSize: 11,
+    fontFamily: FONTS.medium,
+    color: 'rgba(255,255,255,0.4)',
+    lineHeight: 14,
   },
 
-  // Bottom Dock
-  bottomDock: {
+  // Floating Dock
+  floatingDockContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    left: SPACING.lg,
+    right: SPACING.lg,
+    height: 64,
+    borderRadius: RADIUS.full,
     overflow: 'hidden',
-    borderTopLeftRadius: RADIUS['2xl'],
-    borderTopRightRadius: RADIUS['2xl'],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   dockBorder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: RADIUS.full,
   },
-  dockContent: {
+  dockInner: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: SPACING.lg,
-    paddingTop: SPACING.lg,
-  },
-  selectionCount: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  counterBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
-  countText: {
-    color: DARK.text.secondary,
-    fontFamily: FONTS.medium,
+  counterText: {
     fontSize: 14,
+    fontFamily: FONTS.medium,
   },
-  continueButton: {
+  dockButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING['xl'],
-    height: 50,
+    paddingHorizontal: 20,
+    height: 44,
     borderRadius: RADIUS.full,
-    overflow: 'hidden',
     gap: 8,
-    ...DARK.glow.rose,
+    overflow: 'hidden',
   },
-  buttonText: {
+  dockButtonText: {
     color: '#FFF',
-    fontFamily: FONTS.semiBold,
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily: FONTS.bold,
   },
 })

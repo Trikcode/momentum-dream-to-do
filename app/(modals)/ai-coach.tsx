@@ -438,9 +438,7 @@ export default function AICoachScreen() {
         <View style={styles.inputRow}>
           <TextInput
             style={styles.textInput}
-            placeholder={
-              isPremium ? 'Ask me anything...' : 'You have 5 free messages'
-            }
+            placeholder={'Ask for advice...'}
             placeholderTextColor='rgba(255,255,255,0.4)'
             value={inputText}
             onChangeText={setInputText}

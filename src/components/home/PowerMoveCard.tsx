@@ -13,11 +13,12 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
-const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3
 
 interface PowerMoveCardProps {
   id: string
@@ -42,63 +43,64 @@ export function PowerMoveCard({
   showHint = false,
 }: PowerMoveCardProps) {
   const translateX = useSharedValue(0)
-  const itemHeight = useSharedValue(90)
+  const itemHeight = useSharedValue(100) // Slightly taller for better spacing
   const opacity = useSharedValue(1)
   const hintOpacity = useSharedValue(showHint ? 1 : 0)
-
-  // prevents double-fire if gesture ends twice / rerenders
   const hasTriggered = useSharedValue(false)
 
+  // Handlers
   const handleComplete = () => {
-    Promise.resolve(onComplete(id)).catch((e) => {
-      console.error('Complete action failed:', e)
-    })
+    Promise.resolve(onComplete(id)).catch(console.error)
   }
-
   const handleSkip = () => {
-    Promise.resolve(onSkip(id)).catch((e) => {
-      console.error('Skip action failed:', e)
-    })
+    Promise.resolve(onSkip(id)).catch(console.error)
   }
-
   const triggerHaptic = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {})
   }
 
+  // Hint Animation
   useEffect(() => {
     if (!showHint) return
-
     const timeout = setTimeout(() => {
       translateX.value = withSequence(
-        withTiming(30, { duration: 300 }),
-        withTiming(-30, { duration: 400 }),
-        withTiming(0, { duration: 300 }),
+        withTiming(40, {
+          duration: 400,
+          easing: require('react-native-reanimated').Easing.out(
+            require('react-native-reanimated').Easing.ease,
+          ),
+        }),
+        withTiming(0, {
+          duration: 400,
+          easing: require('react-native-reanimated').Easing.out(
+            require('react-native-reanimated').Easing.ease,
+          ),
+        }),
       )
-    }, 1000)
+    }, 1500)
 
-    const hideHint = setTimeout(() => {
+    const fadeOut = setTimeout(() => {
       hintOpacity.value = withTiming(0, { duration: 500 })
-    }, 4000)
+    }, 5000)
 
     return () => {
       clearTimeout(timeout)
-      clearTimeout(hideHint)
+      clearTimeout(fadeOut)
     }
   }, [showHint])
 
+  // Gesture
   const pan = Gesture.Pan()
     .activeOffsetX([-10, 10])
     .onChange((event) => {
       if (hasTriggered.value) return
-
       translateX.value = event.translationX
       if (Math.abs(event.translationX) > 10) {
-        hintOpacity.value = withTiming(0, { duration: 200 })
+        hintOpacity.value = withTiming(0)
       }
     })
     .onEnd((event) => {
       if (hasTriggered.value) return
-
       const shouldTrigger = Math.abs(event.translationX) > SWIPE_THRESHOLD
 
       if (!shouldTrigger) {
@@ -107,74 +109,107 @@ export function PowerMoveCard({
       }
 
       hasTriggered.value = true
-
-      // IMPORTANT: haptics must run on JS thread
       runOnJS(triggerHaptic)()
 
       const direction = event.translationX > 0 ? 1 : -1
-
-      translateX.value = withTiming(direction * SCREEN_WIDTH, { duration: 250 })
-      opacity.value = withTiming(0, { duration: 200 })
-
+      translateX.value = withTiming(direction * SCREEN_WIDTH, { duration: 300 })
+      opacity.value = withTiming(0, { duration: 250 })
       itemHeight.value = withTiming(0, { duration: 300 }, (finished) => {
-        if (!finished) return
-        if (direction > 0) runOnJS(handleComplete)()
-        else runOnJS(handleSkip)()
+        if (finished) {
+          if (direction > 0) runOnJS(handleComplete)()
+          else runOnJS(handleSkip)()
+        }
       })
     })
 
+  // Styles
   const cardStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }))
-
   const containerStyle = useAnimatedStyle(() => ({
     height: itemHeight.value,
     opacity: opacity.value,
-    marginBottom: opacity.value === 0 ? 0 : SPACING.sm,
+    marginBottom: opacity.value === 0 ? 0 : SPACING.md,
   }))
 
+  // Reveal Actions Opacity
   const leftActionStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateX.value,
-      [0, SWIPE_THRESHOLD],
-      [0.3, 1],
+      [0, 60],
+      [0, 1],
       Extrapolation.CLAMP,
     ),
+    transform: [
+      {
+        scale: interpolate(
+          translateX.value,
+          [0, 60],
+          [0.8, 1],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
   }))
-
   const rightActionStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateX.value,
-      [-SWIPE_THRESHOLD, 0],
-      [1, 0.3],
+      [-60, 0],
+      [1, 0],
       Extrapolation.CLAMP,
     ),
+    transform: [
+      {
+        scale: interpolate(
+          translateX.value,
+          [-60, 0],
+          [1, 0.8],
+          Extrapolation.CLAMP,
+        ),
+      },
+    ],
   }))
-
-  const hintStyle = useAnimatedStyle(() => ({
-    opacity: hintOpacity.value,
-  }))
+  const hintStyle = useAnimatedStyle(() => ({ opacity: hintOpacity.value }))
 
   return (
     <Animated.View style={[styles.containerWrapper, containerStyle]}>
+      {/* Background Actions Layer */}
       <View style={styles.actionBg}>
-        <Animated.View
-          style={[styles.actionSide, styles.completeAction, leftActionStyle]}
-        >
-          <Ionicons name='checkmark-circle' size={24} color='#FFF' />
-          <Text style={styles.actionLabel}>Done</Text>
-        </Animated.View>
+        <View style={[styles.actionSide, styles.completeAction]}>
+          <LinearGradient
+            colors={['rgba(16, 185, 129, 0.2)', 'rgba(16, 185, 129, 0.1)']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          />
+          <Animated.View style={[styles.actionContent, leftActionStyle]}>
+            <Ionicons name='checkmark-circle' size={28} color='#10B981' />
+            <Text style={[styles.actionLabel, { color: '#10B981' }]}>
+              Complete
+            </Text>
+          </Animated.View>
+        </View>
 
-        <Animated.View
-          style={[styles.actionSide, styles.skipAction, rightActionStyle]}
-        >
-          <Text style={styles.actionLabel}>Tomorrow</Text>
-          <Ionicons name='time' size={24} color='#FFF' />
-        </Animated.View>
+        <View style={[styles.actionSide, styles.skipAction]}>
+          <LinearGradient
+            colors={['rgba(245, 158, 11, 0.1)', 'rgba(245, 158, 11, 0.2)']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          />
+          <Animated.View style={[styles.actionContent, rightActionStyle]}>
+            <Text style={[styles.actionLabel, { color: '#F59E0B' }]}>
+              Later
+            </Text>
+            <Ionicons name='time' size={28} color='#F59E0B' />
+          </Animated.View>
+        </View>
       </View>
 
+      {/* Foreground Card */}
       <GestureDetector gesture={pan}>
         <Animated.View style={[styles.card, cardStyle]}>
+          {/* Color Indicator */}
           <View
             style={[
               styles.colorBar,
@@ -183,51 +218,57 @@ export function PowerMoveCard({
           />
 
           <View style={styles.content}>
+            {/* Header Row */}
             <View style={styles.header}>
-              <View
-                style={[
-                  styles.catBadge,
-                  { backgroundColor: (category?.color || '#FFF') + '15' },
-                ]}
-              >
-                <Text
-                  style={[styles.catText, { color: category?.color || '#FFF' }]}
+              <View style={styles.metaRow}>
+                <View
+                  style={[
+                    styles.catBadge,
+                    {
+                      backgroundColor: (category?.color || '#FFF') + '15',
+                      borderColor: (category?.color || '#FFF') + '25',
+                    },
+                  ]}
                 >
-                  {category?.name || 'Task'}
+                  <Text
+                    style={[
+                      styles.catText,
+                      { color: category?.color || '#FFF' },
+                    ]}
+                  >
+                    {category?.name || 'Power Move'}
+                  </Text>
+                </View>
+                <Text style={styles.dreamTitle} numberOfLines={1}>
+                  {' '}
+                  • {dreamTitle}
                 </Text>
               </View>
 
               <View style={styles.xpBadge}>
                 <Ionicons name='sparkles' size={10} color={DARK.accent.gold} />
-                <Text style={styles.xpText}>+{sparkReward}</Text>
+                <Text style={styles.xpText}>+{sparkReward} XP</Text>
               </View>
             </View>
 
-            <Text style={styles.title} numberOfLines={1}>
+            {/* Main Title */}
+            <Text style={styles.title} numberOfLines={2}>
               {title}
             </Text>
-
-            <View style={styles.footer}>
-              <Ionicons
-                name='planet-outline'
-                size={12}
-                color={DARK.text.tertiary}
-              />
-              <Text style={styles.dreamTitle} numberOfLines={1}>
-                {dreamTitle}
-              </Text>
-            </View>
           </View>
 
+          {/* Hint Overlay */}
           {showHint && (
-            <Animated.View style={[styles.hintContainer, hintStyle]}>
-              <View style={styles.hintContent}>
-                <Ionicons name='arrow-back' size={14} color={DARK.text.muted} />
-                <Text style={styles.hintText}>Swipe</Text>
+            <Animated.View
+              style={[styles.hintContainer, hintStyle]}
+              pointerEvents='none'
+            >
+              <View style={styles.hintBubble}>
+                <Text style={styles.hintText}>Swipe to complete</Text>
                 <Ionicons
                   name='arrow-forward'
-                  size={14}
-                  color={DARK.text.muted}
+                  size={12}
+                  color='rgba(255,255,255,0.7)'
                 />
               </View>
             </Animated.View>
@@ -240,38 +281,42 @@ export function PowerMoveCard({
 
 const styles = StyleSheet.create({
   containerWrapper: {
-    overflow: 'hidden',
+    width: '100%',
   },
   actionBg: {
     ...StyleSheet.absoluteFillObject,
     flexDirection: 'row',
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   actionSide: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    gap: SPACING.sm,
+    justifyContent: 'center',
   },
   completeAction: {
-    backgroundColor: '#10B981',
-    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    paddingLeft: SPACING.xl,
   },
   skipAction: {
-    backgroundColor: '#F59E0B',
-    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    paddingRight: SPACING.xl,
+  },
+  actionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   actionLabel: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 13,
-    color: '#FFF',
+    fontFamily: FONTS.bold,
+    fontSize: 14,
   },
 
+  // Card
   card: {
-    height: 90,
-    backgroundColor: '#1E232E', // Hardcoded fallback
+    height: '100%',
+    backgroundColor: DARK.bg.card, // Using the theme variable
     borderRadius: RADIUS.xl,
     flexDirection: 'row',
     borderWidth: 1,
@@ -279,7 +324,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   colorBar: {
-    width: 4,
+    width: 6,
     height: '100%',
   },
   content: {
@@ -290,22 +335,40 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
   catBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
   },
   catText: {
     fontSize: 10,
     fontFamily: FONTS.bold,
     textTransform: 'uppercase',
   },
+  dreamTitle: {
+    fontSize: 12,
+    color: DARK.text.tertiary,
+    fontFamily: FONTS.medium,
+    flexShrink: 1,
+  },
   xpBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 100,
   },
   xpText: {
     color: DARK.accent.gold,
@@ -313,40 +376,34 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
   },
   title: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: FONTS.semiBold,
     color: DARK.text.primary,
-    marginBottom: 6,
+    lineHeight: 24,
   },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  dreamTitle: {
-    fontSize: 12,
-    color: DARK.text.tertiary,
-    fontFamily: FONTS.medium,
-  },
+
+  // Hint
   hintContainer: {
     position: 'absolute',
-    right: SPACING.md,
+    right: SPACING.lg,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
   },
-  hintContent: {
+  hintBubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: RADIUS.sm,
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   hintText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
     fontFamily: FONTS.medium,
-    fontSize: 11,
-    color: DARK.text.muted,
   },
 })

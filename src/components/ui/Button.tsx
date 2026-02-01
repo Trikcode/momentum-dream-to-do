@@ -1,4 +1,3 @@
-// src/components/ui/Button.tsx
 import React from 'react'
 import {
   Pressable,
@@ -20,19 +19,53 @@ import { COLORS, DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
-type ButtonVariant =
-  | 'primary'
-  | 'secondary'
-  | 'outline'
-  | 'ghost'
-  | 'danger'
-  | 'accent'
-  | 'dark-primary'
-  | 'dark-secondary'
-  | 'dark-ghost'
-  | 'dark-accent'
-
+type ButtonVariant = 'primary' | 'secondary' | 'dark-accent' | 'ghost'
 type ButtonSize = 'sm' | 'md' | 'lg'
+
+// --- CONFIGURATION ---
+const SIZE_CONFIG: Record<
+  ButtonSize,
+  { height: number; paddingX: number; fontSize: number }
+> = {
+  sm: { height: 40, paddingX: 16, fontSize: 14 },
+  md: { height: 48, paddingX: 20, fontSize: 15 },
+  lg: { height: 56, paddingX: 24, fontSize: 16 },
+}
+
+const VARIANT_CONFIG: Record<
+  ButtonVariant,
+  {
+    backgroundColor: string
+    textColor: string
+    borderWidth: number
+    borderColor: string
+  }
+> = {
+  primary: {
+    backgroundColor: COLORS.primary[500],
+    textColor: '#FFF',
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  secondary: {
+    backgroundColor: 'transparent',
+    textColor: DARK.text.primary,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  'dark-accent': {
+    backgroundColor: DARK.accent.rose,
+    textColor: '#FFF',
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ghost: {
+    backgroundColor: 'transparent',
+    textColor: DARK.text.secondary,
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+}
 
 interface ButtonProps {
   title: string
@@ -68,11 +101,11 @@ export function Button({
   }))
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 20, stiffness: 300 })
+    scale.value = withSpring(0.97)
   }
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 20, stiffness: 300 })
+    scale.value = withSpring(1)
   }
 
   const handlePress = () => {
@@ -114,13 +147,8 @@ export function Button({
     </View>
   )
 
-  // Gradient variants
-  if (variant === 'accent' || variant === 'dark-accent') {
-    const gradientColors =
-      variant === 'accent'
-        ? ([COLORS.primary[500], COLORS.primary[600]] as const)
-        : ([DARK.accent.rose, DARK.accent.roseDark] as const)
-
+  // Gradient Handling
+  if (variant === 'dark-accent') {
     return (
       <AnimatedPressable
         onPress={handlePress}
@@ -135,7 +163,7 @@ export function Button({
         ]}
       >
         <LinearGradient
-          colors={gradientColors}
+          colors={DARK.gradients.primary as [string, string]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
@@ -183,7 +211,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.full,
   },
   fullWidth: {
     width: '100%',
@@ -197,8 +225,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   text: {
-    fontFamily: FONTS.semiBold,
-    letterSpacing: 0.2,
+    fontFamily: FONTS.bold,
   },
   iconLeft: {
     marginRight: SPACING.sm,
@@ -207,86 +234,3 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
   },
 })
-
-const SIZE_CONFIG: Record<
-  ButtonSize,
-  { height: number; paddingX: number; fontSize: number }
-> = {
-  sm: { height: 40, paddingX: 16, fontSize: 14 },
-  md: { height: 48, paddingX: 20, fontSize: 15 },
-  lg: { height: 56, paddingX: 24, fontSize: 16 },
-}
-
-const VARIANT_CONFIG: Record<
-  ButtonVariant,
-  {
-    backgroundColor: string
-    textColor: string
-    borderWidth: number
-    borderColor: string
-  }
-> = {
-  // Light theme
-  primary: {
-    backgroundColor: COLORS.primary[500],
-    textColor: COLORS.neutral[0],
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  secondary: {
-    backgroundColor: COLORS.neutral[100],
-    textColor: COLORS.neutral[900],
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    textColor: COLORS.neutral[700],
-    borderWidth: 1.5,
-    borderColor: COLORS.neutral[300],
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    textColor: COLORS.neutral[600],
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  danger: {
-    backgroundColor: COLORS.error,
-    textColor: COLORS.neutral[0],
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  accent: {
-    backgroundColor: COLORS.primary[500],
-    textColor: COLORS.neutral[0],
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-
-  // Dark theme
-  'dark-primary': {
-    backgroundColor: COLORS.neutral[0],
-    textColor: DARK.bg.primary,
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  'dark-secondary': {
-    backgroundColor: DARK.bg.tertiary,
-    textColor: DARK.text.primary,
-    borderWidth: 1,
-    borderColor: DARK.border.light,
-  },
-  'dark-ghost': {
-    backgroundColor: 'transparent',
-    textColor: DARK.text.secondary,
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  'dark-accent': {
-    backgroundColor: DARK.accent.rose,
-    textColor: COLORS.neutral[0],
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-}

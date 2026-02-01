@@ -27,6 +27,7 @@ import Animated, {
   withSequence,
   withDelay,
   Easing,
+  interpolateColor,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 
@@ -37,7 +38,7 @@ import { useToast } from '@/src/components/shared/Toast'
 import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 import { LANGUAGE } from '@/src/constants/language'
 
-const { width } = Dimensions.get('window')
+const { width, height } = Dimensions.get('window')
 
 type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -47,17 +48,17 @@ const DIFFICULTY_OPTIONS: {
   sparks: number
   color: string
 }[] = [
-  { value: 'easy', label: 'Quick win', sparks: 5, color: '#10B981' }, // Emerald
-  { value: 'medium', label: 'Power up', sparks: 10, color: DARK.accent.gold },
-  { value: 'hard', label: 'Level up', sparks: 20, color: DARK.accent.rose },
+  { value: 'easy', label: 'Quick Win', sparks: 5, color: '#10B981' }, // Emerald
+  { value: 'medium', label: 'Power Up', sparks: 10, color: DARK.accent.gold },
+  { value: 'hard', label: 'Boss Level', sparks: 20, color: DARK.accent.rose },
 ]
 
 // ============================================================================
-// ANIMATED BACKGROUND
+// ANIMATED ATMOSPHERE
 // ============================================================================
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   const scale = useSharedValue(1)
-  const translateY = useSharedValue(0)
+  const opacity = useSharedValue(0.3)
 
   useEffect(() => {
     scale.value = withDelay(
@@ -74,15 +75,12 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
         true,
       ),
     )
-    translateY.value = withDelay(
+    opacity.value = withDelay(
       delay,
       withRepeat(
         withSequence(
-          withTiming(-30, {
-            duration: 6000,
-            easing: Easing.inOut(Easing.ease),
-          }),
-          withTiming(0, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.4, { duration: 4000 }),
+          withTiming(0.2, { duration: 4000 }),
         ),
         -1,
         true,
@@ -91,7 +89,9 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   }, [])
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateY: translateY.value }],
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+    backgroundColor: color,
   }))
 
   return (
@@ -104,8 +104,7 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: color,
-          opacity: 0.25,
+          filter: 'blur(60px)',
         },
         style,
       ]}
@@ -132,12 +131,14 @@ export default function NewActionModal() {
 
   const activeDreams = dreams.filter((d) => d.status === 'active')
 
+  // Load dreams if empty
   useFocusEffect(
     useCallback(() => {
       if (dreams.length === 0) fetchDreams()
     }, [dreams.length, fetchDreams]),
   )
 
+  // Auto-select first dream
   useEffect(() => {
     if (!selectedDreamId && activeDreams.length > 0) {
       setSelectedDreamId(activeDreams[0].id)
@@ -145,14 +146,29 @@ export default function NewActionModal() {
   }, [activeDreams.length])
 
   // Custom Toggle Animation
-  const togglePos = useSharedValue(0)
+  const togglePos = useSharedValue(2)
   useEffect(() => {
-    togglePos.value = withTiming(isRecurring ? 22 : 2)
+    togglePos.value = withTiming(isRecurring ? 22 : 2, { duration: 250 })
   }, [isRecurring])
 
   const toggleStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: togglePos.value }],
   }))
+
+  // Focus Animation
+  const focusProgress = useSharedValue(0)
+  useEffect(() => {
+    focusProgress.value = withTiming(isFocused ? 1 : 0)
+  }, [isFocused])
+
+  const inputContainerStyle = useAnimatedStyle(() => {
+    const borderColor = interpolateColor(
+      focusProgress.value,
+      [0, 1],
+      ['rgba(255,255,255,0.1)', DARK.accent.gold],
+    )
+    return { borderColor }
+  })
 
   const handleCreate = async () => {
     if (!title.trim()) {
@@ -187,8 +203,8 @@ export default function NewActionModal() {
       InteractionManager.runAfterInteractions(() => {
         showToast({
           type: 'success',
-          title: `${LANGUAGE.powerMoves.singular} added`,
-          message: 'Ready when you are.',
+          title: `Action added`,
+          message: 'Momentum building...',
         })
       })
     } catch (error) {
@@ -200,18 +216,25 @@ export default function NewActionModal() {
 
   return (
     <View style={styles.container}>
-      {/* Background Ambience */}
+      {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={DARK.gradients.bg as [string, string, string]}
+          colors={[DARK.bg.primary, '#181820', DARK.bg.primary]}
           style={StyleSheet.absoluteFill}
         />
         <BreathingBlob
-          color={DARK.accent.rose}
+          color={DARK.accent.gold}
           size={300}
           top={-50}
           left={-100}
+        />
+        <BreathingBlob
+          color={DARK.accent.rose}
+          size={250}
+          top={height * 0.4}
+          left={width * 0.6}
+          delay={1000}
         />
       </View>
 
@@ -219,67 +242,73 @@ export default function NewActionModal() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Header */}
+        {/* HEADER */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
           <Pressable onPress={() => router.back()} style={styles.closeButton}>
             <Ionicons name='close' size={20} color={DARK.text.secondary} />
           </Pressable>
-          <Text style={styles.headerTitle}>
-            New {LANGUAGE.powerMoves.singular}
-          </Text>
+          <Text style={styles.headerTitle}>New Power Move</Text>
           <View style={{ width: 36 }} />
         </View>
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
-          {/* Action Title Input */}
+          {/* 1. INPUT CARD */}
           <Animated.View entering={FadeInUp.delay(100).duration(500)}>
-            <Text style={styles.label}>
-              What's your {LANGUAGE.powerMoves.singular.toLowerCase()}?
-            </Text>
+            <Text style={styles.label}>What needs to happen?</Text>
 
-            <View
-              style={[
-                styles.inputWrapper,
-                isFocused && styles.inputWrapperFocused,
-              ]}
-            >
+            <Animated.View style={[styles.inputWrapper, inputContainerStyle]}>
               <BlurView
                 intensity={20}
                 tint='dark'
                 style={StyleSheet.absoluteFill}
               />
+
               <View style={styles.inputInner}>
-                <Ionicons
-                  name='flash'
-                  size={20}
-                  color={isFocused ? DARK.accent.gold : DARK.text.muted}
-                />
+                <View
+                  style={[
+                    styles.iconBox,
+                    {
+                      backgroundColor: isFocused
+                        ? 'rgba(245, 158, 11, 0.2)'
+                        : 'rgba(255,255,255,0.05)',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name='flash'
+                    size={18}
+                    color={isFocused ? DARK.accent.gold : DARK.text.muted}
+                  />
+                </View>
                 <TextInput
                   style={styles.input}
-                  placeholder='e.g., Research flight prices...'
+                  placeholder='e.g., Book flight to Tokyo...'
                   placeholderTextColor={DARK.text.muted}
                   value={title}
                   onChangeText={setTitle}
                   maxLength={150}
+                  multiline
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   selectionColor={DARK.accent.gold}
                 />
               </View>
-            </View>
+            </Animated.View>
           </Animated.View>
 
+          {/* 2. DREAM SELECTOR */}
           <Animated.View entering={FadeInUp.delay(200).duration(500)}>
-            <Text style={styles.label}>Connect to a Dream</Text>
+            <Text style={styles.label}>Connect to a Mission</Text>
+
             {dreamsLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator color={DARK.accent.rose} />
-                <Text style={styles.loadingText}>Loading dreams...</Text>
+                <Text style={styles.loadingText}>Syncing dreams...</Text>
               </View>
             ) : activeDreams.length === 0 ? (
               <Pressable
@@ -288,15 +317,19 @@ export default function NewActionModal() {
               >
                 <Ionicons
                   name='add-circle-outline'
-                  size={32}
+                  size={24}
                   color={DARK.text.muted}
                 />
                 <Text style={styles.emptyDreamsText}>
-                  No dreams yet. Create one first!
+                  No active missions. Create one first!
                 </Text>
               </Pressable>
             ) : (
-              <View style={styles.dreamsGrid}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.dreamsScroll}
+              >
                 {activeDreams.map((dream) => {
                   const isSelected = selectedDreamId === dream.id
                   return (
@@ -307,51 +340,31 @@ export default function NewActionModal() {
                         setSelectedDreamId(dream.id)
                       }}
                       style={[
-                        styles.dreamOption,
-                        isSelected && {
-                          borderColor: DARK.accent.rose,
-                          backgroundColor: DARK.accent.rose + '10',
-                        },
+                        styles.dreamPill,
+                        isSelected && styles.dreamPillSelected,
                       ]}
                     >
-                      <View style={styles.dreamIcon}>
-                        <Ionicons
-                          name='planet'
-                          size={16}
-                          color={
-                            isSelected ? DARK.accent.rose : DARK.text.muted
-                          }
-                        />
-                      </View>
                       <Text
                         style={[
-                          styles.dreamOptionText,
+                          styles.dreamPillText,
                           isSelected && {
-                            color: DARK.text.primary,
-                            fontFamily: FONTS.semiBold,
+                            color: '#FFF',
+                            fontFamily: FONTS.bold,
                           },
                         ]}
-                        numberOfLines={1}
                       >
                         {dream.title}
                       </Text>
-                      {isSelected && (
-                        <Ionicons
-                          name='checkmark'
-                          size={16}
-                          color={DARK.accent.rose}
-                        />
-                      )}
                     </Pressable>
                   )
                 })}
-              </View>
+              </ScrollView>
             )}
           </Animated.View>
 
-          {/* Difficulty Grid */}
+          {/* 3. DIFFICULTY GRID */}
           <Animated.View entering={FadeInUp.delay(300).duration(500)}>
-            <Text style={styles.label}>Challenge Level</Text>
+            <Text style={styles.label}>Energy Required</Text>
             <View style={styles.difficultyGrid}>
               {DIFFICULTY_OPTIONS.map((option) => {
                 const isSelected = difficulty === option.value
@@ -379,26 +392,21 @@ export default function NewActionModal() {
                     <Text
                       style={[
                         styles.difficultyLabel,
-                        isSelected && { color: option.color },
+                        isSelected && { color: '#FFF' },
                       ]}
                     >
                       {option.label}
                     </Text>
-                    <View style={styles.sparksRow}>
-                      <Ionicons
-                        name='sparkles'
-                        size={10}
-                        color={DARK.text.tertiary}
-                      />
-                      <Text style={styles.sparksText}>+{option.sparks}</Text>
-                    </View>
+                    <Text style={[styles.sparksText, { color: option.color }]}>
+                      +{option.sparks} XP
+                    </Text>
                   </Pressable>
                 )
               })}
             </View>
           </Animated.View>
 
-          {/* Recurring Toggle */}
+          {/* 4. RECURRING TOGGLE */}
           <Animated.View entering={FadeInUp.delay(400).duration(500)}>
             <Pressable
               onPress={() => {
@@ -427,7 +435,7 @@ export default function NewActionModal() {
                 <View>
                   <Text style={styles.recurringLabel}>Daily Habit</Text>
                   <Text style={styles.recurringHint}>
-                    Repeat this every day
+                    Repeat this every 24h
                   </Text>
                 </View>
               </View>
@@ -443,11 +451,9 @@ export default function NewActionModal() {
               </View>
             </Pressable>
           </Animated.View>
-
-          <View style={{ height: 100 }} />
         </ScrollView>
 
-        {/* Create Button */}
+        {/* CREATE BUTTON (Floating) */}
         <Animated.View
           entering={FadeInUp.delay(500).duration(500)}
           style={[
@@ -464,7 +470,7 @@ export default function NewActionModal() {
 
           <View style={styles.dockContent}>
             <Button
-              title={`Add ${LANGUAGE.powerMoves.singular}`}
+              title='Ignite Action'
               onPress={handleCreate}
               isLoading={isLoading}
               disabled={!title.trim() || !selectedDreamId}
@@ -472,7 +478,6 @@ export default function NewActionModal() {
               size='lg'
               icon={<Ionicons name='flash' size={18} color='#FFF' />}
               iconPosition='left'
-              style={styles.createButton}
             />
           </View>
         </Animated.View>
@@ -502,9 +507,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontFamily: FONTS.semiBold,
+    fontFamily: FONTS.bold,
     fontSize: 16,
-    color: DARK.text.primary,
+    color: '#FFF',
   },
   scrollView: {
     flex: 1,
@@ -513,11 +518,13 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
   },
   label: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
+    fontFamily: FONTS.bold,
+    fontSize: 13,
     color: DARK.text.secondary,
     marginBottom: SPACING.sm,
     marginTop: SPACING.lg,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
   // Input
@@ -526,58 +533,80 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  inputWrapperFocused: {
-    borderColor: DARK.accent.gold,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    minHeight: 100,
   },
   inputInner: {
     flexDirection: 'row',
-    alignItems: 'center',
     padding: SPACING.md,
     gap: SPACING.md,
   },
   input: {
     flex: 1,
     fontFamily: FONTS.medium,
-    fontSize: 16,
-    color: DARK.text.primary,
+    fontSize: 18,
+    color: '#FFF',
+    marginTop: 2, // align with icon
   },
-
-  // Dreams
-  dreamsGrid: {
-    gap: SPACING.sm,
-  },
-  dreamOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    padding: SPACING.md,
-    gap: 12,
-  },
-  dreamIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dreamOptionText: {
-    flex: 1,
-    fontFamily: FONTS.medium,
+
+  // Dreams
+  dreamsScroll: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  dreamPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: RADIUS.full,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  dreamPillSelected: {
+    backgroundColor: DARK.accent.rose,
+    borderColor: DARK.accent.rose,
+  },
+  dreamPillText: {
     fontSize: 14,
+    fontFamily: FONTS.medium,
     color: DARK.text.secondary,
+  },
+  loadingContainer: {
+    padding: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    color: DARK.text.muted,
+    fontSize: 14,
+  },
+  emptyDreamsCard: {
+    padding: SPACING.lg,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: RADIUS.lg,
+    alignItems: 'center',
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  emptyDreamsText: {
+    color: DARK.text.secondary,
+    marginTop: 8,
+    fontSize: 14,
   },
 
   // Difficulty
   difficultyGrid: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    gap: 8,
   },
   difficultyOption: {
     flex: 1,
@@ -587,7 +616,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: 4,
   },
   difficultyDot: {
     width: 8,
@@ -596,21 +625,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   difficultyLabel: {
-    fontFamily: FONTS.medium,
-    fontSize: 13,
+    fontFamily: FONTS.bold,
+    fontSize: 12,
     color: DARK.text.secondary,
     marginBottom: 4,
   },
-  sparksRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    opacity: 0.6,
-  },
   sparksText: {
     fontFamily: FONTS.medium,
-    fontSize: 11,
-    color: DARK.text.tertiary,
+    fontSize: 10,
   },
 
   // Recurring
@@ -630,25 +652,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.md,
   },
-  iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   recurringLabel: {
-    fontFamily: FONTS.semiBold,
-    fontSize: 15,
-    color: DARK.text.primary,
+    fontFamily: FONTS.bold,
+    fontSize: 14,
+    color: '#FFF',
   },
   recurringHint: {
     fontFamily: FONTS.regular,
     fontSize: 12,
-    color: DARK.text.tertiary,
+    color: DARK.text.muted,
   },
 
-  // Custom Toggle
+  // Toggle
   toggleTrack: {
     width: 48,
     height: 28,
@@ -673,9 +688,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    overflow: 'hidden',
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
+    overflow: 'hidden',
   },
   dockBorder: {
     position: 'absolute',
@@ -688,35 +703,5 @@ const styles = StyleSheet.create({
   dockContent: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
-  },
-  createButton: {
-    ...DARK.glow.rose,
-  },
-  // Add to styles in new-action.tsx
-  loadingContainer: {
-    padding: SPACING.xl,
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
-  loadingText: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
-    color: DARK.text.muted,
-  },
-  emptyDreamsCard: {
-    padding: SPACING.xl,
-    alignItems: 'center',
-    gap: SPACING.md,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderStyle: 'dashed',
-  },
-  emptyDreamsText: {
-    fontFamily: FONTS.medium,
-    fontSize: 14,
-    color: DARK.text.muted,
-    textAlign: 'center',
   },
 })

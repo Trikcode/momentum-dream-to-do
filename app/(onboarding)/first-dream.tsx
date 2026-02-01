@@ -12,6 +12,7 @@ import {
   Dimensions,
   StatusBar,
   Alert,
+  Keyboard,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -29,6 +30,7 @@ import Animated, {
   FadeInDown,
   FadeInUp,
   interpolateColor,
+  ZoomIn,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 
@@ -44,15 +46,20 @@ import { useDreamStore } from '@/src/store/dreamStore'
 import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
 
 const { width, height } = Dimensions.get('window')
-const DOCK_HEIGHT = 100 // Estimated height of bottom area
 
 // ============================================================================
-// ANIMATED BACKGROUND
+// DYNAMIC BACKGROUND BLOB
 // ============================================================================
-
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   const scale = useSharedValue(1)
   const translateY = useSharedValue(0)
+
+  // React to color changes smoothly
+  const colorProgress = useSharedValue(0)
+
+  // We use key to force re-render if needed, or we could animate color.
+  // For simplicity in this specific component structure, passing color directly works
+  // because the parent re-renders, but adding a key to the Blob component in parent helps.
 
   useEffect(() => {
     scale.value = withDelay(
@@ -60,10 +67,10 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
       withRepeat(
         withSequence(
           withTiming(1.2, {
-            duration: 4000,
+            duration: 5000,
             easing: Easing.inOut(Easing.ease),
           }),
-          withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         true,
@@ -73,11 +80,11 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
       delay,
       withRepeat(
         withSequence(
-          withTiming(-30, {
-            duration: 6000,
+          withTiming(-40, {
+            duration: 7000,
             easing: Easing.inOut(Easing.ease),
           }),
-          withTiming(0, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: 7000, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         true,
@@ -87,6 +94,7 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
 
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }, { translateY: translateY.value }],
+    backgroundColor: color, // Animate this if using Reanimated color interpolation
   }))
 
   return (
@@ -99,9 +107,8 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: color,
-          opacity: 0.4,
-          filter: 'blur(50px)',
+          opacity: 0.35,
+          filter: 'blur(60px)', // Web/New Expo
         },
         style,
       ]}
@@ -118,7 +125,7 @@ export default function FirstDreamScreen() {
   const { categories } = useLocalSearchParams<{ categories: string }>()
   const { user } = useAuthStore()
 
-  // Store Logic
+  // Store
   const { dreams, fetchDreams } = useDreamStore()
   const { isPremium, getDreamsLimit, setShowPaywall } = usePremiumStore()
 
@@ -126,11 +133,12 @@ export default function FirstDreamScreen() {
   const currentDreamsCount = dreams.filter((d) => d.status === 'active').length
   const canCreateMore = isPremium || currentDreamsCount < dreamsLimit
 
-  // Category Parsing
+  // Categories
   const selectedCategoryIds = categories ? categories.split(',') : []
   const filteredCategories = DREAM_CATEGORIES.filter((c) =>
     selectedCategoryIds.includes(c.id),
   )
+  // Fallback if no categories passed or found
   const activeCategories =
     filteredCategories.length > 0
       ? filteredCategories
@@ -152,6 +160,8 @@ export default function FirstDreamScreen() {
   const handleExampleSelect = (example: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     setDreamTitle(example)
+    // Optional: Dismiss keyboard if it was just a tap
+    // Keyboard.dismiss()
   }
 
   const handleCreateDream = async () => {
@@ -159,7 +169,6 @@ export default function FirstDreamScreen() {
       setShowPaywall(true)
       return
     }
-
     if (!dreamTitle.trim() || !user) return
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -167,7 +176,9 @@ export default function FirstDreamScreen() {
     try {
       setIsLoading(true)
 
+      // Map local category IDs to DB slugs if needed
       const slugMapping: Record<string, string> = {
+        vitality: 'fitness',
         health: 'fitness',
         career: 'career',
         wealth: 'finance',
@@ -206,19 +217,26 @@ export default function FirstDreamScreen() {
 
   const canCreate = dreamTitle.trim().length >= 3
 
-  // Animation for Input Border
-  const borderProgress = useSharedValue(0)
+  // Input Glow Animation
+  const focusProgress = useSharedValue(0)
   useEffect(() => {
-    borderProgress.value = withTiming(isFocused ? 1 : 0)
+    focusProgress.value = withTiming(isFocused ? 1 : 0, { duration: 300 })
   }, [isFocused])
 
   const animatedInputStyle = useAnimatedStyle(() => {
     const borderColor = interpolateColor(
-      borderProgress.value,
+      focusProgress.value,
       [0, 1],
       ['rgba(255,255,255,0.1)', selectedCategory.color],
     )
-    return { borderColor }
+    const shadowOpacity = focusProgress.value * 0.2
+
+    return {
+      borderColor,
+      shadowColor: selectedCategory.color,
+      shadowOpacity,
+      shadowRadius: 15,
+    }
   })
 
   return (
@@ -229,20 +247,26 @@ export default function FirstDreamScreen() {
       <View style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={DARK.gradients.bg as [string, string, string]}
+          colors={[DARK.bg.primary, '#151520', DARK.bg.primary]}
           style={StyleSheet.absoluteFill}
         />
         <BreathingBlob
+          key={`blob-1-${selectedCategory.id}`} // Force re-render color
           color={selectedCategory.color}
-          size={300}
+          size={350}
           top={-50}
           left={-100}
         />
         <BreathingBlob
-          color={DARK.accent.violet}
-          size={250}
-          top={height * 0.4}
-          left={width * 0.6}
+          key={`blob-2-${selectedCategory.id}`}
+          color={
+            selectedCategory.color === DARK.accent.rose
+              ? '#4F46E5'
+              : DARK.accent.rose
+          }
+          size={300}
+          top={height * 0.5}
+          left={width * 0.4}
           delay={1000}
         />
         {Platform.OS === 'ios' && (
@@ -257,45 +281,43 @@ export default function FirstDreamScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            {
-              paddingTop: insets.top + SPACING.lg,
-              // Critical Fix: Add enough padding at bottom so dock doesn't cover content
-              paddingBottom: insets.bottom + DOCK_HEIGHT + 20,
-            },
+            { paddingTop: insets.top + SPACING.lg, paddingBottom: 120 },
           ]}
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
           {/* HEADER */}
           <Animated.View entering={FadeInDown.delay(100)} style={styles.header}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepText}>Step 2 of 2</Text>
+            <View style={styles.progressBar}>
+              <View style={styles.progressTrack} />
+              <View style={[styles.progressFill, { width: '66%' }]} />
             </View>
+
             <Text style={styles.title}>
-              What is your main{'\n'}
-              <Text style={{ color: selectedCategory.color }}>Focus</Text> right
-              now?
+              Let's make it{'\n'}
+              <Text style={{ color: selectedCategory.color }}>real.</Text>
+            </Text>
+            <Text style={styles.subtitle}>
+              What is the one big thing you want to achieve in this area?
             </Text>
           </Animated.View>
 
-          {/* CATEGORY FILTER */}
+          {/* CATEGORY TABS (If multiple selected) */}
           {activeCategories.length > 1 && (
             <Animated.View
               entering={FadeInDown.delay(200)}
-              style={styles.categoryContainer}
+              style={styles.categoryRow}
             >
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                // Critical Fix: Align start of list with global padding
                 contentContainerStyle={{
                   paddingHorizontal: SPACING.lg,
-                  gap: 10,
+                  gap: 8,
                 }}
               >
                 {activeCategories.map((cat) => {
@@ -312,11 +334,6 @@ export default function FirstDreamScreen() {
                         },
                       ]}
                     >
-                      <Ionicons
-                        name={isActive ? 'checkmark' : (cat.icon as any)}
-                        size={14}
-                        color={isActive ? '#FFF' : DARK.text.secondary}
-                      />
                       <Text
                         style={[
                           styles.categoryText,
@@ -332,67 +349,81 @@ export default function FirstDreamScreen() {
             </Animated.View>
           )}
 
-          {/* INPUT CARD */}
+          {/* MANIFESTO CARD (Input) */}
           <Animated.View
             entering={FadeInUp.delay(300)}
             style={styles.inputSection}
           >
-            <Animated.View style={[styles.inputWrapper, animatedInputStyle]}>
+            <Animated.View
+              style={[styles.glassInputContainer, animatedInputStyle]}
+            >
               <BlurView
                 intensity={20}
                 tint='dark'
                 style={StyleSheet.absoluteFill}
               />
 
-              <View style={styles.inputHeader}>
-                <View
-                  style={[
-                    styles.iconBox,
-                    { backgroundColor: selectedCategory.color },
-                  ]}
-                >
-                  <Ionicons
-                    name={selectedCategory.icon as any}
-                    size={20}
-                    color='#FFF'
-                  />
+              <View style={styles.inputInternal}>
+                <View style={styles.inputLabelRow}>
+                  <View
+                    style={[
+                      styles.miniIcon,
+                      { backgroundColor: selectedCategory.color },
+                    ]}
+                  >
+                    <Ionicons
+                      name={selectedCategory.icon as any}
+                      size={14}
+                      color='#FFF'
+                    />
+                  </View>
+                  <Text style={styles.label}>I commit to...</Text>
                 </View>
-                <Text style={styles.inputLabel}>I want to...</Text>
+
+                <TextInput
+                  ref={inputRef}
+                  style={styles.textInput}
+                  placeholder='e.g. Write the first chapter of my book...'
+                  placeholderTextColor='rgba(255,255,255,0.3)'
+                  value={dreamTitle}
+                  onChangeText={setDreamTitle}
+                  multiline
+                  maxLength={140}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  autoCapitalize='sentences'
+                />
+
+                <View style={styles.charCountRow}>
+                  <Text style={styles.charCount}>{dreamTitle.length}/140</Text>
+                </View>
               </View>
-
-              <TextInput
-                ref={inputRef}
-                style={styles.input}
-                placeholder='e.g. Run a 5k marathon...'
-                placeholderTextColor={DARK.text.muted}
-                value={dreamTitle}
-                onChangeText={setDreamTitle}
-                multiline
-                maxLength={100}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                autoCapitalize='sentences'
-              />
-
-              <Text style={styles.charCount}>{dreamTitle.length}/100</Text>
             </Animated.View>
           </Animated.View>
 
-          {/* SUGGESTIONS */}
+          {/* SPARK INSPIRATION */}
           <Animated.View
             entering={FadeInUp.delay(400)}
-            style={styles.suggestions}
+            style={styles.suggestionsSection}
           >
-            <Text style={styles.sectionTitle}>Ideas for you</Text>
-            <View style={styles.chipGrid}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name='sparkles' size={12} color={DARK.accent.gold} />
+              <Text style={styles.sectionTitle}>Spark Inspiration</Text>
+            </View>
+
+            <View style={styles.suggestionsGrid}>
               {selectedCategory.examples.map((ex, i) => (
-                <Pressable
-                  key={i}
-                  onPress={() => handleExampleSelect(ex)}
-                  style={styles.suggestionChip}
-                >
-                  <Text style={styles.suggestionText}>{ex}</Text>
-                </Pressable>
+                <Animated.View key={i} entering={ZoomIn.delay(450 + i * 50)}>
+                  <Pressable
+                    onPress={() => handleExampleSelect(ex)}
+                    style={({ pressed }) => [
+                      styles.suggestionPill,
+                      pressed && { backgroundColor: 'rgba(255,255,255,0.1)' },
+                    ]}
+                  >
+                    <Text style={styles.suggestionText}>{ex}</Text>
+                  </Pressable>
+                </Animated.View>
               ))}
             </View>
           </Animated.View>
@@ -403,67 +434,53 @@ export default function FirstDreamScreen() {
               onPress={() => setShowPaywall(true)}
               style={styles.limitWarning}
             >
-              <Ionicons name='lock-closed' size={16} color={DARK.accent.gold} />
+              <Ionicons name='lock-closed' size={14} color={DARK.accent.gold} />
               <Text style={styles.limitText}>
-                Free limit reached. Tap to upgrade.
+                Free limit reached. Tap to unlock unlimited dreams.
               </Text>
             </Pressable>
           )}
         </ScrollView>
+      </KeyboardAvoidingView>
 
-        {/* BOTTOM DOCK */}
-        <Animated.View
-          entering={FadeInUp.delay(500)}
-          style={[styles.bottomDock, { paddingBottom: insets.bottom + 10 }]}
-        >
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={80}
-              tint='dark'
+      {/* FLOATING DOCK */}
+      <Animated.View
+        entering={FadeInUp.delay(600).springify()}
+        style={[styles.floatingDockContainer, { bottom: insets.bottom + 10 }]}
+      >
+        <BlurView intensity={60} tint='dark' style={StyleSheet.absoluteFill} />
+        <View style={styles.dockBorder} />
+
+        <View style={styles.dockContent}>
+          <Pressable
+            onPress={handleCreateDream}
+            disabled={!canCreate || isLoading}
+            style={[
+              styles.primaryButton,
+              (!canCreate || isLoading) && styles.buttonDisabled,
+            ]}
+          >
+            <LinearGradient
+              colors={
+                canCreate
+                  ? (DARK.gradients.primary as [string, string])
+                  : ['#333', '#444']
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
             />
-          ) : (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: '#0F1115', opacity: 0.95 },
-              ]}
-            />
-          )}
-
-          <View style={styles.dockBorder} />
-
-          <View style={styles.dockContent}>
-            <Pressable
-              onPress={handleCreateDream}
-              disabled={!canCreate || isLoading}
-              style={[
-                styles.createButton,
-                (!canCreate || isLoading) && styles.buttonDisabled,
-              ]}
-            >
-              <LinearGradient
-                colors={
-                  canCreate
-                    ? (DARK.gradients.primary as [string, string])
-                    : ['#333', '#444']
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFill}
-              />
-              {isLoading ? (
-                <Text style={styles.buttonText}>Creating...</Text>
-              ) : (
-                <>
-                  <Ionicons name='sparkles' size={18} color='#FFF' />
-                  <Text style={styles.buttonText}>Create Dream</Text>
-                </>
-              )}
-            </Pressable>
-          </View>
-        </Animated.View>
-      </KeyboardAvoidingView>
+            {isLoading ? (
+              <Text style={styles.buttonText}>Igniting...</Text>
+            ) : (
+              <>
+                <Text style={styles.buttonText}>Ignite Momentum</Text>
+                <Ionicons name='arrow-forward' size={18} color='#FFF' />
+              </>
+            )}
+          </Pressable>
+        </View>
+      </Animated.View>
     </View>
   )
 }
@@ -486,143 +503,153 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     marginBottom: SPACING.lg,
   },
-  stepBadge: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: RADIUS.full,
-    alignSelf: 'flex-start',
-    marginBottom: SPACING.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+  progressBar: {
+    height: 4,
+    width: 60,
+    marginBottom: SPACING.lg,
+    position: 'relative',
   },
-  stepText: {
-    color: DARK.text.secondary,
-    fontSize: 12,
-    fontFamily: FONTS.medium,
+  progressTrack: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 2,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: DARK.accent.rose,
+    borderRadius: 2,
   },
   title: {
-    fontSize: 32,
+    fontSize: 34,
     fontFamily: FONTS.bold,
     color: DARK.text.primary,
-    lineHeight: 40,
+    lineHeight: 42,
+    marginBottom: SPACING.sm,
+    letterSpacing: -1,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: FONTS.regular,
+    color: DARK.text.secondary,
+    lineHeight: 24,
   },
 
   // Categories
-  categoryContainer: {
+  categoryRow: {
     marginBottom: SPACING.xl,
-    // We do NOT use negative margins here anymore to avoid alignment issues.
-    // Instead, the ScrollView has full width, and paddingHorizontal handles the offset.
   },
   categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
-    height: 36,
-    borderRadius: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(255,255,255,0.03)',
-    gap: 8,
   },
   categoryText: {
     fontSize: 14,
     fontFamily: FONTS.medium,
-    color: DARK.text.secondary,
+    color: 'rgba(255,255,255,0.6)',
   },
 
-  // Input
+  // Glass Input
   inputSection: {
     paddingHorizontal: SPACING.lg,
     marginBottom: SPACING.xl,
   },
-  inputWrapper: {
+  glassInputContainer: {
     borderRadius: RADIUS.xl,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     minHeight: 180,
   },
-  inputHeader: {
+  inputInternal: {
+    padding: SPACING.lg,
+    flex: 1,
+  },
+  inputLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.md,
-    gap: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    marginBottom: SPACING.md,
+    gap: 10,
   },
-  iconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+  miniIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  inputLabel: {
+  label: {
     fontSize: 14,
-    color: DARK.text.secondary,
     fontFamily: FONTS.medium,
+    color: 'rgba(255,255,255,0.7)',
   },
-  input: {
-    flex: 1,
-    padding: SPACING.lg,
-    fontSize: 20,
+  textInput: {
+    fontSize: 22,
     fontFamily: FONTS.medium,
-    color: DARK.text.primary,
+    color: '#FFF',
+    lineHeight: 30,
+    minHeight: 100,
     textAlignVertical: 'top',
-    lineHeight: 28,
+  },
+  charCountRow: {
+    alignItems: 'flex-end',
+    marginTop: SPACING.sm,
   },
   charCount: {
-    position: 'absolute',
-    bottom: SPACING.md,
-    right: SPACING.md,
     fontSize: 12,
-    color: DARK.text.muted,
-    fontFamily: FONTS.regular,
+    color: 'rgba(255,255,255,0.3)',
   },
 
   // Suggestions
-  suggestions: {
+  suggestionsSection: {
     paddingHorizontal: SPACING.lg,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontFamily: FONTS.semiBold,
-    color: DARK.text.tertiary,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontFamily: FONTS.bold,
+    color: DARK.accent.gold,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  chipGrid: {
+  suggestionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
+    gap: 8,
   },
-  suggestionChip: {
+  suggestionPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   suggestionText: {
-    color: DARK.text.secondary,
-    fontFamily: FONTS.regular,
     fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontFamily: FONTS.regular,
   },
 
-  // Limit Warning
+  // Limit
   limitWarning: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: SPACING.lg,
-    padding: SPACING.sm,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    marginTop: SPACING.xl,
     marginHorizontal: SPACING.lg,
+    padding: SPACING.md,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: 'rgba(245, 158, 11, 0.3)',
@@ -633,29 +660,32 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.medium,
   },
 
-  // Bottom Dock
-  bottomDock: {
+  // Floating Dock
+  floatingDockContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
+    left: SPACING.lg,
+    right: SPACING.lg,
+    height: 64,
+    borderRadius: RADIUS.full,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   dockBorder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: RADIUS.full,
   },
   dockContent: {
-    padding: SPACING.lg,
+    flex: 1,
+    padding: 8,
   },
-  createButton: {
-    height: 56,
+  primaryButton: {
+    flex: 1,
     borderRadius: RADIUS.full,
     flexDirection: 'row',
     alignItems: 'center',
@@ -665,7 +695,7 @@ const styles = StyleSheet.create({
     ...DARK.glow.rose,
   },
   buttonDisabled: {
-    opacity: 0.7,
+    opacity: 0.5,
     shadowOpacity: 0,
   },
   buttonText: {

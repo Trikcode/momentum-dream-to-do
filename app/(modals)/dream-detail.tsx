@@ -43,19 +43,30 @@ import { useAuthStore } from '@/src/store/authStore'
 
 const { width } = Dimensions.get('window')
 
-// Helper to get category
+// ============================================================================
+// HELPERS
+// ============================================================================
 const getCategoryById = (id?: string | null): DreamCategory => {
   return DREAM_CATEGORIES.find((c) => c.id === id) || DREAM_CATEGORIES[0]
 }
 
 const ThemeBlob = ({ color }: { color: string }) => {
   const scale = useSharedValue(1)
+  const opacity = useSharedValue(0.3)
 
   useEffect(() => {
     scale.value = withRepeat(
       withSequence(
-        withTiming(1.2, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.2, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 5000, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      true,
+    )
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.4, { duration: 4000 }),
+        withTiming(0.2, { duration: 4000 }),
       ),
       -1,
       true,
@@ -64,15 +75,16 @@ const ThemeBlob = ({ color }: { color: string }) => {
 
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+    backgroundColor: color,
   }))
 
-  return (
-    <Animated.View style={[styles.blobContainer, style]}>
-      <View style={[styles.blob, { backgroundColor: color }]} />
-    </Animated.View>
-  )
+  return <Animated.View style={[styles.blobContainer, style]} />
 }
 
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 export default function DreamDetailModal() {
   const insets = useSafeAreaInsets()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -99,6 +111,7 @@ export default function DreamDetailModal() {
   // Find Data
   const dream = dreams?.find((d) => d.id === id)
 
+  // Fallback if not found (e.g. deep link error)
   if (!dream) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -108,7 +121,7 @@ export default function DreamDetailModal() {
         <View
           style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
         >
-          <Text style={{ color: '#FFF' }}>Dream not found.</Text>
+          <Text style={{ color: '#FFF' }}>Mission not found.</Text>
         </View>
       </View>
     )
@@ -126,18 +139,19 @@ export default function DreamDetailModal() {
 
   // HANDLERS
   const handleDelete = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
     Alert.alert(
-      'Abandon Dream?',
-      'This cannot be undone. All progress and XP associated with this dream will be lost.',
+      'Abandon Mission?',
+      'This cannot be undone. All momentum gained here will be lost.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Keep Going', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             await deleteDream(dream.id)
             router.back()
-            showToast({ type: 'success', title: 'Dream deleted' })
+            showToast({ type: 'success', title: 'Mission deleted' })
           },
         },
       ],
@@ -155,12 +169,13 @@ export default function DreamDetailModal() {
     router.back()
     showToast({
       type: 'success',
-      title: 'Dream Achieved! 🎉',
-      message: 'History made.',
+      title: 'Mission Accomplished! 🎉',
+      message: 'Legacy secured.',
     })
   }
 
   const handleAddAction = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     router.push({
       pathname: '/(modals)/new-action',
       params: { dreamId: dream.id },
@@ -169,29 +184,31 @@ export default function DreamDetailModal() {
 
   return (
     <View style={styles.container}>
-      {/* Background Ambience */}
+      {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
         <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={DARK.gradients.bg as [string, string, string]}
+          colors={[DARK.bg.primary, '#151520', DARK.bg.primary]}
           style={StyleSheet.absoluteFill}
         />
         <ThemeBlob color={category.color} />
+        {/* Subtle texture overlay */}
+        <BlurView intensity={30} tint='dark' style={StyleSheet.absoluteFill} />
       </View>
 
-      {/* Header */}
+      {/* HEADER */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         <Pressable onPress={() => router.back()} style={styles.iconButton}>
           <Ionicons name='arrow-back' size={20} color={DARK.text.primary} />
         </Pressable>
         <Text style={styles.headerTitle}>Mission Control</Text>
         <Pressable onPress={handleDelete} style={styles.iconButton}>
-          <Ionicons name='trash-outline' size={20} color={DARK.error} />
+          <Ionicons name='trash-outline' size={18} color={DARK.error} />
         </Pressable>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* HERO CARD */}
@@ -200,12 +217,13 @@ export default function DreamDetailModal() {
           style={styles.heroCard}
         >
           <BlurView
-            intensity={30}
+            intensity={20}
             tint='dark'
             style={StyleSheet.absoluteFill}
           />
+          {/* Dynamic Gradient based on category */}
           <LinearGradient
-            colors={[category.color + '40', 'transparent']}
+            colors={[category.color + '30', 'transparent']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
@@ -215,15 +233,20 @@ export default function DreamDetailModal() {
             <View
               style={[
                 styles.categoryBadge,
-                { backgroundColor: category.color },
+                {
+                  backgroundColor: category.color + '20',
+                  borderColor: category.color + '40',
+                },
               ]}
             >
               <Ionicons
                 name={category.icon.name as any}
-                size={16}
-                color='#FFF'
+                size={12}
+                color={category.color}
               />
-              <Text style={styles.categoryText}>{category.name}</Text>
+              <Text style={[styles.categoryText, { color: category.color }]}>
+                {category.name}
+              </Text>
             </View>
 
             <Text style={styles.dreamTitle}>{dream.title}</Text>
@@ -234,7 +257,7 @@ export default function DreamDetailModal() {
             {/* Progress Bar */}
             <View style={styles.progressContainer}>
               <View style={styles.progressRow}>
-                <Text style={styles.progressLabel}>Progress</Text>
+                <Text style={styles.progressLabel}>Momentum</Text>
                 <Text style={styles.progressValue}>{progress}%</Text>
               </View>
               <View style={styles.progressBarBg}>
@@ -242,7 +265,10 @@ export default function DreamDetailModal() {
                   layout={Layout.springify()}
                   style={[
                     styles.progressBarFill,
-                    { width: `${progress}%`, backgroundColor: category.color },
+                    {
+                      width: `${Math.max(progress, 2)}%`,
+                      backgroundColor: category.color,
+                    },
                   ]}
                 />
               </View>
@@ -273,7 +299,7 @@ export default function DreamDetailModal() {
                 ? format(new Date(dream.target_date), 'MMM d')
                 : '--'}
             </Text>
-            <Text style={styles.statLabel}>Target Date</Text>
+            <Text style={styles.statLabel}>Target</Text>
           </View>
           <View style={styles.statBox}>
             <Ionicons name='flame' size={18} color={DARK.accent.rose} />
@@ -286,10 +312,10 @@ export default function DreamDetailModal() {
 
         {/* ACTIONS SECTION */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Power Moves</Text>
+          <Text style={styles.sectionTitle}>Action Plan</Text>
           <Pressable onPress={handleAddAction}>
             <Text style={[styles.sectionAction, { color: category.color }]}>
-              + Add New
+              + New Move
             </Text>
           </Pressable>
         </View>
@@ -297,12 +323,17 @@ export default function DreamDetailModal() {
         <View style={styles.actionsList}>
           {dreamActions.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name='list' size={40} color={DARK.text.muted} />
-              <Text style={styles.emptyText}>No power moves yet.</Text>
+              <Ionicons
+                name='planet-outline'
+                size={32}
+                color={DARK.text.muted}
+              />
+              <Text style={styles.emptyText}>No actions defined yet.</Text>
               <Button
-                title='Add First Move'
+                title='Initiate First Move'
                 onPress={handleAddAction}
                 size='sm'
+                variant='ghost'
                 style={{ marginTop: 12 }}
               />
             </View>
@@ -312,7 +343,7 @@ export default function DreamDetailModal() {
                 <Animated.View
                   key={action.id}
                   entering={FadeInUp.delay(300 + index * 50)}
-                  // layout={Layout.springify()}
+                  layout={Layout.springify()}
                 >
                   <PowerMoveCard
                     id={action.id}
@@ -327,18 +358,29 @@ export default function DreamDetailModal() {
                   />
                 </Animated.View>
               ))}
-              {/* Completed Actions (Smaller/Dimmed) */}
+
+              {/* Completed Actions (Clean List) */}
               {completedActions.length > 0 && (
-                <View style={{ marginTop: 20 }}>
+                <View style={{ marginTop: 24 }}>
                   <Text style={styles.subHeader}>Completed History</Text>
                   {completedActions.map((action) => (
                     <View key={action.id} style={styles.completedRow}>
-                      <Ionicons
-                        name='checkmark-circle'
-                        size={16}
-                        color={DARK.success}
-                      />
-                      <Text style={styles.completedText}>{action.title}</Text>
+                      <View style={styles.completedCheck}>
+                        <Ionicons
+                          name='checkmark'
+                          size={12}
+                          color={DARK.bg.primary}
+                        />
+                      </View>
+                      <Text style={styles.completedText} numberOfLines={1}>
+                        {action.title}
+                      </Text>
+                      <Text style={styles.completedDate}>
+                        {format(
+                          new Date(action.updated_at || new Date()),
+                          'MMM d',
+                        )}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -346,8 +388,6 @@ export default function DreamDetailModal() {
             </>
           )}
         </View>
-
-        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* BOTTOM ACTION DOCK */}
@@ -360,16 +400,16 @@ export default function DreamDetailModal() {
       >
         <BlurView intensity={80} tint='dark' style={StyleSheet.absoluteFill} />
         <View style={styles.dockBorder} />
+
         <View style={styles.dockContent}>
           {progress >= 100 && dream.status !== 'completed' ? (
             <Button
-              title='Complete Dream'
+              title='Complete Mission'
               onPress={handleCompleteDream}
               isLoading={isLoading}
               fullWidth
               size='lg'
               icon={<Ionicons name='trophy' size={20} color='#FFF' />}
-              style={{ ...DARK.glow.gold, backgroundColor: DARK.accent.gold }}
             />
           ) : (
             <Button
@@ -377,8 +417,8 @@ export default function DreamDetailModal() {
               onPress={handleAddAction}
               fullWidth
               size='lg'
-              icon={<Ionicons name='add' size={20} color='#FFF' />}
-              style={{ ...DARK.glow.rose }}
+              icon={<Ionicons name='flash' size={20} color='#FFF' />}
+              style={DARK.glow.rose}
             />
           )}
         </View>
@@ -396,17 +436,12 @@ const styles = StyleSheet.create({
   // Background Blob
   blobContainer: {
     position: 'absolute',
-    top: -100,
-    left: -50,
-    width: width,
+    top: -150,
+    left: -100,
+    width: 400,
     height: 400,
-    alignItems: 'center',
-  },
-  blob: {
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    opacity: 0.2,
+    borderRadius: 200,
+    filter: 'blur(90px)', // Web/Expo
   },
 
   // Header
@@ -419,9 +454,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -432,8 +467,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: FONTS.semiBold,
-    color: DARK.text.primary,
+    fontFamily: FONTS.bold,
+    color: '#FFF',
   },
 
   scrollContent: {
@@ -457,28 +492,29 @@ const styles = StyleSheet.create({
     gap: 6,
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: RADIUS.full,
+    borderWidth: 1,
     marginBottom: SPACING.md,
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: FONTS.bold,
-    color: '#FFF',
     textTransform: 'uppercase',
   },
   dreamTitle: {
-    fontSize: 26,
+    fontSize: 24,
     fontFamily: FONTS.bold,
-    color: DARK.text.primary,
+    color: '#FFF',
     marginBottom: SPACING.xs,
     lineHeight: 32,
   },
   dreamDesc: {
     fontSize: 15,
     fontFamily: FONTS.regular,
-    color: DARK.text.secondary,
+    color: 'rgba(255,255,255,0.7)',
     marginBottom: SPACING.lg,
+    lineHeight: 22,
   },
 
   // Progress Bar
@@ -487,12 +523,12 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 12,
     fontFamily: FONTS.medium,
-    color: DARK.text.tertiary,
+    color: DARK.text.secondary,
   },
   progressValue: {
     fontSize: 12,
     fontFamily: FONTS.bold,
-    color: DARK.text.primary,
+    color: '#FFF',
   },
   progressBarBg: {
     height: 6,
@@ -505,7 +541,7 @@ const styles = StyleSheet.create({
   // Stats Grid
   statsGrid: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: SPACING.sm,
     marginBottom: SPACING['2xl'],
   },
   statBox: {
@@ -515,19 +551,20 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   statNumber: {
     fontSize: 18,
     fontFamily: FONTS.bold,
-    color: DARK.text.primary,
-    marginTop: 8,
+    color: '#FFF',
+    marginTop: 6,
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 11,
     fontFamily: FONTS.medium,
     color: DARK.text.tertiary,
+    textTransform: 'uppercase',
   },
 
   // Actions
@@ -538,9 +575,11 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: FONTS.bold,
-    color: DARK.text.primary,
+    color: '#FFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   sectionAction: {
     fontSize: 14,
@@ -552,14 +591,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.xl,
     backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: RADIUS.xl,
+    borderRadius: RADIUS.lg,
     borderStyle: 'dashed',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
   emptyText: {
-    color: DARK.text.muted,
-    marginTop: 8,
+    color: DARK.text.secondary,
+    marginTop: 12,
     fontFamily: FONTS.medium,
   },
 
@@ -575,16 +614,30 @@ const styles = StyleSheet.create({
   completedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
+    gap: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
+  completedCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   completedText: {
+    flex: 1,
     fontSize: 14,
     fontFamily: FONTS.medium,
-    color: DARK.text.muted,
+    color: 'rgba(255,255,255,0.4)',
     textDecorationLine: 'line-through',
+  },
+  completedDate: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.2)',
+    fontFamily: FONTS.regular,
   },
 
   // Bottom Dock

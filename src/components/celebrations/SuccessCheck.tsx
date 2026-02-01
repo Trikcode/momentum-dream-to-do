@@ -1,4 +1,3 @@
-// src/components/celebrations/SuccessCheck.tsx
 import React, { useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
 import Animated, {
@@ -6,60 +5,46 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withDelay,
-  withSequence,
   withTiming,
   Easing,
-  interpolate,
 } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
-import { COLORS } from '@/src/constants/theme'
+import { DARK } from '@/src/constants/theme'
 
 interface SuccessCheckProps {
   size?: number
   delay?: number
 }
 
-export function SuccessCheck({ size = 120, delay = 0 }: SuccessCheckProps) {
+export function SuccessCheck({ size = 100, delay = 0 }: SuccessCheckProps) {
   const scale = useSharedValue(0)
   const checkScale = useSharedValue(0)
-  const ringScale = useSharedValue(0)
-  const ringOpacity = useSharedValue(1)
+  const ringScale = useSharedValue(0.5)
+  const ringOpacity = useSharedValue(0)
 
   useEffect(() => {
-    // Circle animation
+    // 1. Pop Circle
     scale.value = withDelay(
       delay,
-      withSpring(1, {
-        damping: 12,
-        stiffness: 100,
-      }),
+      withSpring(1, { damping: 12, stiffness: 100 }),
     )
 
-    // Check animation
-    checkScale.value = withDelay(
-      delay + 300,
-      withSpring(1, {
-        damping: 10,
-        stiffness: 150,
-      }),
-    )
-
-    // Ring animation
-    ringScale.value = withDelay(
-      delay + 200,
-      withTiming(2, {
-        duration: 800,
-        easing: Easing.out(Easing.ease),
-      }),
-    )
-
+    // 2. Expand Ring (Shockwave)
     ringOpacity.value = withDelay(
-      delay + 200,
-      withTiming(0, {
-        duration: 800,
-        easing: Easing.out(Easing.ease),
-      }),
+      delay + 100,
+      withTiming(0.6, { duration: 100 }),
+    )
+    ringScale.value = withDelay(
+      delay + 100,
+      withTiming(2, { duration: 600, easing: Easing.out(Easing.ease) }),
+    )
+    ringOpacity.value = withDelay(delay + 300, withTiming(0, { duration: 400 }))
+
+    // 3. Show Icon
+    checkScale.value = withDelay(
+      delay + 250,
+      withSpring(1, { damping: 12, stiffness: 150 }),
     )
   }, [])
 
@@ -69,7 +54,6 @@ export function SuccessCheck({ size = 120, delay = 0 }: SuccessCheckProps) {
 
   const checkStyle = useAnimatedStyle(() => ({
     transform: [{ scale: checkScale.value }],
-    opacity: checkScale.value,
   }))
 
   const ringStyle = useAnimatedStyle(() => ({
@@ -78,31 +62,23 @@ export function SuccessCheck({ size = 120, delay = 0 }: SuccessCheckProps) {
   }))
 
   return (
-    <View style={styles.container}>
-      {/* Expanding ring */}
+    <View style={[styles.container, { width: size, height: size }]}>
+      {/* Shockwave Ring */}
       <Animated.View
         style={[
           styles.ring,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-          },
+          { width: size, height: size, borderRadius: size / 2 },
           ringStyle,
         ]}
       />
 
-      {/* Main circle */}
-      <Animated.View style={containerStyle}>
+      {/* Main Circle */}
+      <Animated.View style={[StyleSheet.absoluteFill, containerStyle]}>
         <LinearGradient
-          colors={[COLORS.success[400], COLORS.success[600]]}
+          colors={[DARK.success, '#059669']} // Emerald Gradient
           style={[
             styles.circle,
-            {
-              width: size,
-              height: size,
-              borderRadius: size / 2,
-            },
+            { width: size, height: size, borderRadius: size / 2 },
           ]}
         >
           <Animated.View style={checkStyle}>
@@ -122,15 +98,15 @@ const styles = StyleSheet.create({
   circle: {
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.success[500],
+    shadowColor: DARK.success,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.5,
     shadowRadius: 16,
     elevation: 10,
   },
   ring: {
     position: 'absolute',
-    borderWidth: 3,
-    borderColor: COLORS.success[400],
+    borderWidth: 2,
+    borderColor: DARK.success,
   },
 })
