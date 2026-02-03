@@ -1,26 +1,43 @@
 {
   "project_info": {
-    "project_number": "217223445515",
-    "project_id": "momentum-446a5",
-    "storage_bucket": "momentum-446a5.firebasestorage.app"
+    "project_number": "558924029307",
+    "project_id": "momentum-485912",
+    "storage_bucket": "momentum-485912.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:217223445515:android:6b66c79995ec2451f85b0e",
+        "mobilesdk_app_id": "1:558924029307:android:692c33fa77c3f7fdf6f1de",
         "android_client_info": {
           "package_name": "com.trikcode.momentum"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "558924029307-k6gsl0k1ln4a3tmtavvvndqihi8g0kgf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyAXdi4UvvqQPzRK6jDT5EExAyZkaOEWEKU"
+          "current_key": "AIzaSyCwMqCNIlS4mk7UeKVsNIyrWi3GmYIoslU"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "558924029307-k6gsl0k1ln4a3tmtavvvndqihi8g0kgf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "558924029307-hvcv53ad816c1vpj3hl2fevlnq698b4b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.trikcode.momentum"
+              }
+            }
+          ]
         }
       }
     }

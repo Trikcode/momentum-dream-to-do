@@ -13,11 +13,9 @@ import {
 import * as AppleAuthentication from 'expo-apple-authentication'
 import { ENV } from '@/src/config/env'
 
-const GOOGLE_WEB_CLIENT_ID = ENV.GOOGLE_WEB_CLIENT_ID
-// Configure once at module load (safe)
-if (GOOGLE_WEB_CLIENT_ID) {
-  GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID })
-}
+GoogleSignin.configure({
+  webClientId: ENV.GOOGLE_OAUTH_EXPO_WEB_CLIENT_ID,
+})
 
 interface Profile {
   id: string
@@ -191,9 +189,6 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signInWithGoogle: async () => {
-        if (!GOOGLE_WEB_CLIENT_ID) {
-          throw new Error('Missing EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID')
-        }
         try {
           await GoogleSignin.hasPlayServices({
             showPlayServicesUpdateDialog: true,

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Momentum",
     "slug": "momentum",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "momentum",
@@ -16,10 +16,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.trikcode.momentum",
-      "buildNumber": "1",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true,
+        "ITSAppUsesNonExemptEncryption": false,
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
@@ -60,10 +61,10 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
       "eas": {
         "projectId": "09c65eaa-6c20-490b-8f6e-be77d869037c"
       }
-    }
+    },
+    "owner": "trikcode"
   }
 }

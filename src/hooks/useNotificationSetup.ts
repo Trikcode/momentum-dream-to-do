@@ -78,7 +78,6 @@ export function useRequestNotificationPermission() {
           return
         }
 
-        // Small delay so the home screen renders first
         await new Promise((resolve) => setTimeout(resolve, 1500))
 
         prompted.current = true
@@ -86,14 +85,7 @@ export function useRequestNotificationPermission() {
         // Mark as prompted (even before asking)
         await AsyncStorage.setItem(NOTIFICATION_PROMPTED_KEY, 'true')
 
-        console.log('🔔 Requesting notification permission...')
-        const success = await enableNotifications()
-
-        if (success) {
-          console.log('✅ Notifications enabled!')
-        } else {
-          console.log('❌ User denied or error occurred')
-        }
+        await enableNotifications()
       } catch (error) {
         console.error('Error in notification prompt:', error)
       }

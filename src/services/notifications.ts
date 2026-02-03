@@ -78,8 +78,6 @@ export async function setupNotificationChannels(): Promise<void> {
       sound: 'default',
       enableVibrate: true,
     })
-
-    console.log('✅ Android notification channels created')
   } catch (error) {
     console.error('❌ Error setting up notification channels:', error)
   }
@@ -117,8 +115,6 @@ export async function registerForPushNotificationsAsync(): Promise<
       return null
     }
 
-    console.log('✅ Notification permission granted')
-
     const projectId =
       Constants?.expoConfig?.extra?.eas?.projectId ??
       Constants?.easConfig?.projectId
@@ -129,7 +125,6 @@ export async function registerForPushNotificationsAsync(): Promise<
     }
 
     const pushToken = await Notifications.getExpoPushTokenAsync({ projectId })
-    console.log('✅ Push token:', pushToken.data)
 
     return pushToken.data
   } catch (error) {

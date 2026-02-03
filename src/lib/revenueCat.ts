@@ -42,18 +42,20 @@ class RevenueCatService {
 
       const apiKey = Platform.OS === 'ios' ? API_KEYS.ios : API_KEYS.android
 
+      if (!apiKey) {
+        console.warn(
+          '⚠️ RevenueCat API key not configured, skipping initialization',
+        )
+        return
+      }
+
       await Purchases.configure({
         apiKey,
         appUserID: userId || null,
       })
 
       this.initialized = true
-      console.log(
-        '✅ RevenueCat initialized',
-        userId ? `for user ${userId}` : 'anonymously',
-      )
     } catch (error) {
-      console.error('❌ RevenueCat init error:', error)
       throw error
     }
   }
@@ -61,10 +63,8 @@ class RevenueCatService {
   async login(userId: string): Promise<CustomerInfo | null> {
     try {
       const { customerInfo } = await Purchases.logIn(userId)
-      console.log('✅ RevenueCat logged in:', userId)
       return customerInfo
     } catch (error) {
-      console.error('❌ RevenueCat login error:', error)
       return null
     }
   }
@@ -72,10 +72,7 @@ class RevenueCatService {
   async logout(): Promise<void> {
     try {
       await Purchases.logOut()
-      console.log('✅ RevenueCat logged out')
-    } catch (error) {
-      console.error('❌ RevenueCat logout error:', error)
-    }
+    } catch (error) {}
   }
 
   async getOfferings(): Promise<PurchasesOffering | null> {
@@ -233,8 +230,6 @@ class RevenueCatService {
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
-
-      console.log('✅ Synced subscription to database')
     } catch (error) {
       console.error('❌ Error syncing to database:', error)
     }
