@@ -7,6 +7,7 @@ import {
   RefreshControl,
   Text,
   Dimensions,
+  Platform,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, {
@@ -25,13 +26,17 @@ import { Ionicons } from '@expo/vector-icons'
 
 import { useAuthStore } from '@/src/store/authStore'
 import { useDreamStore } from '@/src/store/dreamStore'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import { useTheme } from '@/src/context/ThemeContext'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 
 const { width } = Dimensions.get('window')
 
-// ============================================================================
-// ANIMATED ATMOSPHERE
-// ============================================================================
 const GlowOrb = ({ color, style }: any) => {
   const scale = useSharedValue(1)
 
@@ -57,12 +62,12 @@ const GlowOrb = ({ color, style }: any) => {
 
 export default function JourneyScreen() {
   const insets = useSafeAreaInsets()
+  const { colors, isDark } = useTheme()
   const [refreshing, setRefreshing] = useState(false)
 
   const { profile, refreshProfile } = useAuthStore()
   const { dreams, fetchDreams } = useDreamStore()
 
-  // Real stats
   const stats = {
     totalXP: profile?.total_xp ?? 0,
     currentStreak: profile?.current_streak ?? 0,
@@ -76,7 +81,6 @@ export default function JourneyScreen() {
     ),
   }
 
-  // Level Logic
   const xpForNextLevel = Math.pow(stats.currentLevel + 1, 2) * 100
   const levelProgress = Math.min(
     (stats.totalXP % xpForNextLevel) / xpForNextLevel,
@@ -90,18 +94,37 @@ export default function JourneyScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* BACKGROUND */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={[DARK.bg.primary, '#181220', DARK.bg.primary]}
+          colors={
+            isDark
+              ? [
+                  PALETTE.midnight.obsidian,
+                  PALETTE.midnight.slate,
+                  PALETTE.midnight.obsidian,
+                ]
+              : [
+                  colors.background,
+                  colors.backgroundSecondary,
+                  colors.background,
+                ]
+          }
           style={StyleSheet.absoluteFill}
         />
-        <GlowOrb color={DARK.accent.rose} style={styles.orb1} />
-        <GlowOrb color={DARK.accent.violet} style={styles.orb2} />
-        {/* Texture */}
-        <BlurView intensity={40} tint='dark' style={StyleSheet.absoluteFill} />
+        {isDark && (
+          <>
+            <GlowOrb color={PALETTE.electric.cyan} style={styles.orb1} />
+            <GlowOrb color={PALETTE.electric.indigo} style={styles.orb2} />
+          </>
+        )}
+        {isDark && Platform.OS === 'ios' && (
+          <BlurView
+            intensity={40}
+            tint='dark'
+            style={StyleSheet.absoluteFill}
+          />
+        )}
       </View>
 
       <ScrollView
@@ -115,71 +138,82 @@ export default function JourneyScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={DARK.accent.rose}
+            tintColor={PALETTE.electric.cyan}
           />
         }
       >
-        {/* HEADER */}
         <Animated.View
           entering={FadeInDown.duration(500)}
           style={styles.header}
         >
-          <Text style={styles.title}>Your Legacy</Text>
-          <Text style={styles.subtitle}>Every step builds your story.</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Your Legacy
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            Every step builds your story.
+          </Text>
         </Animated.View>
 
-        {/* 1. LEVEL CARD */}
         <Animated.View entering={FadeInUp.delay(200)}>
           <LevelCard
             level={stats.currentLevel}
             currentXP={stats.totalXP}
             xpForNext={xpForNextLevel}
             progress={levelProgress}
+            colors={colors}
+            isDark={isDark}
           />
         </Animated.View>
 
-        {/* 2. STATS GRID */}
         <Animated.View entering={FadeInUp.delay(300)} style={styles.statsGrid}>
           <StatCard
             icon='flash'
             value={stats.totalPowerMoves}
             label='Moves Made'
-            color={DARK.accent.rose}
+            color={PALETTE.electric.cyan}
+            colors={colors}
+            isDark={isDark}
           />
           <StatCard
             icon='flame'
             value={stats.currentStreak}
             label='Day Streak'
-            color={DARK.accent.gold}
+            color={PALETTE.status.warning}
             sublabel={`Best: ${stats.longestStreak}`}
+            colors={colors}
+            isDark={isDark}
           />
           <StatCard
             icon='planet'
             value={stats.activeDreams}
             label='Active Missions'
-            color={DARK.accent.violet}
+            color={PALETTE.electric.indigo}
+            colors={colors}
+            isDark={isDark}
           />
           <StatCard
             icon='trophy'
             value={stats.completedDreams}
             label='Victories'
-            color='#10B981' // Emerald
+            color={PALETTE.electric.emerald}
+            colors={colors}
+            isDark={isDark}
           />
         </Animated.View>
 
-        {/* 3. STREAK CARD */}
         {stats.currentStreak > 0 && (
           <Animated.View entering={FadeInUp.delay(400)}>
             <StreakCard
               currentStreak={stats.currentStreak}
               longestStreak={stats.longestStreak}
+              colors={colors}
+              isDark={isDark}
             />
           </Animated.View>
         )}
 
-        {/* 4. MOTIVATION */}
         <Animated.View entering={FadeInUp.delay(500)} style={styles.section}>
-          <MotivationCard stats={stats} />
+          <MotivationCard colors={colors} isDark={isDark} />
         </Animated.View>
 
         <View style={{ height: 120 }} />
@@ -188,28 +222,49 @@ export default function JourneyScreen() {
   )
 }
 
-// -----------------------------------------------------------------------------
-// COMPONENTS
-// -----------------------------------------------------------------------------
-
-function LevelCard({ level, currentXP, xpForNext, progress }: any) {
+function LevelCard({
+  level,
+  currentXP,
+  xpForNext,
+  progress,
+  colors,
+  isDark,
+}: any) {
   return (
-    <View style={styles.levelCard}>
-      {/* Glass & Gradient */}
-      <BlurView intensity={20} tint='dark' style={StyleSheet.absoluteFill} />
+    <View
+      style={[
+        styles.levelCard,
+        {
+          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : colors.surface,
+        },
+      ]}
+    >
+      {isDark && Platform.OS === 'ios' && (
+        <BlurView intensity={20} tint='dark' style={StyleSheet.absoluteFill} />
+      )}
       <LinearGradient
-        colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
+        colors={
+          isDark
+            ? ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']
+            : [colors.surface, colors.surfaceMuted]
+        }
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={styles.cardBorder} />
+      <View
+        style={[
+          styles.cardBorder,
+          {
+            borderColor: isDark ? 'rgba(255,255,255,0.1)' : colors.border,
+          },
+        ]}
+      />
 
       <View style={styles.levelContent}>
-        {/* Badge */}
         <View style={styles.levelBadge}>
           <LinearGradient
-            colors={[DARK.accent.violet, DARK.accent.rose]}
+            colors={GRADIENTS.electricAlt}
             style={styles.levelBadgeGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -219,20 +274,34 @@ function LevelCard({ level, currentXP, xpForNext, progress }: any) {
           </LinearGradient>
         </View>
 
-        {/* Info */}
         <View style={styles.levelInfo}>
           <View style={styles.levelHeader}>
-            <Text style={styles.levelTitle}>Chapter {level}</Text>
+            <Text style={[styles.levelTitle, { color: colors.text }]}>
+              Chapter {level}
+            </Text>
             <Text style={styles.levelXP}>
-              <Text style={styles.xpCurrent}>{currentXP}</Text>
-              <Text style={styles.xpTotal}> / {xpForNext} XP</Text>
+              <Text style={[styles.xpCurrent, { color: colors.text }]}>
+                {currentXP}
+              </Text>
+              <Text style={[styles.xpTotal, { color: colors.textMuted }]}>
+                {' '}
+                / {xpForNext} XP
+              </Text>
             </Text>
           </View>
 
-          {/* Bar */}
-          <View style={styles.track}>
+          <View
+            style={[
+              styles.track,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.1)'
+                  : colors.border,
+              },
+            ]}
+          >
             <LinearGradient
-              colors={[DARK.accent.violet, DARK.accent.rose]}
+              colors={GRADIENTS.electricAlt}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[
@@ -242,7 +311,7 @@ function LevelCard({ level, currentXP, xpForNext, progress }: any) {
             />
           </View>
 
-          <Text style={styles.levelSubtext}>
+          <Text style={[styles.levelSubtext, { color: colors.textTertiary }]}>
             {xpForNext - currentXP} sparks to next chapter
           </Text>
         </View>
@@ -251,9 +320,25 @@ function LevelCard({ level, currentXP, xpForNext, progress }: any) {
   )
 }
 
-function StatCard({ icon, value, label, color, sublabel }: any) {
+function StatCard({
+  icon,
+  value,
+  label,
+  color,
+  sublabel,
+  colors,
+  isDark,
+}: any) {
   return (
-    <View style={styles.statCard}>
+    <View
+      style={[
+        styles.statCard,
+        {
+          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : colors.surface,
+          borderColor: isDark ? 'rgba(255,255,255,0.05)' : colors.border,
+        },
+      ]}
+    >
       <View
         style={[
           styles.statIconBox,
@@ -262,44 +347,72 @@ function StatCard({ icon, value, label, color, sublabel }: any) {
       >
         <Ionicons name={icon} size={20} color={color} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-      {sublabel && <Text style={styles.statSub}>{sublabel}</Text>}
+      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+        {label}
+      </Text>
+      {sublabel && (
+        <Text style={[styles.statSub, { color: colors.textMuted }]}>
+          {sublabel}
+        </Text>
+      )}
     </View>
   )
 }
 
-function StreakCard({ currentStreak, longestStreak }: any) {
+function StreakCard({ currentStreak, longestStreak, colors, isDark }: any) {
   const isPersonalBest = currentStreak >= longestStreak && currentStreak > 1
 
   return (
-    <View style={styles.streakCard}>
+    <View
+      style={[
+        styles.streakCard,
+        {
+          backgroundColor: isDark
+            ? 'rgba(251, 191, 36, 0.05)'
+            : `${PALETTE.status.warning}10`,
+        },
+      ]}
+    >
       <LinearGradient
-        colors={[DARK.accent.gold + '20', 'transparent']}
+        colors={[PALETTE.status.warning + '20', 'transparent']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       />
       <View
-        style={[styles.cardBorder, { borderColor: DARK.accent.gold + '40' }]}
+        style={[
+          styles.cardBorder,
+          { borderColor: PALETTE.status.warning + '40' },
+        ]}
       />
 
       <View style={styles.streakContent}>
         <View style={styles.fireContainer}>
-          <Ionicons name='flame' size={32} color={DARK.accent.gold} />
+          <Ionicons name='flame' size={32} color={PALETTE.status.warning} />
         </View>
 
         <View style={styles.streakTextContainer}>
           <View style={styles.streakRow}>
-            <Text style={styles.streakTitle}>{currentStreak} Day Streak</Text>
+            <Text style={[styles.streakTitle, { color: colors.text }]}>
+              {currentStreak} Day Streak
+            </Text>
             {isPersonalBest && (
               <View style={styles.pbBadge}>
-                <Ionicons name='trophy' size={10} color={DARK.accent.gold} />
-                <Text style={styles.pbText}>NEW RECORD</Text>
+                <Ionicons
+                  name='trophy'
+                  size={10}
+                  color={PALETTE.status.warning}
+                />
+                <Text
+                  style={[styles.pbText, { color: PALETTE.status.warning }]}
+                >
+                  NEW RECORD
+                </Text>
               </View>
             )}
           </View>
-          <Text style={styles.streakDesc}>
+          <Text style={[styles.streakDesc, { color: colors.textSecondary }]}>
             {currentStreak < 7
               ? "You're building heat. Keep going!"
               : 'You are unstoppable. 🔥'}
@@ -310,15 +423,29 @@ function StreakCard({ currentStreak, longestStreak }: any) {
   )
 }
 
-function MotivationCard({ stats }: any) {
+function MotivationCard({ colors, isDark }: any) {
   return (
-    <View style={styles.motivationCard}>
+    <View
+      style={[
+        styles.motivationCard,
+        {
+          backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : colors.surface,
+          borderColor: isDark ? 'rgba(255,255,255,0.05)' : colors.border,
+        },
+      ]}
+    >
       <View style={styles.motivationIcon}>
-        <Ionicons name='rocket-outline' size={24} color={DARK.accent.rose} />
+        <Ionicons
+          name='rocket-outline'
+          size={24}
+          color={PALETTE.electric.cyan}
+        />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.motivationTitle}>Momentum Builder</Text>
-        <Text style={styles.motivationText}>
+        <Text style={[styles.motivationTitle, { color: colors.textSecondary }]}>
+          Momentum Builder
+        </Text>
+        <Text style={[styles.motivationText, { color: colors.text }]}>
           "Consistency is the bridge between goals and accomplishment."
         </Text>
       </View>
@@ -326,21 +453,15 @@ function MotivationCard({ stats }: any) {
   )
 }
 
-// -----------------------------------------------------------------------------
-// STYLES
-// -----------------------------------------------------------------------------
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   scrollView: { flex: 1 },
   scrollContent: {
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING['4xl'],
   },
-
-  // Ambience
   orb1: {
     position: 'absolute',
     top: -50,
@@ -349,7 +470,6 @@ const styles = StyleSheet.create({
     height: 250,
     borderRadius: 125,
     opacity: 0.15,
-    filter: 'blur(80px)',
   },
   orb2: {
     position: 'absolute',
@@ -359,38 +479,29 @@ const styles = StyleSheet.create({
     height: 300,
     borderRadius: 150,
     opacity: 0.1,
-    filter: 'blur(90px)',
   },
-
-  // Header
   header: {
     marginBottom: SPACING.xl,
   },
   title: {
     fontFamily: FONTS.bold,
     fontSize: 32,
-    color: '#FFF',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: 16,
-    color: DARK.text.secondary,
     marginTop: 4,
   },
-
-  // Level Card
   levelCard: {
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     marginBottom: SPACING.lg,
-    backgroundColor: 'rgba(255,255,255,0.03)',
     minHeight: 100,
   },
   cardBorder: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: RADIUS.xl,
   },
   levelContent: {
@@ -400,7 +511,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   levelBadge: {
-    shadowColor: DARK.accent.violet,
+    shadowColor: PALETTE.electric.indigo,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -430,20 +541,16 @@ const styles = StyleSheet.create({
   levelTitle: {
     fontFamily: FONTS.bold,
     fontSize: 16,
-    color: '#FFF',
   },
   levelXP: { fontSize: 12 },
   xpCurrent: {
     fontFamily: FONTS.bold,
-    color: '#FFF',
   },
   xpTotal: {
     fontFamily: FONTS.medium,
-    color: DARK.text.muted,
   },
   track: {
     height: 6,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 6,
@@ -451,11 +558,8 @@ const styles = StyleSheet.create({
   fill: { height: '100%', borderRadius: 3 },
   levelSubtext: {
     fontSize: 11,
-    color: DARK.text.tertiary,
     fontFamily: FONTS.medium,
   },
-
-  // Stats
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -463,12 +567,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   statCard: {
-    width: '48%', // Slightly less than half for gap
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    width: '48%',
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   statIconBox: {
     width: 36,
@@ -482,26 +584,20 @@ const styles = StyleSheet.create({
   statValue: {
     fontFamily: FONTS.bold,
     fontSize: 24,
-    color: '#FFF',
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 12,
-    color: DARK.text.secondary,
     fontFamily: FONTS.medium,
   },
   statSub: {
     fontSize: 10,
-    color: DARK.text.muted,
     marginTop: 4,
   },
-
-  // Streak
   streakCard: {
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     marginBottom: SPACING.lg,
-    backgroundColor: 'rgba(245, 158, 11, 0.05)',
   },
   streakContent: {
     flexDirection: 'row',
@@ -513,7 +609,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -527,7 +623,6 @@ const styles = StyleSheet.create({
   streakTitle: {
     fontSize: 18,
     fontFamily: FONTS.bold,
-    color: '#FFF',
   },
   pbBadge: {
     flexDirection: 'row',
@@ -535,31 +630,25 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    backgroundColor: 'rgba(251, 191, 36, 0.2)',
     borderRadius: 4,
   },
   pbText: {
     fontSize: 9,
     fontFamily: FONTS.bold,
-    color: DARK.accent.gold,
   },
   streakDesc: {
     fontSize: 13,
-    color: DARK.text.secondary,
     fontFamily: FONTS.regular,
   },
-
-  // Motivation
   section: { marginTop: SPACING.md },
   motivationCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: RADIUS.xl,
     padding: SPACING.lg,
     gap: SPACING.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   motivationIcon: {
     paddingTop: 2,
@@ -567,7 +656,6 @@ const styles = StyleSheet.create({
   motivationTitle: {
     fontSize: 14,
     fontFamily: FONTS.bold,
-    color: DARK.text.secondary,
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -575,7 +663,6 @@ const styles = StyleSheet.create({
   motivationText: {
     fontSize: 15,
     fontFamily: FONTS.medium,
-    color: '#FFF',
     fontStyle: 'italic',
     lineHeight: 22,
   },

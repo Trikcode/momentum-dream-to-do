@@ -1,4 +1,3 @@
-// src/components/celebrations/MomentumFlame.tsx
 import React, { useEffect } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import Animated, {
@@ -7,14 +6,12 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-  withSpring,
   Easing,
   interpolate,
-  interpolateColor,
 } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS, FONTS, SPACING } from '@/src/constants/theme'
+import { FONTS, SPACING, PALETTE } from '@/src/constants/new-theme'
 
 interface MomentumFlameProps {
   days: number
@@ -41,13 +38,36 @@ export function MomentumFlame({
 
   const config = sizeConfig[size]
 
-  // Determine flame intensity based on streak
   const getFlameColors = (): [string, string, string] => {
-    if (days >= 30) return ['#FF4500', '#FF6B00', '#FFD700'] // Legendary
-    if (days >= 14) return ['#FF6B6B', '#FF8E53', '#FFC107'] // Epic
-    if (days >= 7) return ['#F43F5E', '#FF7A95', '#FFA500'] // Strong
-    if (days >= 3) return ['#FB7185', '#FDA4AF', '#FBBF24'] // Growing
-    return ['#FCA5A5', '#FECDD3', '#FDE68A'] // Starting
+    if (days >= 30)
+      return [
+        PALETTE.electric.cyan,
+        PALETTE.electric.emerald,
+        PALETTE.status.warning,
+      ]
+    if (days >= 14)
+      return [
+        PALETTE.electric.indigo,
+        PALETTE.electric.cyan,
+        PALETTE.electric.emerald,
+      ]
+    if (days >= 7)
+      return [
+        PALETTE.electric.cyan,
+        PALETTE.electric.cyanLight,
+        PALETTE.status.warning,
+      ]
+    if (days >= 3)
+      return [
+        PALETTE.electric.emerald,
+        PALETTE.electric.emeraldLight,
+        PALETTE.status.warning,
+      ]
+    return [
+      PALETTE.electric.cyanLight,
+      PALETTE.electric.emeraldLight,
+      PALETTE.status.warningLight,
+    ]
   }
 
   const flameColors = getFlameColors()
@@ -55,7 +75,6 @@ export function MomentumFlame({
   useEffect(() => {
     if (!animated) return
 
-    // Flicker animation
     flicker.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 300, easing: Easing.inOut(Easing.ease) }),
@@ -67,7 +86,6 @@ export function MomentumFlame({
       true,
     )
 
-    // Glow pulse
     glow.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 800 }),
@@ -77,7 +95,6 @@ export function MomentumFlame({
       true,
     )
 
-    // Subtle scale pulse
     scale.value = withRepeat(
       withSequence(
         withTiming(1.05, { duration: 600 }),
@@ -104,7 +121,6 @@ export function MomentumFlame({
   return (
     <View style={styles.wrapper}>
       <Animated.View style={[styles.container, containerStyle]}>
-        {/* Glow effect */}
         <Animated.View
           style={[
             styles.glow,
@@ -117,7 +133,6 @@ export function MomentumFlame({
           ]}
         />
 
-        {/* Flame background */}
         <Animated.View style={flameStyle}>
           <LinearGradient
             colors={flameColors}
@@ -132,11 +147,14 @@ export function MomentumFlame({
             start={{ x: 0.5, y: 1 }}
             end={{ x: 0.5, y: 0 }}
           >
-            <Ionicons name='flame' size={config.icon} color='#FFF' />
+            <Ionicons
+              name='flame'
+              size={config.icon}
+              color={PALETTE.midnight.obsidian}
+            />
           </LinearGradient>
         </Animated.View>
 
-        {/* Days count badge */}
         <View style={[styles.badge, { minWidth: config.container * 0.6 }]}>
           <Text style={[styles.badgeText, { fontSize: config.font * 0.75 }]}>
             {days}
@@ -168,7 +186,7 @@ const styles = StyleSheet.create({
   flameContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF6B00',
+    shadowColor: PALETTE.electric.cyan,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -177,12 +195,12 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     bottom: -8,
-    backgroundColor: COLORS.neutral[900],
+    backgroundColor: PALETTE.midnight.obsidian,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: COLORS.surface,
+    borderColor: PALETTE.midnight.slate,
   },
   badgeText: {
     fontFamily: FONTS.bold,
@@ -192,7 +210,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: FONTS.medium,
     fontSize: 12,
-    color: COLORS.neutral[500],
+    color: PALETTE.slate[500],
     marginTop: SPACING.sm,
   },
 })

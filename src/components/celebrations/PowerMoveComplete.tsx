@@ -6,17 +6,20 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withDelay,
-  withSequence,
   withTiming,
   runOnJS,
   Easing,
-  FadeIn,
-  FadeOut,
 } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
 import { Confetti } from './Confetti'
-import { COLORS, FONTS, SPACING, SHADOWS } from '@/src/constants/theme'
+import {
+  FONTS,
+  SPACING,
+  SHADOWS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 import { useHaptics } from '@/src/hooks/useHaptics'
 import { getRandomCelebration } from '@/src/constants/language'
 
@@ -67,13 +70,11 @@ export function PowerMoveComplete({
       withSpring(0, { damping: 18, stiffness: 100 }),
     )
 
-    // Spark animation
     sparkScale.value = withDelay(
       900,
       withSpring(1, { damping: 14, stiffness: 100 }),
     )
 
-    // Auto dismiss (keep timing)
     setTimeout(() => {
       overlayOpacity.value = withTiming(0, { duration: 400 }, () => {
         runOnJS(onComplete)()
@@ -112,20 +113,22 @@ export function PowerMoveComplete({
       <Confetti count={40} />
 
       <View style={styles.content}>
-        {/* Check mark with ring */}
         <View style={styles.checkContainer}>
           <Animated.View style={[styles.ring, ringStyle]} />
           <Animated.View style={[styles.checkCircle, checkStyle]}>
             <LinearGradient
-              colors={COLORS.gradients.success as [string, string]}
+              colors={GRADIENTS.electric}
               style={styles.checkGradient}
             >
-              <Ionicons name='checkmark' size={48} color='#FFF' />
+              <Ionicons
+                name='checkmark'
+                size={48}
+                color={PALETTE.midnight.obsidian}
+              />
             </LinearGradient>
           </Animated.View>
         </View>
 
-        {/* Celebration text */}
         <Animated.View style={[styles.textContent, contentStyle]}>
           <Text style={styles.celebrationText}>{celebrationMessage}</Text>
           <Text style={styles.moveTitle} numberOfLines={2}>
@@ -133,10 +136,13 @@ export function PowerMoveComplete({
           </Text>
         </Animated.View>
 
-        {/* Spark earned */}
         <Animated.View style={[styles.sparkContainer, sparkStyle]}>
           <View style={styles.sparkBadge}>
-            <Ionicons name='sparkles' size={18} color={COLORS.accent[500]} />
+            <Ionicons
+              name='sparkles'
+              size={18}
+              color={PALETTE.electric.emerald}
+            />
             <Text style={styles.sparkText}>+{sparksEarned}</Text>
             <Text style={styles.sparkLabel}>sparks earned</Text>
           </View>
@@ -169,7 +175,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: COLORS.success[400],
+    borderColor: PALETTE.electric.cyan,
   },
   checkCircle: {
     ...SHADOWS.lg,
@@ -215,11 +221,11 @@ const styles = StyleSheet.create({
   sparkText: {
     fontFamily: FONTS.bold,
     fontSize: 20,
-    color: COLORS.accent[600],
+    color: PALETTE.electric.emeraldDark,
   },
   sparkLabel: {
     fontFamily: FONTS.medium,
     fontSize: 14,
-    color: COLORS.neutral[500],
+    color: PALETTE.slate[500],
   },
 })

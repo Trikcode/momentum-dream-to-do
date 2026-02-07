@@ -1,12 +1,6 @@
+// src/components/celebrations/VictoryModal.tsx
 import React, { useEffect } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  Pressable,
-  Platform,
-} from 'react-native'
+import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
@@ -25,24 +19,10 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { Confetti } from './Confetti' // Assuming you have this component
+import { Confetti } from './Confetti'
+import { FONTS, PALETTE, GRADIENTS, SHADOWS } from '@/src/constants/new-theme'
 
-const { width, height } = Dimensions.get('window')
-
-// ============================================================================
-// LOCAL THEME (Premium Dark Mode)
-// ============================================================================
-const THEME = {
-  colors: {
-    gold: ['#F59E0B', '#D97706'],
-    purple: ['#A855F7', '#7C3AED'],
-    rose: ['#F43F5E', '#E11D48'],
-    glass: 'rgba(30, 35, 45, 0.7)',
-    border: 'rgba(255,255,255,0.15)',
-    text: '#FFFFFF',
-    textDim: '#94A3B8',
-  },
-}
+const { width } = Dimensions.get('window')
 
 interface Victory {
   id: string
@@ -60,9 +40,6 @@ interface VictoryModalProps {
   showConfetti?: boolean
 }
 
-// ============================================================================
-// COMPONENT: SUNBURST (God Rays)
-// ============================================================================
 const Sunburst = () => {
   const rotation = useSharedValue(0)
 
@@ -95,22 +72,18 @@ export function VictoryModal({
   onDismiss,
   showConfetti = true,
 }: VictoryModalProps) {
-  // Animation Values
   const badgeScale = useSharedValue(0)
   const shimmer = useSharedValue(0)
   const glowOpacity = useSharedValue(0)
 
   useEffect(() => {
-    // 1. Trigger Haptics
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-    // 2. Animate Badge Pop
     badgeScale.value = withDelay(
       300,
       withSpring(1, { damping: 12, stiffness: 100 }),
     )
 
-    // 3. Animate Glow Pulse
     glowOpacity.value = withDelay(
       600,
       withRepeat(
@@ -123,7 +96,6 @@ export function VictoryModal({
       ),
     )
 
-    // 4. Shimmer Effect
     shimmer.value = withRepeat(
       withSequence(
         withDelay(
@@ -137,7 +109,6 @@ export function VictoryModal({
     )
   }, [])
 
-  // Styles
   const badgeStyle = useAnimatedStyle(() => ({
     transform: [{ scale: badgeScale.value }],
   }))
@@ -157,45 +128,36 @@ export function VictoryModal({
     ],
   }))
 
-  // Determine Colors based on category
-  const getGradient = (): readonly [string, string, ...string[]] => {
+  const getGradient = (): readonly [string, string] => {
     switch (victory.category) {
       case 'dreams':
-        return THEME.colors.purple as any
+        return GRADIENTS.electricAlt
       case 'streak':
-        return THEME.colors.rose as any
+        return GRADIENTS.electric
       default:
-        return THEME.colors.gold as any // Default to Gold for generic victory
+        return [PALETTE.status.warning, PALETTE.status.warningDark]
     }
   }
 
   return (
     <View style={styles.container}>
-      {/* 1. Dark Backdrop Blur */}
       <BlurView intensity={40} tint='dark' style={StyleSheet.absoluteFill} />
       <View style={styles.backdropOverlay} />
 
-      {/* 2. Confetti Layer */}
       {showConfetti && (
         <View style={StyleSheet.absoluteFill} pointerEvents='none'>
           <Confetti count={120} />
         </View>
       )}
 
-      {/* 3. Dismiss Area */}
       <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
 
-      {/* 4. The Glass Card */}
       <Animated.View
         entering={SlideInDown.springify().damping(15)}
         style={styles.modalCard}
       >
-        {/* Glass Effect Inside Card */}
         <View style={styles.cardGlassBg} />
 
-        {/* --- CONTENT --- */}
-
-        {/* Header Label */}
         <Animated.View entering={FadeIn.delay(400)}>
           <View style={styles.labelContainer}>
             <View style={styles.labelLine} />
@@ -204,12 +166,9 @@ export function VictoryModal({
           </View>
         </Animated.View>
 
-        {/* HERO: The Badge */}
         <View style={styles.heroContainer}>
-          {/* Rotating Sunburst behind */}
           <Sunburst />
 
-          {/* Pulsing Glow */}
           <Animated.View
             style={[
               styles.glowBehind,
@@ -218,7 +177,6 @@ export function VictoryModal({
             ]}
           />
 
-          {/* The Icon Bubble */}
           <Animated.View style={[styles.badge, badgeStyle]}>
             <LinearGradient
               colors={getGradient()}
@@ -227,15 +185,17 @@ export function VictoryModal({
               end={{ x: 1, y: 1 }}
             >
               <Animated.View style={[styles.shimmerOverlay, shimmerStyle]} />
-              <Ionicons name={victory.iconName as any} size={72} color='#FFF' />
+              <Ionicons
+                name={victory.iconName as any}
+                size={72}
+                color={PALETTE.midnight.obsidian}
+              />
             </LinearGradient>
 
-            {/* Glossy Reflection */}
             <View style={styles.badgeGloss} />
           </Animated.View>
         </View>
 
-        {/* Text Details */}
         <Animated.View
           entering={FadeIn.delay(600).springify()}
           style={styles.textContainer}
@@ -244,7 +204,6 @@ export function VictoryModal({
           <Text style={styles.victoryDesc}>{victory.description}</Text>
         </Animated.View>
 
-        {/* Reward Pill */}
         <Animated.View
           entering={ZoomIn.delay(900)}
           style={styles.rewardContainer}
@@ -255,7 +214,11 @@ export function VictoryModal({
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.sparkIcon}>
-            <Ionicons name='sparkles' size={16} color={THEME.colors.gold[0]} />
+            <Ionicons
+              name='sparkles'
+              size={16}
+              color={PALETTE.electric.emerald}
+            />
           </View>
           <Text style={styles.rewardText}>
             <Text style={styles.rewardValue}>+{victory.sparkReward}</Text>{' '}
@@ -263,7 +226,6 @@ export function VictoryModal({
           </Text>
         </Animated.View>
 
-        {/* Main Action Button */}
         <Animated.View entering={FadeIn.delay(1200)} style={{ width: '100%' }}>
           <Pressable onPress={onDismiss}>
             {({ pressed }) => (
@@ -295,9 +257,8 @@ const styles = StyleSheet.create({
   },
   backdropOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)', // Darken the background further
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
-  // The Main Card
   modalCard: {
     width: width * 0.85,
     maxWidth: 360,
@@ -306,14 +267,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
     borderWidth: 1,
-    borderColor: THEME.colors.border,
-    backgroundColor: THEME.colors.glass,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
   },
   cardGlassBg: {
     ...StyleSheet.absoluteFillObject,
-    // Add noise or subtle texture here if desired
   },
-  // Top Label
   labelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -326,13 +285,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   label: {
-    fontFamily: 'Poppins_600SemiBold', // Make sure fonts are loaded
+    fontFamily: FONTS.semiBold,
     fontSize: 12,
-    color: '#F59E0B',
+    color: PALETTE.electric.emerald,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  // Hero Section
   heroContainer: {
     width: 200,
     height: 200,
@@ -360,7 +318,6 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    filter: 'blur(40px)', // Web/Expo 50+ property, safe to leave
   },
   badge: {
     width: 140,
@@ -399,13 +356,12 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: 'rgba(255,255,255,0.5)',
   },
-  // Text
   textContainer: {
     alignItems: 'center',
     marginBottom: 32,
   },
   victoryName: {
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: FONTS.bold,
     fontSize: 28,
     color: '#FFF',
     textAlign: 'center',
@@ -415,13 +371,12 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   victoryDesc: {
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: FONTS.regular,
     fontSize: 15,
-    color: THEME.colors.textDim,
+    color: PALETTE.slate[400],
     textAlign: 'center',
     lineHeight: 22,
   },
-  // Reward Pill
   rewardContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -429,24 +384,23 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 30,
     overflow: 'hidden',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)', // Low opacity gold
+    backgroundColor: `${PALETTE.electric.emerald}15`,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: `${PALETTE.electric.emerald}30`,
     marginBottom: 24,
   },
   sparkIcon: {
     marginRight: 8,
   },
   rewardText: {
-    fontFamily: 'Poppins_500Medium',
-    color: '#FCD34D', // Light Gold
+    fontFamily: FONTS.medium,
+    color: PALETTE.electric.emeraldLight,
     fontSize: 14,
   },
   rewardValue: {
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: FONTS.bold,
     fontSize: 16,
   },
-  // Button
   button: {
     height: 56,
     borderRadius: 28,
@@ -454,20 +408,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   buttonPressed: {
     transform: [{ scale: 0.98 }],
     opacity: 0.9,
   },
   buttonText: {
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: FONTS.semiBold,
     fontSize: 16,
-    color: '#FFF',
+    color: PALETTE.midnight.obsidian,
     letterSpacing: 0.5,
   },
 })

@@ -1,6 +1,12 @@
-// app/(onboarding)/complete.tsx
 import React, { useEffect } from 'react'
-import { View, Text, StyleSheet, Dimensions, StatusBar } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  StatusBar,
+  Platform,
+} from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -20,75 +26,19 @@ import Animated, {
 import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
 
-// Components
 import { Confetti } from '@/src/components/celebrations/Confetti'
 import { SuccessCheck } from '@/src/components/celebrations/SuccessCheck'
 import { Button } from '@/src/components/ui/Button'
 import { useAuthStore } from '@/src/store/authStore'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 
-// ============================================================================
-// AMBIENT BACKGROUND (Consistent with Flow)
-// ============================================================================
-const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
-  const scale = useSharedValue(1)
-  const opacity = useSharedValue(0.3)
-
-  useEffect(() => {
-    scale.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(1.2, {
-            duration: 4000,
-            easing: Easing.inOut(Easing.ease),
-          }),
-          withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
-        ),
-        -1,
-        true,
-      ),
-    )
-    opacity.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(0.5, { duration: 4000 }),
-          withTiming(0.3, { duration: 4000 }),
-        ),
-        -1,
-        true,
-      ),
-    )
-  }, [])
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }))
-
-  return (
-    <Animated.View
-      style={[
-        {
-          position: 'absolute',
-          top,
-          left,
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: color,
-          filter: 'blur(60px)',
-        },
-        style,
-      ]}
-    />
-  )
-}
-
-// ============================================================================
-// HELPER: STAT ITEM
-// ============================================================================
 const StatItem = ({ icon, value, label, color, delay }: any) => (
   <Animated.View
     entering={FadeInDown.delay(delay).springify()}
@@ -109,9 +59,6 @@ const StatItem = ({ icon, value, label, color, delay }: any) => (
 
 const VerticalDivider = () => <View style={styles.statDivider} />
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 export default function CompleteScreen() {
   const insets = useSafeAreaInsets()
   const { profile, completeOnboarding } = useAuthStore()
@@ -120,10 +67,8 @@ export default function CompleteScreen() {
   const glowOpacity = useSharedValue(0.3)
 
   useEffect(() => {
-    // 1. Success Haptic
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-    // 2. Mark onboarding complete in DB
     const finishSetup = async () => {
       try {
         await completeOnboarding()
@@ -133,7 +78,6 @@ export default function CompleteScreen() {
     }
     finishSetup()
 
-    // 3. Start ambient pulse for the checkmark
     glowScale.value = withRepeat(
       withSequence(
         withTiming(1.3, { duration: 2500, easing: Easing.inOut(Easing.ease) }),
@@ -154,40 +98,36 @@ export default function CompleteScreen() {
     opacity: glowOpacity.value,
   }))
 
-  // Dynamic Data
   const firstName = profile?.full_name?.split(' ')[0] || 'Dreamer'
-  const dreamsCount = 1 // They just created one
-  const momentumDays = 1 // Day 1
-  const xp = 50 // Bonus for joining
+  const dreamsCount = 1
+  const momentumDays = 1
+  const xp = 50
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <StatusBar barStyle='light-content' />
 
-      {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={[DARK.bg.primary, '#181825', DARK.bg.primary]}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
         />
-        {/* Reusing the atmospheric blobs from previous screens */}
-        <BreathingBlob
-          color={DARK.accent.rose}
-          size={300}
-          top={-50}
-          left={-80}
-        />
-        <BreathingBlob
-          color={DARK.accent.gold}
-          size={250}
-          top={100}
-          left={Dimensions.get('window').width - 150}
-          delay={1000}
-        />
+
+        {Platform.OS === 'ios' && (
+          <BlurView
+            intensity={40}
+            tint='dark'
+            style={StyleSheet.absoluteFill}
+          />
+        )}
       </View>
 
-      {/* CONFETTI (Overlay) */}
       <View
         style={[StyleSheet.absoluteFill, { zIndex: 50, pointerEvents: 'none' }]}
       >
@@ -195,15 +135,19 @@ export default function CompleteScreen() {
       </View>
 
       <View style={[styles.content, { paddingTop: insets.top + 40 }]}>
-        {/* 1. SUCCESS CHECKMARK */}
         <View style={styles.checkWrapper}>
-          <Animated.View style={[styles.glowRing, glowStyle]} />
+          <Animated.View
+            style={[
+              styles.glowRing,
+              glowStyle,
+              { backgroundColor: PALETTE.electric.cyan },
+            ]}
+          />
           <Animated.View entering={ZoomIn.duration(600).springify()}>
             <SuccessCheck size={100} delay={200} />
           </Animated.View>
         </View>
 
-        {/* 2. TEXT CONTENT */}
         <Animated.View
           entering={FadeInUp.delay(500).springify()}
           style={styles.textContainer}
@@ -211,7 +155,7 @@ export default function CompleteScreen() {
           <Text style={styles.title}>You're Ready.</Text>
           <Text style={styles.subtitle}>
             Welcome to the club,{' '}
-            <Text style={{ color: DARK.accent.rose }}>{firstName}.</Text>
+            <Text style={{ color: PALETTE.electric.cyan }}>{firstName}.</Text>
           </Text>
           <Text style={styles.description}>
             Your system is live. Your first dream is set. {'\n'}
@@ -219,16 +163,17 @@ export default function CompleteScreen() {
           </Text>
         </Animated.View>
 
-        {/* 3. STATS CARD */}
         <Animated.View
           entering={FadeInUp.delay(800).springify()}
           style={styles.statsCardWrapper}
         >
-          <BlurView
-            intensity={40}
-            tint='dark'
-            style={StyleSheet.absoluteFill}
-          />
+          {Platform.OS === 'ios' && (
+            <BlurView
+              intensity={40}
+              tint='dark'
+              style={StyleSheet.absoluteFill}
+            />
+          )}
           <View style={styles.statsBorder} />
           <LinearGradient
             colors={['rgba(255,255,255,0.05)', 'transparent']}
@@ -240,7 +185,7 @@ export default function CompleteScreen() {
               icon='sparkles'
               value={String(dreamsCount)}
               label='Dream'
-              color={DARK.accent.rose}
+              color={PALETTE.electric.cyan}
               delay={900}
             />
             <VerticalDivider />
@@ -248,7 +193,7 @@ export default function CompleteScreen() {
               icon='flame'
               value={String(momentumDays)}
               label='Day 1'
-              color={DARK.accent.gold}
+              color={PALETTE.electric.emerald}
               delay={1000}
             />
             <VerticalDivider />
@@ -256,14 +201,13 @@ export default function CompleteScreen() {
               icon='trophy'
               value={`+${xp}`}
               label='XP Earned'
-              color={DARK.accent.violet}
+              color={PALETTE.electric.indigo}
               delay={1100}
             />
           </View>
         </Animated.View>
       </View>
 
-      {/* 4. BOTTOM ACTION */}
       <Animated.View
         entering={FadeInDown.delay(1200).springify()}
         style={[
@@ -275,9 +219,15 @@ export default function CompleteScreen() {
           title="Let's Start Dreaming"
           onPress={handleStart}
           size='lg'
-          variant='dark-accent' // Using the specific dark theme variant
+          variant='dark-accent'
           fullWidth
-          icon={<Ionicons name='arrow-forward' size={20} color='#FFF' />}
+          icon={
+            <Ionicons
+              name='arrow-forward'
+              size={20}
+              color={PALETTE.midnight.obsidian}
+            />
+          }
           iconPosition='right'
           style={styles.actionButton}
         />
@@ -286,21 +236,15 @@ export default function CompleteScreen() {
   )
 }
 
-// ============================================================================
-// STYLES
-// ============================================================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   content: {
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: SPACING.lg,
   },
-
-  // Checkmark Section
   checkWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -313,12 +257,8 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: DARK.accent.rose, // Rose glow behind check
-    filter: 'blur(40px)', // Web support
     opacity: 0.2,
   },
-
-  // Typography
   textContainer: {
     alignItems: 'center',
     marginBottom: SPACING['3xl'],
@@ -327,31 +267,29 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: FONTS.bold,
     fontSize: 36,
-    color: DARK.text.primary,
+    color: '#FFF',
     letterSpacing: -1,
   },
   subtitle: {
     fontFamily: FONTS.medium,
     fontSize: 18,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     textAlign: 'center',
   },
   description: {
     fontFamily: FONTS.regular,
     fontSize: 15,
-    color: DARK.text.tertiary,
+    color: PALETTE.slate[500],
     textAlign: 'center',
     lineHeight: 24,
     maxWidth: '85%',
     marginTop: SPACING.sm,
   },
-
-  // Stats Card
   statsCardWrapper: {
     width: '100%',
     borderRadius: RADIUS['2xl'],
     overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.2)', // Darker backing
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   statsBorder: {
     ...StyleSheet.absoluteFillObject,
@@ -381,12 +319,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontFamily: FONTS.bold,
     fontSize: 20,
-    color: DARK.text.primary,
+    color: '#FFF',
   },
   statLabel: {
     fontFamily: FONTS.medium,
     fontSize: 12,
-    color: DARK.text.tertiary,
+    color: PALETTE.slate[500],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -395,13 +333,12 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
-
   bottomSection: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
     width: '100%',
   },
   actionButton: {
-    ...DARK.glow.rose,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
 })

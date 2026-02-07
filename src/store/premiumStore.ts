@@ -171,35 +171,23 @@ export const usePremiumStore = create<PremiumState>()(
           set({ offerings })
 
           if (offerings) {
-            // Check trial eligibility for all products
-            const productIds = offerings.availablePackages.map(
-              (p) => p.product.identifier,
-            )
-            const eligibility =
-              await revenueCatService.getIntroEligibility(productIds)
-
-            // Check if any product has a trial
-            const hasTrialEligibility = Object.values(eligibility).some(
-              (e) => e,
-            )
-
-            // Get trial duration from first eligible product
+            const eligibility: Record<string, boolean> = {}
+            let hasAnyTrial = false
             let trialDuration: string | null = null
+
             for (const pkg of offerings.availablePackages) {
-              if (
-                eligibility[pkg.product.identifier] &&
-                pkg.product.introPrice
-              ) {
-                const intro = pkg.product.introPrice
-                trialDuration = `${intro.periodNumberOfUnits} ${intro.periodUnit.toLowerCase()}`
-                if (intro.periodNumberOfUnits > 1) trialDuration += 's'
-                break
+              const hasTrial = revenueCatService.hasFreeTrial(pkg)
+              eligibility[pkg.product.identifier] = hasTrial
+
+              if (hasTrial && !trialDuration) {
+                hasAnyTrial = true
+                trialDuration = revenueCatService.getFreeTrialDuration(pkg)
               }
             }
 
             set({
               introEligibility: eligibility,
-              isTrialEligible: hasTrialEligibility,
+              isTrialEligible: hasAnyTrial,
               trialDuration,
             })
           }

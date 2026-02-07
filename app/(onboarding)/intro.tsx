@@ -1,4 +1,3 @@
-// app/(onboarding)/intro.tsx
 import React, { useRef, useState, useEffect } from 'react'
 import {
   View,
@@ -36,21 +35,22 @@ import Svg, {
   Defs,
   LinearGradient as SvgGradient,
   Stop,
-  G,
 } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  GRADIENTS,
+  PALETTE,
+  SHADOWS,
+} from '@/src/constants/new-theme'
 
 const { width, height } = Dimensions.get('window')
-
-// ============================================================================
-// 1. CUSTOM ABSTRACT VISUALS (Replaces Generic Icons)
-// ============================================================================
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 const AnimatedPath = Animated.createAnimatedComponent(Path)
 
-// Visual 1: The North Star (Focus/Direction)
 const FocusVisual = ({ color }: { color: string }) => {
   const pulse = useSharedValue(1)
   useEffect(() => {
@@ -77,7 +77,6 @@ const FocusVisual = ({ color }: { color: string }) => {
           <Stop offset='1' stopColor='#FFF' stopOpacity='0.2' />
         </SvgGradient>
       </Defs>
-      {/* Outer Rings - Target */}
       <Circle
         cx='60'
         cy='60'
@@ -95,12 +94,8 @@ const FocusVisual = ({ color }: { color: string }) => {
         strokeWidth='2'
         strokeOpacity='0.5'
       />
-
-      {/* Center Core */}
       <Circle cx='60' cy='60' r='8' fill='url(#focusGrad)' />
       <AnimatedCircle cx='60' cy='60' fill={color} animatedProps={pulseProps} />
-
-      {/* Crosshairs */}
       <Path
         d='M 60 10 L 60 20 M 60 100 L 60 110 M 10 60 L 20 60 M 100 60 L 110 60'
         stroke={color}
@@ -111,7 +106,6 @@ const FocusVisual = ({ color }: { color: string }) => {
   )
 }
 
-// Visual 2: The Ascent (Growth/Steps)
 const AscentVisual = ({ color }: { color: string }) => {
   const progress = useSharedValue(0)
   useEffect(() => {
@@ -130,8 +124,6 @@ const AscentVisual = ({ color }: { color: string }) => {
           <Stop offset='1' stopColor={color} stopOpacity='1' />
         </SvgGradient>
       </Defs>
-
-      {/* Connecting Line */}
       <Path
         d='M 30 90 C 50 90, 50 60, 90 30'
         stroke={color}
@@ -139,13 +131,9 @@ const AscentVisual = ({ color }: { color: string }) => {
         strokeOpacity='0.3'
         fill='none'
       />
-
-      {/* Steps */}
       <Circle cx='30' cy='90' r='6' fill={color} fillOpacity='0.4' />
       <Circle cx='60' cy='60' r='8' fill={color} fillOpacity='0.7' />
       <Circle cx='90' cy='30' r='12' fill='url(#ascentGrad)' />
-
-      {/* Glow Effect under top circle */}
       <Circle cx='90' cy='30' r='20' fill={color} fillOpacity='0.15' />
     </Svg>
   )
@@ -167,7 +155,6 @@ const RadianceVisual = ({ color }: { color: string }) => {
 
   return (
     <Svg width={120} height={120} viewBox='0 0 120 120'>
-      {/* Rays */}
       <AnimatedPath
         d='M60 20 L60 10 M60 110 L60 100 M20 60 L10 60 M110 60 L100 60 M32 32 L25 25 M88 88 L95 95 M32 88 L25 95 M88 32 L95 25'
         stroke={color}
@@ -176,8 +163,6 @@ const RadianceVisual = ({ color }: { color: string }) => {
         opacity='0.5'
         animatedProps={spinProps}
       />
-
-      {/* Core Shape (Diamond) */}
       <Path
         d='M 60 30 L 90 60 L 60 90 L 30 60 Z'
         fill={color}
@@ -186,8 +171,6 @@ const RadianceVisual = ({ color }: { color: string }) => {
         strokeWidth='1'
       />
       <Path d='M 60 45 L 75 60 L 60 75 L 45 60 Z' fill={color} />
-
-      {/* Orbital ring */}
       <Circle
         cx='60'
         cy='60'
@@ -199,10 +182,6 @@ const RadianceVisual = ({ color }: { color: string }) => {
     </Svg>
   )
 }
-
-// ============================================================================
-// DATA & TYPES
-// ============================================================================
 
 interface SlideData {
   id: string
@@ -221,7 +200,7 @@ const SLIDES: SlideData[] = [
     description:
       'Turn vague dreams into laser-focused daily actions. Know exactly where you are going.',
     VisualComponent: FocusVisual,
-    color: DARK.accent.rose,
+    color: PALETTE.electric.cyan,
   },
   {
     id: '2',
@@ -230,7 +209,7 @@ const SLIDES: SlideData[] = [
     description:
       'Consistency compounds. Stack small wins every day to create massive, effortless growth.',
     VisualComponent: AscentVisual,
-    color: DARK.accent.gold,
+    color: PALETTE.electric.emerald,
   },
   {
     id: '3',
@@ -239,13 +218,9 @@ const SLIDES: SlideData[] = [
     description:
       'Celebrate meaningful victories. See how far you have come and expand what is possible.',
     VisualComponent: RadianceVisual,
-    color: DARK.accent.violet,
+    color: PALETTE.electric.indigo,
   },
 ]
-
-// ============================================================================
-// COMPONENTS
-// ============================================================================
 
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   const scale = useSharedValue(1)
@@ -298,7 +273,6 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           borderRadius: size / 2,
           backgroundColor: color,
           opacity: 0.4,
-          filter: 'blur(50px)', // Web support
         },
         animatedStyle,
       ]}
@@ -318,7 +292,6 @@ const IntroSlide = ({
   const contentStyle = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * width, index * width, (index + 1) * width]
 
-    // Subtle Parallax
     const opacity = interpolate(
       scrollX.value,
       inputRange,
@@ -349,7 +322,6 @@ const IntroSlide = ({
   return (
     <View style={styles.slideContainer}>
       <Animated.View style={[styles.slideContent, contentStyle]}>
-        {/* Abstract Visual Container */}
         <View style={styles.visualContainer}>
           <View style={[styles.visualGlow, { backgroundColor: item.color }]} />
 
@@ -360,7 +332,6 @@ const IntroSlide = ({
           </View>
         </View>
 
-        {/* Text Content */}
         <View style={styles.textContainer}>
           <Text style={styles.title}>
             {item.title}
@@ -389,7 +360,7 @@ const PaginatorDot = ({ index, scrollX }: { index: number; scrollX: any }) => {
       [0.3, 1, 0.3],
       Extrapolation.CLAMP,
     )
-    return { width: dotWidth, opacity, backgroundColor: DARK.text.primary }
+    return { width: dotWidth, opacity, backgroundColor: '#FFF' }
   })
   return <Animated.View style={[styles.dot, animatedDotStyle]} />
 }
@@ -403,10 +374,6 @@ const Paginator = ({ data, scrollX }: { data: SlideData[]; scrollX: any }) => {
     </View>
   )
 }
-
-// ============================================================================
-// MAIN SCREEN
-// ============================================================================
 
 export default function IntroScreen() {
   const insets = useSafeAreaInsets()
@@ -447,29 +414,27 @@ export default function IntroScreen() {
   }).current
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <StatusBar barStyle='light-content' />
 
-      {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={DARK.gradients.bg as [string, string, string]}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
         />
         <BreathingBlob
-          color={DARK.accent.rose}
+          color={PALETTE.electric.cyan}
           size={300}
           top={-50}
           left={-100}
         />
-        <BreathingBlob
-          color={DARK.accent.violet}
-          size={280}
-          top={height * 0.5}
-          left={width * 0.4}
-          delay={1000}
-        />
+
         {Platform.OS === 'ios' && (
           <BlurView
             intensity={80}
@@ -479,7 +444,6 @@ export default function IntroScreen() {
         )}
       </View>
 
-      {/* HEADER */}
       <View style={[styles.header, { marginTop: insets.top }]}>
         <Animated.View entering={FadeIn.delay(500)}>
           {currentIndex < SLIDES.length - 1 && (
@@ -490,7 +454,6 @@ export default function IntroScreen() {
         </Animated.View>
       </View>
 
-      {/* CAROUSEL */}
       <Animated.FlatList
         ref={flatListRef}
         data={SLIDES}
@@ -508,7 +471,6 @@ export default function IntroScreen() {
         viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
       />
 
-      {/* CONTROLS */}
       <View
         style={[styles.bottomContainer, { paddingBottom: insets.bottom + 20 }]}
       >
@@ -524,7 +486,7 @@ export default function IntroScreen() {
                 style={[styles.primaryButton, pressed && styles.buttonPressed]}
               >
                 <LinearGradient
-                  colors={DARK.gradients.primary as [string, string]}
+                  colors={GRADIENTS.electric}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
@@ -535,7 +497,7 @@ export default function IntroScreen() {
                 <Ionicons
                   name='arrow-forward'
                   size={20}
-                  color='white'
+                  color={PALETTE.midnight.obsidian}
                   style={{ marginLeft: 8 }}
                 />
               </Animated.View>
@@ -547,14 +509,9 @@ export default function IntroScreen() {
   )
 }
 
-// ============================================================================
-// STYLES
-// ============================================================================
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   header: {
     height: 60,
@@ -568,12 +525,10 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
   },
   skipText: {
-    color: DARK.text.tertiary,
+    color: PALETTE.slate[500],
     fontSize: 14,
     fontFamily: FONTS.medium,
   },
-
-  // Slide Layout
   slideContainer: {
     width,
     alignItems: 'center',
@@ -584,8 +539,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 80,
   },
-
-  // Visual Container (The Custom Icon Area)
   visualContainer: {
     width: 200,
     height: 200,
@@ -599,7 +552,6 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 70,
     opacity: 0.25,
-    filter: 'blur(20px)',
   },
   visualBorder: {
     width: 160,
@@ -618,8 +570,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
-
-  // Typography
   textContainer: {
     alignItems: 'center',
     gap: SPACING.md,
@@ -627,7 +577,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontFamily: FONTS.bold,
-    color: DARK.text.primary,
+    color: '#FFF',
     textAlign: 'center',
     lineHeight: 40,
     letterSpacing: -1,
@@ -635,13 +585,11 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 16,
     fontFamily: FONTS.regular,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: SPACING.sm,
   },
-
-  // Controls
   bottomContainer: {
     position: 'absolute',
     bottom: 0,
@@ -670,14 +618,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    shadowColor: DARK.accent.rose,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   buttonText: {
-    color: 'white',
+    color: PALETTE.midnight.obsidian,
     fontSize: 16,
     fontFamily: FONTS.semiBold,
   },

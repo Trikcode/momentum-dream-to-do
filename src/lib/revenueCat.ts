@@ -198,6 +198,66 @@ class RevenueCatService {
     }
   }
 
+  hasFreeTrial(pkg: PurchasesPackage): boolean {
+    // iOS: Check introPrice with price = 0
+    if (pkg.product.introPrice?.price === 0) {
+      return true
+    }
+
+    // Android: Check for freePhase in subscription options
+    const product = pkg.product as any
+
+    // Check defaultOption
+    if (product.defaultOption?.freePhase) {
+      return true
+    }
+
+    if (product.subscriptionOptions) {
+      for (const option of product.subscriptionOptions) {
+        if (option.freePhase) {
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
+  getFreeTrialDuration(pkg: PurchasesPackage): string | null {
+    // iOS: Get from introPrice
+    if (pkg.product.introPrice?.price === 0) {
+      const intro = pkg.product.introPrice
+      const count = intro.periodNumberOfUnits
+      const unit = intro.periodUnit
+
+      if (unit === 'DAY') return `${count} day${count > 1 ? 's' : ''}`
+      if (unit === 'WEEK') return `${count} week${count > 1 ? 's' : ''}`
+      if (unit === 'MONTH') return `${count} month${count > 1 ? 's' : ''}`
+      if (unit === 'YEAR') return `${count} year${count > 1 ? 's' : ''}`
+      return `${count} ${unit.toLowerCase()}`
+    }
+
+    // Android: Get from freePhase
+    const product = pkg.product as any
+    const freePhase =
+      product.defaultOption?.freePhase ||
+      product.subscriptionOptions?.find((opt: any) => opt.freePhase)?.freePhase
+
+    if (freePhase?.billingPeriod) {
+      // Android uses ISO 8601 duration format: P7D, P1W, P1M, etc.
+      const match = freePhase.billingPeriod.match(/P(\d+)([DWMY])/)
+      if (match) {
+        const count = parseInt(match[1])
+        const unit = match[2]
+        if (unit === 'D') return `${count} day${count > 1 ? 's' : ''}`
+        if (unit === 'W') return `${count} week${count > 1 ? 's' : ''}`
+        if (unit === 'M') return `${count} month${count > 1 ? 's' : ''}`
+        if (unit === 'Y') return `${count} year${count > 1 ? 's' : ''}`
+      }
+    }
+
+    return null
+  }
   addCustomerInfoUpdateListener(
     listener: (customerInfo: CustomerInfo) => void,
   ): () => void {

@@ -15,28 +15,12 @@ import Animated, {
   FadeIn,
   SlideInDown,
   ZoomIn,
-  interpolate,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { Confetti } from './Confetti' // Assuming you have this
+import { Confetti } from './Confetti'
+import { FONTS, PALETTE, GRADIENTS, SHADOWS } from '@/src/constants/new-theme'
 
 const { width } = Dimensions.get('window')
-
-// ============================================================================
-// THEME (Consistent with System)
-// ============================================================================
-const THEME = {
-  colors: {
-    primary: ['#A855F7', '#7C3AED'], // Violet Gradient
-    accent: '#F472B6', // Pinkish accent
-    glass: 'rgba(30, 35, 45, 0.8)',
-    glassLight: 'rgba(255,255,255,0.05)',
-    border: 'rgba(255,255,255,0.15)',
-    text: '#FFFFFF',
-    textDim: '#94A3B8',
-    success: '#10B981',
-  },
-}
 
 interface LevelUpData {
   previousChapter: number
@@ -49,9 +33,6 @@ interface LevelUpModalProps {
   onDismiss: () => void
 }
 
-// ============================================================================
-// COMPONENT: ROTATING RINGS (Sacred Geometry)
-// ============================================================================
 const RotatingRings = () => {
   const rotate1 = useSharedValue(0)
   const rotate2 = useSharedValue(0)
@@ -85,40 +66,32 @@ const RotatingRings = () => {
 }
 
 export function LevelUpModal({ data, onDismiss }: LevelUpModalProps) {
-  // Animation Values
   const containerScale = useSharedValue(0.8)
   const oldNumY = useSharedValue(0)
   const oldNumOp = useSharedValue(1)
-  const newNumY = useSharedValue(40) // Start below
+  const newNumY = useSharedValue(40)
   const newNumOp = useSharedValue(0)
   const glowIntensity = useSharedValue(0)
 
   useEffect(() => {
-    // 1. Haptics
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-    // 2. Main Card Entrance
     containerScale.value = withSpring(1)
 
-    // 3. Number Swap Animation sequence
     setTimeout(() => {
-      // Old leaves up
       oldNumY.value = withTiming(-40, { duration: 400, easing: Easing.back(2) })
       oldNumOp.value = withTiming(0, { duration: 300 })
 
-      // New enters from below
       newNumY.value = withDelay(
         100,
         withSpring(0, { damping: 12, stiffness: 100 }),
       )
       newNumOp.value = withDelay(100, withTiming(1, { duration: 400 }))
 
-      // Impact Haptic
       setTimeout(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
       }, 300)
 
-      // Glow Pulse on impact
       glowIntensity.value = withSequence(
         withTiming(1, { duration: 200 }),
         withTiming(0.4, { duration: 1000 }),
@@ -126,7 +99,6 @@ export function LevelUpModal({ data, onDismiss }: LevelUpModalProps) {
     }, 800)
   }, [])
 
-  // Styles
   const containerStyle = useAnimatedStyle(() => ({
     transform: [{ scale: containerScale.value }],
   }))
@@ -148,38 +120,31 @@ export function LevelUpModal({ data, onDismiss }: LevelUpModalProps) {
 
   return (
     <View style={styles.container}>
-      {/* 1. Backdrop */}
       <BlurView intensity={50} tint='dark' style={StyleSheet.absoluteFill} />
       <View style={styles.dimmer} />
       <Confetti count={150} />
 
       <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
 
-      {/* 2. Main Card */}
       <Animated.View style={[styles.card, containerStyle]}>
-        {/* Glass Background */}
         <View style={styles.cardBg} />
 
-        {/* --- Header --- */}
         <Animated.View entering={FadeIn.delay(300)}>
           <Text style={styles.overline}>MOMENTUM UPGRADE</Text>
         </Animated.View>
 
-        {/* --- Hero: Level Circle --- */}
         <View style={styles.heroSection}>
           <RotatingRings />
 
-          {/* Back Glow */}
           <Animated.View style={[styles.backGlow, glowStyle]} />
 
           <View style={styles.circleContainer}>
             <LinearGradient
-              colors={THEME.colors.primary as [string, string]}
+              colors={GRADIENTS.electric}
               style={styles.gradientCircle}
             >
               <View style={styles.innerCircleBorder} />
 
-              {/* Number Container for masking */}
               <View style={styles.numberMask}>
                 <Animated.Text style={[styles.levelNum, oldStyle]}>
                   {data.previousChapter}
@@ -196,7 +161,6 @@ export function LevelUpModal({ data, onDismiss }: LevelUpModalProps) {
           </View>
         </View>
 
-        {/* --- Text --- */}
         <Animated.View entering={FadeIn.delay(1200)} style={styles.textSection}>
           <Text style={styles.title}>Story Unlocked</Text>
           <Text style={styles.description}>
@@ -204,7 +168,6 @@ export function LevelUpModal({ data, onDismiss }: LevelUpModalProps) {
           </Text>
         </Animated.View>
 
-        {/* --- Features List --- */}
         {data.unlockedFeatures && data.unlockedFeatures.length > 0 && (
           <View style={styles.featureList}>
             {data.unlockedFeatures.map((feature, i) => (
@@ -214,7 +177,11 @@ export function LevelUpModal({ data, onDismiss }: LevelUpModalProps) {
                 style={styles.featureRow}
               >
                 <View style={styles.checkCircle}>
-                  <Ionicons name='checkmark' size={12} color='#FFF' />
+                  <Ionicons
+                    name='checkmark'
+                    size={12}
+                    color={PALETTE.midnight.obsidian}
+                  />
                 </View>
                 <Text style={styles.featureText}>{feature}</Text>
               </Animated.View>
@@ -222,7 +189,6 @@ export function LevelUpModal({ data, onDismiss }: LevelUpModalProps) {
           </View>
         )}
 
-        {/* --- Button --- */}
         <Animated.View
           entering={ZoomIn.delay(1800)}
           style={{ width: '100%', marginTop: 24 }}
@@ -231,7 +197,7 @@ export function LevelUpModal({ data, onDismiss }: LevelUpModalProps) {
             {({ pressed }) => (
               <Animated.View style={[styles.button, pressed && styles.pressed]}>
                 <LinearGradient
-                  colors={THEME.colors.primary as [string, string]}
+                  colors={GRADIENTS.electric}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={StyleSheet.absoluteFill}
@@ -240,7 +206,7 @@ export function LevelUpModal({ data, onDismiss }: LevelUpModalProps) {
                 <Ionicons
                   name='arrow-forward'
                   size={18}
-                  color='#FFF'
+                  color={PALETTE.midnight.obsidian}
                   style={{ marginLeft: 8 }}
                 />
               </Animated.View>
@@ -271,21 +237,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: THEME.colors.border,
-    backgroundColor: THEME.colors.glass,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
   },
   cardBg: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
   overline: {
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: FONTS.semiBold,
     fontSize: 11,
-    color: THEME.colors.textDim,
+    color: PALETTE.slate[400],
     letterSpacing: 2,
     marginBottom: 32,
   },
-  // Hero
   heroSection: {
     width: 200,
     height: 200,
@@ -297,25 +262,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.3)', // Violet low opacity
+    borderColor: `${PALETTE.electric.cyan}40`,
   },
   ring1: { width: 180, height: 180, borderStyle: 'dashed' },
   ring2: { width: 220, height: 220, opacity: 0.5 },
-
   backGlow: {
     position: 'absolute',
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: '#A855F7',
-    filter: 'blur(50px)',
+    backgroundColor: PALETTE.electric.cyan,
   },
   circleContainer: {
-    shadowColor: '#A855F7',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   gradientCircle: {
     width: 140,
@@ -339,47 +298,45 @@ const styles = StyleSheet.create({
     width: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden', // Essential for the slide effect
+    overflow: 'hidden',
   },
   levelNum: {
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: FONTS.bold,
     fontSize: 64,
-    color: '#FFF',
+    color: PALETTE.midnight.obsidian,
     lineHeight: 80,
     position: 'absolute',
   },
   newLevelNum: {
-    color: '#FFF',
+    color: PALETTE.midnight.obsidian,
     textShadowColor: 'rgba(255,255,255,0.5)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
   chapterLabel: {
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: FONTS.semiBold,
     fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(2, 6, 23, 0.7)',
     marginTop: -5,
     letterSpacing: 1,
   },
-  // Text
   textSection: {
     alignItems: 'center',
     marginBottom: 24,
   },
   title: {
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: FONTS.bold,
     fontSize: 24,
     color: '#FFF',
     marginBottom: 8,
   },
   description: {
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: FONTS.regular,
     fontSize: 14,
-    color: THEME.colors.textDim,
+    color: PALETTE.slate[400],
     textAlign: 'center',
     lineHeight: 20,
   },
-  // Feature List
   featureList: {
     width: '100%',
     gap: 12,
@@ -387,7 +344,7 @@ const styles = StyleSheet.create({
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.colors.glassLight,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     padding: 12,
     borderRadius: 16,
     borderWidth: 1,
@@ -397,17 +354,16 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: THEME.colors.success,
+    backgroundColor: PALETTE.electric.emerald,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   featureText: {
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: FONTS.medium,
     fontSize: 13,
     color: '#FFF',
   },
-  // Button
   button: {
     height: 52,
     borderRadius: 26,
@@ -415,18 +371,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    shadowColor: '#A855F7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   pressed: {
     transform: [{ scale: 0.98 }],
     opacity: 0.9,
   },
   btnText: {
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: FONTS.semiBold,
     fontSize: 15,
-    color: '#FFF',
+    color: PALETTE.midnight.obsidian,
   },
 })

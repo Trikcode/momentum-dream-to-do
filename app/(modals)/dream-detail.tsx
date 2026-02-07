@@ -1,4 +1,3 @@
-// app/(modals)/dream-detail.tsx
 import React, { useState, useEffect } from 'react'
 import {
   View,
@@ -8,6 +7,7 @@ import {
   Pressable,
   Alert,
   Dimensions,
+  Platform,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -22,18 +22,23 @@ import Animated, {
   withTiming,
   withRepeat,
   withSequence,
-  withDelay,
   Easing,
   Layout,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { format } from 'date-fns'
 
-// Store & Components
 import { useDreamStore } from '@/src/store/dreamStore'
 import { Button } from '@/src/components/ui/Button'
 import { useToast } from '@/src/components/shared/Toast'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 import {
   DREAM_CATEGORIES,
   DreamCategory,
@@ -43,9 +48,6 @@ import { useAuthStore } from '@/src/store/authStore'
 
 const { width } = Dimensions.get('window')
 
-// ============================================================================
-// HELPERS
-// ============================================================================
 const getCategoryById = (id?: string | null): DreamCategory => {
   return DREAM_CATEGORIES.find((c) => c.id === id) || DREAM_CATEGORIES[0]
 }
@@ -82,9 +84,6 @@ const ThemeBlob = ({ color }: { color: string }) => {
   return <Animated.View style={[styles.blobContainer, style]} />
 }
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 export default function DreamDetailModal() {
   const insets = useSafeAreaInsets()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -108,13 +107,19 @@ export default function DreamDetailModal() {
     }
   }, [id])
 
-  // Find Data
   const dream = dreams?.find((d) => d.id === id)
 
-  // Fallback if not found (e.g. deep link error)
   if (!dream) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top,
+            backgroundColor: PALETTE.midnight.obsidian,
+          },
+        ]}
+      >
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name='arrow-back' size={24} color='#FFF' />
         </Pressable>
@@ -137,7 +142,6 @@ export default function DreamDetailModal() {
       ? Math.round((dream.completed_actions! / dream.total_actions) * 100)
       : 0
 
-  // HANDLERS
   const handleDelete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
     Alert.alert(
@@ -183,27 +187,39 @@ export default function DreamDetailModal() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* BACKGROUND */}
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={[DARK.bg.primary, '#151520', DARK.bg.primary]}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
         />
-        <ThemeBlob color={category.color} />
-        {/* Subtle texture overlay */}
-        <BlurView intensity={30} tint='dark' style={StyleSheet.absoluteFill} />
+        <ThemeBlob color={PALETTE.electric.cyan} />
+        {Platform.OS === 'ios' && (
+          <BlurView
+            intensity={30}
+            tint='dark'
+            style={StyleSheet.absoluteFill}
+          />
+        )}
       </View>
 
-      {/* HEADER */}
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         <Pressable onPress={() => router.back()} style={styles.iconButton}>
-          <Ionicons name='arrow-back' size={20} color={DARK.text.primary} />
+          <Ionicons name='arrow-back' size={20} color='#FFF' />
         </Pressable>
         <Text style={styles.headerTitle}>Mission Control</Text>
         <Pressable onPress={handleDelete} style={styles.iconButton}>
-          <Ionicons name='trash-outline' size={18} color={DARK.error} />
+          <Ionicons
+            name='trash-outline'
+            size={18}
+            color={PALETTE.status.error}
+          />
         </Pressable>
       </View>
 
@@ -211,19 +227,19 @@ export default function DreamDetailModal() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* HERO CARD */}
         <Animated.View
           entering={FadeInDown.delay(100).springify()}
           style={styles.heroCard}
         >
-          <BlurView
-            intensity={20}
-            tint='dark'
-            style={StyleSheet.absoluteFill}
-          />
-          {/* Dynamic Gradient based on category */}
+          {Platform.OS === 'ios' && (
+            <BlurView
+              intensity={20}
+              tint='dark'
+              style={StyleSheet.absoluteFill}
+            />
+          )}
           <LinearGradient
-            colors={[category.color + '30', 'transparent']}
+            colors={[`${PALETTE.electric.cyan}30`, 'transparent']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
@@ -234,17 +250,19 @@ export default function DreamDetailModal() {
               style={[
                 styles.categoryBadge,
                 {
-                  backgroundColor: category.color + '20',
-                  borderColor: category.color + '40',
+                  backgroundColor: `${PALETTE.electric.cyan}20`,
+                  borderColor: `${PALETTE.electric.cyan}40`,
                 },
               ]}
             >
               <Ionicons
                 name={category.icon.name as any}
                 size={12}
-                color={category.color}
+                color={PALETTE.electric.cyan}
               />
-              <Text style={[styles.categoryText, { color: category.color }]}>
+              <Text
+                style={[styles.categoryText, { color: PALETTE.electric.cyan }]}
+              >
                 {category.name}
               </Text>
             </View>
@@ -254,7 +272,6 @@ export default function DreamDetailModal() {
               <Text style={styles.dreamDesc}>{dream.description}</Text>
             )}
 
-            {/* Progress Bar */}
             <View style={styles.progressContainer}>
               <View style={styles.progressRow}>
                 <Text style={styles.progressLabel}>Momentum</Text>
@@ -267,7 +284,7 @@ export default function DreamDetailModal() {
                     styles.progressBarFill,
                     {
                       width: `${Math.max(progress, 2)}%`,
-                      backgroundColor: category.color,
+                      backgroundColor: PALETTE.electric.cyan,
                     },
                   ]}
                 />
@@ -276,13 +293,12 @@ export default function DreamDetailModal() {
           </View>
         </Animated.View>
 
-        {/* STATS GRID */}
         <Animated.View
           entering={FadeInDown.delay(200).springify()}
           style={styles.statsGrid}
         >
           <View style={styles.statBox}>
-            <Ionicons name='flash' size={18} color={DARK.accent.gold} />
+            <Ionicons name='flash' size={18} color={PALETTE.electric.emerald} />
             <Text style={styles.statNumber}>
               {dream.completed_actions || 0}
             </Text>
@@ -292,7 +308,7 @@ export default function DreamDetailModal() {
             <Ionicons
               name='calendar-outline'
               size={18}
-              color={DARK.text.secondary}
+              color={PALETTE.slate[400]}
             />
             <Text style={styles.statNumber}>
               {dream.target_date
@@ -302,7 +318,7 @@ export default function DreamDetailModal() {
             <Text style={styles.statLabel}>Target</Text>
           </View>
           <View style={styles.statBox}>
-            <Ionicons name='flame' size={18} color={DARK.accent.rose} />
+            <Ionicons name='flame' size={18} color={PALETTE.electric.cyan} />
             <Text style={styles.statNumber}>
               {profile?.current_streak || 0}
             </Text>
@@ -310,11 +326,12 @@ export default function DreamDetailModal() {
           </View>
         </Animated.View>
 
-        {/* ACTIONS SECTION */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Action Plan</Text>
           <Pressable onPress={handleAddAction}>
-            <Text style={[styles.sectionAction, { color: category.color }]}>
+            <Text
+              style={[styles.sectionAction, { color: PALETTE.electric.cyan }]}
+            >
               + New Move
             </Text>
           </Pressable>
@@ -326,7 +343,7 @@ export default function DreamDetailModal() {
               <Ionicons
                 name='planet-outline'
                 size={32}
-                color={DARK.text.muted}
+                color={PALETTE.slate[600]}
               />
               <Text style={styles.emptyText}>No actions defined yet.</Text>
               <Button
@@ -359,7 +376,6 @@ export default function DreamDetailModal() {
                 </Animated.View>
               ))}
 
-              {/* Completed Actions (Clean List) */}
               {completedActions.length > 0 && (
                 <View style={{ marginTop: 24 }}>
                   <Text style={styles.subHeader}>Completed History</Text>
@@ -369,7 +385,7 @@ export default function DreamDetailModal() {
                         <Ionicons
                           name='checkmark'
                           size={12}
-                          color={DARK.bg.primary}
+                          color={PALETTE.midnight.obsidian}
                         />
                       </View>
                       <Text style={styles.completedText} numberOfLines={1}>
@@ -390,7 +406,6 @@ export default function DreamDetailModal() {
         </View>
       </ScrollView>
 
-      {/* BOTTOM ACTION DOCK */}
       <Animated.View
         entering={FadeInUp.delay(500)}
         style={[
@@ -398,7 +413,13 @@ export default function DreamDetailModal() {
           { paddingBottom: insets.bottom + SPACING.md },
         ]}
       >
-        <BlurView intensity={80} tint='dark' style={StyleSheet.absoluteFill} />
+        {Platform.OS === 'ios' && (
+          <BlurView
+            intensity={80}
+            tint='dark'
+            style={StyleSheet.absoluteFill}
+          />
+        )}
         <View style={styles.dockBorder} />
 
         <View style={styles.dockContent}>
@@ -409,7 +430,13 @@ export default function DreamDetailModal() {
               isLoading={isLoading}
               fullWidth
               size='lg'
-              icon={<Ionicons name='trophy' size={20} color='#FFF' />}
+              icon={
+                <Ionicons
+                  name='trophy'
+                  size={20}
+                  color={PALETTE.midnight.obsidian}
+                />
+              }
             />
           ) : (
             <Button
@@ -417,8 +444,14 @@ export default function DreamDetailModal() {
               onPress={handleAddAction}
               fullWidth
               size='lg'
-              icon={<Ionicons name='flash' size={20} color='#FFF' />}
-              style={DARK.glow.rose}
+              icon={
+                <Ionicons
+                  name='flash'
+                  size={20}
+                  color={PALETTE.midnight.obsidian}
+                />
+              }
+              style={styles.actionButton}
             />
           )}
         </View>
@@ -430,10 +463,7 @@ export default function DreamDetailModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
-
-  // Background Blob
   blobContainer: {
     position: 'absolute',
     top: -150,
@@ -441,10 +471,7 @@ const styles = StyleSheet.create({
     width: 400,
     height: 400,
     borderRadius: 200,
-    filter: 'blur(90px)', // Web/Expo
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -470,18 +497,16 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
     color: '#FFF',
   },
-
   scrollContent: {
     padding: SPACING.lg,
   },
-
-  // Hero Card
   heroCard: {
     borderRadius: RADIUS['2xl'],
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     marginBottom: SPACING.lg,
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   heroContent: {
     padding: SPACING.xl,
@@ -516,14 +541,12 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     lineHeight: 22,
   },
-
-  // Progress Bar
   progressContainer: { gap: 8 },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between' },
   progressLabel: {
     fontSize: 12,
     fontFamily: FONTS.medium,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
   },
   progressValue: {
     fontSize: 12,
@@ -537,8 +560,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressBarFill: { height: '100%', borderRadius: 3 },
-
-  // Stats Grid
   statsGrid: {
     flexDirection: 'row',
     gap: SPACING.sm,
@@ -563,11 +584,9 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 11,
     fontFamily: FONTS.medium,
-    color: DARK.text.tertiary,
+    color: PALETTE.slate[500],
     textTransform: 'uppercase',
   },
-
-  // Actions
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -586,7 +605,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
   },
   actionsList: { gap: SPACING.md },
-
   emptyState: {
     alignItems: 'center',
     padding: SPACING.xl,
@@ -597,16 +615,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   emptyText: {
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     marginTop: 12,
     fontFamily: FONTS.medium,
   },
-
-  // History
   subHeader: {
     fontSize: 12,
     fontFamily: FONTS.bold,
-    color: DARK.text.tertiary,
+    color: PALETTE.slate[500],
     textTransform: 'uppercase',
     marginBottom: 12,
     letterSpacing: 1,
@@ -639,8 +655,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.2)',
     fontFamily: FONTS.regular,
   },
-
-  // Bottom Dock
   bottomDock: {
     position: 'absolute',
     bottom: 0,
@@ -649,6 +663,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
   },
   dockBorder: {
     position: 'absolute',
@@ -661,5 +676,8 @@ const styles = StyleSheet.create({
   dockContent: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
+  },
+  actionButton: {
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
 })

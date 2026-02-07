@@ -22,21 +22,33 @@ import Constants from 'expo-constants'
 
 import { useAuthStore } from '@/src/store/authStore'
 import { supabase } from '@/src/lib/supabase'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import { useTheme } from '@/src/context/ThemeContext'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 
 const FEEDBACK_TYPES = [
-  { id: 'bug', label: 'Bug Report', icon: 'bug-outline', color: '#EF4444' },
+  {
+    id: 'bug',
+    label: 'Bug Report',
+    icon: 'bug-outline',
+    color: PALETTE.status.error,
+  },
   {
     id: 'feature',
     label: 'Feature Request',
     icon: 'bulb-outline',
-    color: '#F59E0B',
+    color: PALETTE.status.warning,
   },
   {
     id: 'general',
     label: 'General',
     icon: 'chatbubble-outline',
-    color: '#8B5CF6',
+    color: PALETTE.electric.indigo,
   },
 ] as const
 
@@ -44,6 +56,7 @@ type FeedbackType = (typeof FEEDBACK_TYPES)[number]['id']
 
 export default function FeedbackScreen() {
   const insets = useSafeAreaInsets()
+  const { colors, isDark } = useTheme()
   const { profile } = useAuthStore()
 
   const [type, setType] = useState<FeedbackType>('general')
@@ -94,21 +107,33 @@ export default function FeedbackScreen() {
     }
   }
 
-  const selectedType = FEEDBACK_TYPES.find((t) => t.id === type)!
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.background, paddingTop: insets.top },
+      ]}
+    >
       <LinearGradient
-        colors={DARK.gradients.bg as [string, string, string]}
+        colors={
+          isDark
+            ? [
+                PALETTE.midnight.obsidian,
+                PALETTE.midnight.slate,
+                PALETTE.midnight.obsidian,
+              ]
+            : [colors.background, colors.backgroundSecondary, colors.background]
+        }
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name='close' size={24} color={DARK.text.secondary} />
+          <Ionicons name='close' size={24} color={colors.textSecondary} />
         </Pressable>
-        <Text style={styles.title}>Send Feedback</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          Send Feedback
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -122,8 +147,9 @@ export default function FeedbackScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps='handled'
         >
-          {/* Type Selection */}
-          <Text style={styles.label}>What's this about?</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            What's this about?
+          </Text>
           <View style={styles.typeContainer}>
             {FEEDBACK_TYPES.map((item) => {
               const isActive = type === item.id
@@ -136,10 +162,17 @@ export default function FeedbackScreen() {
                   }}
                   style={[
                     styles.typeButton,
-                    isActive && {
-                      borderColor: item.color,
-                      backgroundColor: `${item.color}15`,
+                    {
+                      backgroundColor: isDark
+                        ? 'rgba(255,255,255,0.03)'
+                        : colors.surface,
+                      borderColor: isActive
+                        ? item.color
+                        : isDark
+                          ? 'rgba(255,255,255,0.08)'
+                          : colors.border,
                     },
+                    isActive && { backgroundColor: `${item.color}15` },
                   ]}
                 >
                   <View
@@ -148,20 +181,22 @@ export default function FeedbackScreen() {
                       {
                         backgroundColor: isActive
                           ? `${item.color}20`
-                          : 'rgba(255,255,255,0.05)',
+                          : isDark
+                            ? 'rgba(255,255,255,0.05)'
+                            : colors.surfaceMuted,
                       },
                     ]}
                   >
                     <Ionicons
                       name={item.icon as any}
                       size={20}
-                      color={isActive ? item.color : DARK.text.secondary}
+                      color={isActive ? item.color : colors.textSecondary}
                     />
                   </View>
                   <Text
                     style={[
                       styles.typeLabel,
-                      isActive && { color: item.color },
+                      { color: isActive ? item.color : colors.textSecondary },
                     ]}
                   >
                     {item.label}
@@ -181,11 +216,22 @@ export default function FeedbackScreen() {
             })}
           </View>
 
-          {/* Message */}
-          <Text style={styles.label}>Your message</Text>
-          <View style={styles.textAreaContainer}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            Your message
+          </Text>
+          <View
+            style={[
+              styles.textAreaContainer,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.05)'
+                  : colors.surface,
+                borderColor: isDark ? 'rgba(255,255,255,0.08)' : colors.border,
+              },
+            ]}
+          >
             <TextInput
-              style={styles.textArea}
+              style={[styles.textArea, { color: colors.text }]}
               value={message}
               onChangeText={setMessage}
               placeholder={
@@ -195,15 +241,16 @@ export default function FeedbackScreen() {
                     ? "Describe the feature you'd like to see..."
                     : "Tell us what's on your mind..."
               }
-              placeholderTextColor={DARK.text.muted}
+              placeholderTextColor={colors.textMuted}
               multiline
               textAlignVertical='top'
               maxLength={1000}
             />
-            <Text style={styles.charCount}>{message.length}/1000</Text>
+            <Text style={[styles.charCount, { color: colors.textMuted }]}>
+              {message.length}/1000
+            </Text>
           </View>
 
-          {/* Submit */}
           <Pressable
             onPress={handleSubmit}
             disabled={isLoading || !message.trim()}
@@ -213,25 +260,34 @@ export default function FeedbackScreen() {
             ]}
           >
             <LinearGradient
-              colors={
-                message.trim()
-                  ? (DARK.gradients.primary as [string, string])
-                  : ['#333', '#444']
-              }
+              colors={message.trim() ? GRADIENTS.electric : ['#333', '#444']}
               style={styles.submitGradient}
             >
               {isLoading ? (
-                <ActivityIndicator color='#FFF' />
+                <ActivityIndicator
+                  color={isDark ? PALETTE.midnight.obsidian : '#FFF'}
+                />
               ) : (
                 <>
-                  <Ionicons name='send' size={18} color='#FFF' />
-                  <Text style={styles.submitText}>Send Feedback</Text>
+                  <Ionicons
+                    name='send'
+                    size={18}
+                    color={isDark ? PALETTE.midnight.obsidian : '#FFF'}
+                  />
+                  <Text
+                    style={[
+                      styles.submitText,
+                      { color: isDark ? PALETTE.midnight.obsidian : '#FFF' },
+                    ]}
+                  >
+                    Send Feedback
+                  </Text>
                 </>
               )}
             </LinearGradient>
           </Pressable>
 
-          <Text style={styles.emailNote}>
+          <Text style={[styles.emailNote, { color: colors.textMuted }]}>
             We'll respond to {profile?.email || 'you'} if needed
           </Text>
 
@@ -245,7 +301,6 @@ export default function FeedbackScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   header: {
     flexDirection: 'row',
@@ -261,7 +316,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: FONTS.semiBold,
     fontSize: 17,
-    color: DARK.text.primary,
   },
   keyboardView: {
     flex: 1,
@@ -273,16 +327,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.sm,
   },
-
   label: {
     fontFamily: FONTS.medium,
     fontSize: 13,
-    color: DARK.text.secondary,
     marginBottom: SPACING.sm,
     marginLeft: SPACING.xs,
   },
-
-  // Type selection - vertical layout
   typeContainer: {
     gap: SPACING.sm,
     marginBottom: SPACING.xl,
@@ -292,9 +342,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.md,
     borderRadius: RADIUS.lg,
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   typeIconContainer: {
     width: 40,
@@ -308,7 +356,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: FONTS.semiBold,
     fontSize: 15,
-    color: DARK.text.secondary,
   },
   checkmark: {
     width: 18,
@@ -317,13 +364,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  // Text area
   textAreaContainer: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     marginBottom: SPACING.xl,
     overflow: 'hidden',
   },
@@ -331,20 +374,16 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     fontFamily: FONTS.regular,
     fontSize: 16,
-    color: DARK.text.primary,
     minHeight: 150,
     maxHeight: 250,
   },
   charCount: {
     fontFamily: FONTS.regular,
     fontSize: 11,
-    color: DARK.text.muted,
     textAlign: 'right',
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.sm,
   },
-
-  // Submit
   submitButton: {
     borderRadius: RADIUS.lg,
     overflow: 'hidden',
@@ -362,13 +401,10 @@ const styles = StyleSheet.create({
   submitText: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-    color: '#FFF',
   },
-
   emailNote: {
     fontFamily: FONTS.regular,
     fontSize: 12,
-    color: DARK.text.muted,
     textAlign: 'center',
     marginTop: SPACING.md,
   },

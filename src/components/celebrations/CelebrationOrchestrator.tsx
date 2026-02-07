@@ -28,7 +28,6 @@ export function CelebrationOrchestrator() {
 
   return (
     <View style={styles.container} pointerEvents='box-none'>
-      {/* Power Move Complete */}
       {showPowerMoveComplete && (
         <PowerMoveComplete
           title={completedMoveTitle}
@@ -37,22 +36,18 @@ export function CelebrationOrchestrator() {
         />
       )}
 
-      {/* Victory Modal */}
       {showVictory && currentVictory && (
         <VictoryModal victory={currentVictory} onDismiss={dismissVictory} />
       )}
 
-      {/* Level Up Modal */}
       {showLevelUp && levelUpData && (
         <LevelUpModal data={levelUpData} onDismiss={dismissLevelUp} />
       )}
 
-      {/* Spark Burst */}
       {showSparkBurst && (
         <SparkBurst amount={sparkBurstAmount} position={sparkBurstPosition} />
       )}
 
-      {/* Standalone Confetti */}
       {showConfetti &&
         !showPowerMoveComplete &&
         !showVictory &&

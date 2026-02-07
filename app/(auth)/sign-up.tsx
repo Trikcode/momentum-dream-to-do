@@ -1,4 +1,3 @@
-// app/(auth)/sign-up.tsx
 import React, { useState } from 'react'
 import {
   View,
@@ -9,7 +8,6 @@ import {
   Platform,
   Pressable,
   TextInput,
-  Dimensions,
   StatusBar,
   ActivityIndicator,
   Alert,
@@ -26,31 +24,42 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import * as Haptics from 'expo-haptics'
 import { useAuthStore, AUTH_CANCELLED_MESSAGE } from '@/src/store/authStore'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import { useTheme } from '@/src/context/ThemeContext'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  GRADIENTS,
+  PALETTE,
+  SHADOWS,
+} from '@/src/constants/new-theme'
 
-// =============================================================================
-// COMPONENTS
-// =============================================================================
-
-const GlassInput = ({ label, icon, error, isPassword, ...props }: any) => {
+const GlassInput = ({
+  label,
+  icon,
+  error,
+  isPassword,
+  colors,
+  ...props
+}: any) => {
   const [isFocused, setIsFocused] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const borderColor = error
-    ? DARK.error
+    ? PALETTE.status.error
     : isFocused
-      ? DARK.accent.rose
+      ? PALETTE.electric.cyan
       : 'rgba(255,255,255,0.1)'
 
   const iconColor = error
-    ? DARK.error
+    ? PALETTE.status.error
     : isFocused
-      ? DARK.accent.rose
-      : DARK.text.secondary
+      ? PALETTE.electric.cyan
+      : PALETTE.slate[400]
 
   return (
     <View style={styles.inputContainer}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: PALETTE.slate[400] }]}>{label}</Text>
       <View style={[styles.inputWrapper, { borderColor }]}>
         <BlurView intensity={10} tint='dark' style={StyleSheet.absoluteFill} />
 
@@ -63,14 +72,14 @@ const GlassInput = ({ label, icon, error, isPassword, ...props }: any) => {
 
         <TextInput
           style={styles.input}
-          placeholderTextColor={DARK.text.muted}
+          placeholderTextColor={PALETTE.slate[500]}
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
             setIsFocused(false)
             props.onBlur?.()
           }}
           secureTextEntry={isPassword && !showPassword}
-          selectionColor={DARK.accent.rose}
+          selectionColor={PALETTE.electric.cyan}
           {...props}
         />
 
@@ -83,23 +92,22 @@ const GlassInput = ({ label, icon, error, isPassword, ...props }: any) => {
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
               size={18}
-              color={DARK.text.secondary}
+              color={PALETTE.slate[400]}
             />
           </Pressable>
         )}
       </View>
       {error && (
-        <Animated.Text entering={FadeInUp} style={styles.errorText}>
+        <Animated.Text
+          entering={FadeInUp}
+          style={[styles.errorText, { color: PALETTE.status.error }]}
+        >
           {error}
         </Animated.Text>
       )}
     </View>
   )
 }
-
-// =============================================================================
-// LOGIC
-// =============================================================================
 
 const signUpSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -111,6 +119,7 @@ type SignUpForm = z.infer<typeof signUpSchema>
 
 export default function SignUpScreen() {
   const insets = useSafeAreaInsets()
+  const { colors } = useTheme()
   const [isLoading, setIsLoading] = useState(false)
 
   const signUp = useAuthStore((state) => state.signUp)
@@ -178,17 +187,21 @@ export default function SignUpScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <StatusBar barStyle='light-content' />
 
-      {/* Background */}
       <LinearGradient
-        colors={[DARK.bg.primary, '#1A1E29', DARK.bg.primary]}
+        colors={[
+          PALETTE.midnight.obsidian,
+          PALETTE.midnight.slate,
+          PALETTE.midnight.obsidian,
+        ]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Ambient Glow */}
-      <View style={styles.orb} />
+      <View style={[styles.orb, { backgroundColor: PALETTE.electric.cyan }]} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -203,7 +216,6 @@ export default function SignUpScreen() {
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Section */}
           <Animated.View entering={FadeInDown.delay(100).duration(400)}>
             <Pressable style={styles.backButton} onPress={() => router.back()}>
               <Ionicons name='arrow-back' size={24} color='#FFF' />
@@ -211,18 +223,16 @@ export default function SignUpScreen() {
 
             <View style={styles.header}>
               <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.subtitle, { color: PALETTE.slate[400] }]}>
                 Start building your momentum today.
               </Text>
             </View>
           </Animated.View>
 
-          {/* Form Card */}
           <Animated.View
             entering={FadeInDown.delay(200).duration(500)}
             style={styles.card}
           >
-            {/* Glass Background for Card */}
             <BlurView
               intensity={30}
               tint='dark'
@@ -243,6 +253,7 @@ export default function SignUpScreen() {
                     onBlur={onBlur}
                     error={errors.fullName?.message}
                     autoCapitalize='words'
+                    colors={colors}
                   />
                 )}
               />
@@ -261,6 +272,7 @@ export default function SignUpScreen() {
                     error={errors.email?.message}
                     keyboardType='email-address'
                     autoCapitalize='none'
+                    colors={colors}
                   />
                 )}
               />
@@ -279,11 +291,11 @@ export default function SignUpScreen() {
                     error={errors.password?.message}
                     isPassword
                     autoCapitalize='none'
+                    colors={colors}
                   />
                 )}
               />
 
-              {/* Main Button */}
               <Pressable
                 onPress={handleSubmit(onSubmit)}
                 disabled={isLoading}
@@ -293,29 +305,37 @@ export default function SignUpScreen() {
                 ]}
               >
                 <LinearGradient
-                  colors={DARK.gradients.primary as [string, string]}
+                  colors={GRADIENTS.electric}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.btnGradient}
                 >
                   {isLoading ? (
-                    <ActivityIndicator color='#FFF' />
+                    <ActivityIndicator color={PALETTE.midnight.obsidian} />
                   ) : (
-                    <Text style={styles.primaryButtonText}>Create Account</Text>
+                    <Text
+                      style={[
+                        styles.primaryButtonText,
+                        { color: PALETTE.midnight.obsidian },
+                      ]}
+                    >
+                      Create Account
+                    </Text>
                   )}
                 </LinearGradient>
               </Pressable>
             </View>
           </Animated.View>
 
-          {/* Social & Footer */}
           <Animated.View
             entering={FadeInDown.delay(300).duration(600)}
             style={styles.footerSection}
           >
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
+              <Text style={[styles.dividerText, { color: PALETTE.slate[500] }]}>
+                or continue with
+              </Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -324,7 +344,6 @@ export default function SignUpScreen() {
                 <Ionicons name='logo-google' size={22} color='#FFF' />
               </Pressable>
 
-              {/* Only show Apple Login on iOS */}
               {Platform.OS === 'ios' && (
                 <Pressable style={styles.socialButton} onPress={handleApple}>
                   <Ionicons name='logo-apple' size={24} color='#FFF' />
@@ -333,17 +352,22 @@ export default function SignUpScreen() {
             </View>
 
             <View style={styles.loginRow}>
-              <Text style={styles.footerText}>Already have an account? </Text>
+              <Text style={[styles.footerText, { color: PALETTE.slate[400] }]}>
+                Already have an account?{' '}
+              </Text>
               <Pressable
                 onPress={() => router.push('/(auth)/sign-in')}
                 hitSlop={10}
               >
-                <Text style={styles.footerLink}>Sign In</Text>
+                <Text
+                  style={[styles.footerLink, { color: PALETTE.electric.cyan }]}
+                >
+                  Sign In
+                </Text>
               </Pressable>
             </View>
           </Animated.View>
 
-          {/* Spacer to ensure scrolling past keyboard */}
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -354,7 +378,6 @@ export default function SignUpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   orb: {
     position: 'absolute',
@@ -363,13 +386,12 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: DARK.accent.rose,
     opacity: 0.15,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    justifyContent: 'center', // Helps center content on large screens
+    justifyContent: 'center',
   },
   backButton: {
     width: 40,
@@ -392,30 +414,24 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: 15,
-    color: DARK.text.secondary,
   },
-
-  // Card Style
   card: {
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(15, 17, 21, 0.4)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
   },
   cardContent: {
     padding: 20,
     gap: 16,
   },
-
-  // Inputs
   inputContainer: {
     gap: 6,
   },
   label: {
     fontFamily: FONTS.medium,
     fontSize: 13,
-    color: DARK.text.secondary,
     marginLeft: 4,
   },
   inputWrapper: {
@@ -442,22 +458,15 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   errorText: {
-    color: DARK.error,
     fontSize: 12,
     fontFamily: FONTS.regular,
     marginLeft: 4,
   },
-
-  // Button
   primaryButton: {
     height: 52,
     borderRadius: 26,
     marginTop: 8,
-    shadowColor: DARK.accent.rose,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   btnGradient: {
     flex: 1,
@@ -468,10 +477,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-    color: '#FFF',
   },
-
-  // Footer Section
   footerSection: {
     marginTop: 24,
   },
@@ -488,7 +494,6 @@ const styles = StyleSheet.create({
   dividerText: {
     fontFamily: FONTS.regular,
     fontSize: 13,
-    color: DARK.text.tertiary,
     marginHorizontal: 16,
   },
   socialButtons: {
@@ -514,11 +519,9 @@ const styles = StyleSheet.create({
   footerText: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-    color: DARK.text.secondary,
   },
   footerLink: {
     fontFamily: FONTS.semiBold,
     fontSize: 14,
-    color: DARK.accent.rose,
   },
 })

@@ -1,4 +1,3 @@
-// src/components/home/PowerMoveCard.tsx
 import React, { useEffect } from 'react'
 import { View, Text, StyleSheet, Dimensions } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
@@ -11,11 +10,13 @@ import Animated, {
   runOnJS,
   interpolate,
   Extrapolation,
+  Easing,
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import { useTheme } from '@/src/context/ThemeContext'
+import { FONTS, SPACING, RADIUS, PALETTE } from '@/src/constants/new-theme'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3
@@ -42,13 +43,13 @@ export function PowerMoveCard({
   onSkip,
   showHint = false,
 }: PowerMoveCardProps) {
+  const { colors, isDark } = useTheme()
   const translateX = useSharedValue(0)
-  const itemHeight = useSharedValue(100) // Slightly taller for better spacing
+  const itemHeight = useSharedValue(100)
   const opacity = useSharedValue(1)
   const hintOpacity = useSharedValue(showHint ? 1 : 0)
   const hasTriggered = useSharedValue(false)
 
-  // Handlers
   const handleComplete = () => {
     Promise.resolve(onComplete(id)).catch(console.error)
   }
@@ -59,23 +60,12 @@ export function PowerMoveCard({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {})
   }
 
-  // Hint Animation
   useEffect(() => {
     if (!showHint) return
     const timeout = setTimeout(() => {
       translateX.value = withSequence(
-        withTiming(40, {
-          duration: 400,
-          easing: require('react-native-reanimated').Easing.out(
-            require('react-native-reanimated').Easing.ease,
-          ),
-        }),
-        withTiming(0, {
-          duration: 400,
-          easing: require('react-native-reanimated').Easing.out(
-            require('react-native-reanimated').Easing.ease,
-          ),
-        }),
+        withTiming(40, { duration: 400, easing: Easing.out(Easing.ease) }),
+        withTiming(0, { duration: 400, easing: Easing.out(Easing.ease) }),
       )
     }, 1500)
 
@@ -89,7 +79,6 @@ export function PowerMoveCard({
     }
   }, [showHint])
 
-  // Gesture
   const pan = Gesture.Pan()
     .activeOffsetX([-10, 10])
     .onChange((event) => {
@@ -122,7 +111,6 @@ export function PowerMoveCard({
       })
     })
 
-  // Styles
   const cardStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }))
@@ -131,8 +119,6 @@ export function PowerMoveCard({
     opacity: opacity.value,
     marginBottom: opacity.value === 0 ? 0 : SPACING.md,
   }))
-
-  // Reveal Actions Opacity
   const leftActionStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateX.value,
@@ -171,20 +157,35 @@ export function PowerMoveCard({
   }))
   const hintStyle = useAnimatedStyle(() => ({ opacity: hintOpacity.value }))
 
+  const accentColor = PALETTE.electric.cyan
+
   return (
     <Animated.View style={[styles.containerWrapper, containerStyle]}>
-      {/* Background Actions Layer */}
-      <View style={styles.actionBg}>
+      <View
+        style={[
+          styles.actionBg,
+          { borderColor: isDark ? 'rgba(255,255,255,0.05)' : colors.border },
+        ]}
+      >
         <View style={[styles.actionSide, styles.completeAction]}>
           <LinearGradient
-            colors={['rgba(16, 185, 129, 0.2)', 'rgba(16, 185, 129, 0.1)']}
+            colors={[
+              `${PALETTE.electric.emerald}20`,
+              `${PALETTE.electric.emerald}10`,
+            ]}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           />
           <Animated.View style={[styles.actionContent, leftActionStyle]}>
-            <Ionicons name='checkmark-circle' size={28} color='#10B981' />
-            <Text style={[styles.actionLabel, { color: '#10B981' }]}>
+            <Ionicons
+              name='checkmark-circle'
+              size={28}
+              color={PALETTE.electric.emerald}
+            />
+            <Text
+              style={[styles.actionLabel, { color: PALETTE.electric.emerald }]}
+            >
               Complete
             </Text>
           </Animated.View>
@@ -192,83 +193,122 @@ export function PowerMoveCard({
 
         <View style={[styles.actionSide, styles.skipAction]}>
           <LinearGradient
-            colors={['rgba(245, 158, 11, 0.1)', 'rgba(245, 158, 11, 0.2)']}
+            colors={[
+              `${PALETTE.status.warning}10`,
+              `${PALETTE.status.warning}20`,
+            ]}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           />
           <Animated.View style={[styles.actionContent, rightActionStyle]}>
-            <Text style={[styles.actionLabel, { color: '#F59E0B' }]}>
+            <Text
+              style={[styles.actionLabel, { color: PALETTE.status.warning }]}
+            >
               Later
             </Text>
-            <Ionicons name='time' size={28} color='#F59E0B' />
+            <Ionicons name='time' size={28} color={PALETTE.status.warning} />
           </Animated.View>
         </View>
       </View>
 
-      {/* Foreground Card */}
       <GestureDetector gesture={pan}>
-        <Animated.View style={[styles.card, cardStyle]}>
-          {/* Color Indicator */}
-          <View
-            style={[
-              styles.colorBar,
-              { backgroundColor: category?.color || DARK.accent.rose },
-            ]}
-          />
+        <Animated.View
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? PALETTE.midnight.slate : colors.surface,
+              borderColor: isDark ? 'rgba(255,255,255,0.08)' : colors.border,
+            },
+            cardStyle,
+          ]}
+        >
+          <View style={[styles.colorBar, { backgroundColor: accentColor }]} />
 
           <View style={styles.content}>
-            {/* Header Row */}
             <View style={styles.header}>
               <View style={styles.metaRow}>
                 <View
                   style={[
                     styles.catBadge,
                     {
-                      backgroundColor: (category?.color || '#FFF') + '15',
-                      borderColor: (category?.color || '#FFF') + '25',
+                      backgroundColor: accentColor + '15',
+                      borderColor: accentColor + '25',
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.catText,
-                      { color: category?.color || '#FFF' },
-                    ]}
-                  >
+                  <Text style={[styles.catText, { color: accentColor }]}>
                     {category?.name || 'Power Move'}
                   </Text>
                 </View>
-                <Text style={styles.dreamTitle} numberOfLines={1}>
+                <Text
+                  style={[styles.dreamTitle, { color: colors.textTertiary }]}
+                  numberOfLines={1}
+                >
                   {' '}
                   • {dreamTitle}
                 </Text>
               </View>
 
-              <View style={styles.xpBadge}>
-                <Ionicons name='sparkles' size={10} color={DARK.accent.gold} />
-                <Text style={styles.xpText}>+{sparkReward} XP</Text>
+              <View
+                style={[
+                  styles.xpBadge,
+                  { backgroundColor: `${PALETTE.status.warning}15` },
+                ]}
+              >
+                <Ionicons
+                  name='sparkles'
+                  size={10}
+                  color={PALETTE.status.warning}
+                />
+                <Text
+                  style={[styles.xpText, { color: PALETTE.status.warning }]}
+                >
+                  +{sparkReward} XP
+                </Text>
               </View>
             </View>
 
-            {/* Main Title */}
-            <Text style={styles.title} numberOfLines={2}>
+            <Text
+              style={[styles.title, { color: colors.text }]}
+              numberOfLines={2}
+            >
               {title}
             </Text>
           </View>
 
-          {/* Hint Overlay */}
           {showHint && (
             <Animated.View
               style={[styles.hintContainer, hintStyle]}
               pointerEvents='none'
             >
-              <View style={styles.hintBubble}>
-                <Text style={styles.hintText}>Swipe to complete</Text>
+              <View
+                style={[
+                  styles.hintBubble,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(0,0,0,0.8)'
+                      : colors.surface,
+                    borderColor: isDark
+                      ? 'rgba(255,255,255,0.1)'
+                      : colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.hintText,
+                    { color: isDark ? 'rgba(255,255,255,0.9)' : colors.text },
+                  ]}
+                >
+                  Swipe to complete
+                </Text>
                 <Ionicons
                   name='arrow-forward'
                   size={12}
-                  color='rgba(255,255,255,0.7)'
+                  color={
+                    isDark ? 'rgba(255,255,255,0.7)' : colors.textSecondary
+                  }
                 />
               </View>
             </Animated.View>
@@ -289,7 +329,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   actionSide: {
     flex: 1,
@@ -312,15 +351,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bold,
     fontSize: 14,
   },
-
-  // Card
   card: {
     height: '100%',
-    backgroundColor: DARK.bg.card, // Using the theme variable
     borderRadius: RADIUS.xl,
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
   },
   colorBar: {
@@ -357,7 +392,6 @@ const styles = StyleSheet.create({
   },
   dreamTitle: {
     fontSize: 12,
-    color: DARK.text.tertiary,
     fontFamily: FONTS.medium,
     flexShrink: 1,
   },
@@ -365,24 +399,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 100,
   },
   xpText: {
-    color: DARK.accent.gold,
     fontSize: 11,
     fontFamily: FONTS.bold,
   },
   title: {
     fontSize: 16,
     fontFamily: FONTS.semiBold,
-    color: DARK.text.primary,
     lineHeight: 24,
   },
-
-  // Hint
   hintContainer: {
     position: 'absolute',
     right: SPACING.lg,
@@ -394,15 +423,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.8)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   hintText: {
-    color: 'rgba(255,255,255,0.9)',
     fontSize: 12,
     fontFamily: FONTS.medium,
   },

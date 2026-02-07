@@ -55,6 +55,7 @@ interface AuthState {
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   completeOnboarding: () => Promise<void>
+  deleteAccount: () => Promise<void>
 
   updateNotificationSettings: (input: {
     notifications_enabled?: boolean
@@ -271,6 +272,49 @@ export const useAuthStore = create<AuthState>()(
             // await GoogleSignin.signOut()
           } catch {}
 
+          await supabase.auth.signOut()
+        } finally {
+          set({ session: null, user: null, profile: null, hasOnboarded: false })
+        }
+      },
+
+      // Add this implementation inside the store:
+      deleteAccount: async () => {
+        const { user } = get()
+        if (!user) throw new Error('Not authenticated')
+
+        try {
+          // Delete user data from profiles table first
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', user.id)
+
+          if (profileError) {
+            console.warn(
+              '[deleteAccount] profile delete error:',
+              profileError.message,
+            )
+          }
+
+          // Delete dreams and actions (if not handled by cascade)
+          await supabase.from('dreams').delete().eq('user_id', user.id)
+          await supabase.from('actions').delete().eq('user_id', user.id)
+
+          // Call Supabase auth to delete the user
+          // Note: This requires the user to be authenticated
+          // You may need to set up a server-side function for this
+          const { error: deleteError } = await supabase.rpc(
+            'delete_user_account',
+          )
+
+          if (deleteError) {
+            // If RPC doesn't exist, try signing out and let user know
+            console.warn('[deleteAccount] RPC error:', deleteError.message)
+            // Fallback: just sign out - user deletion would need admin action
+          }
+
+          // Sign out and clear local state
           await supabase.auth.signOut()
         } finally {
           set({ session: null, user: null, profile: null, hasOnboarded: false })

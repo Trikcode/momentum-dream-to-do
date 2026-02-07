@@ -1,4 +1,3 @@
-// app/(auth)/sign-in.tsx
 import React, { useState } from 'react'
 import {
   View,
@@ -12,7 +11,6 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
-  Dimensions,
   Keyboard,
 } from 'react-native'
 import { router } from 'expo-router'
@@ -26,31 +24,42 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import * as Haptics from 'expo-haptics'
 import { useAuthStore, AUTH_CANCELLED_MESSAGE } from '@/src/store/authStore'
-import { DARK, FONTS, RADIUS } from '@/src/constants/theme'
+import { useTheme } from '@/src/context/ThemeContext'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  GRADIENTS,
+  PALETTE,
+  SHADOWS,
+} from '@/src/constants/new-theme'
 
-// =============================================================================
-// COMPONENTS
-// =============================================================================
-
-const GlassInput = ({ label, icon, error, isPassword, ...props }: any) => {
+const GlassInput = ({
+  label,
+  icon,
+  error,
+  isPassword,
+  colors,
+  ...props
+}: any) => {
   const [isFocused, setIsFocused] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const borderColor = error
-    ? DARK.error
+    ? PALETTE.status.error
     : isFocused
-      ? DARK.accent.rose
+      ? PALETTE.electric.cyan
       : 'rgba(255,255,255,0.1)'
 
   const iconColor = error
-    ? DARK.error
+    ? PALETTE.status.error
     : isFocused
-      ? DARK.accent.rose
-      : DARK.text.secondary
+      ? PALETTE.electric.cyan
+      : PALETTE.slate[400]
 
   return (
     <View style={styles.inputContainer}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: PALETTE.slate[400] }]}>{label}</Text>
       <View style={[styles.inputWrapper, { borderColor }]}>
         <BlurView intensity={10} tint='dark' style={StyleSheet.absoluteFill} />
 
@@ -63,14 +72,14 @@ const GlassInput = ({ label, icon, error, isPassword, ...props }: any) => {
 
         <TextInput
           style={styles.input}
-          placeholderTextColor={DARK.text.muted}
+          placeholderTextColor={PALETTE.slate[500]}
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
             setIsFocused(false)
             props.onBlur?.()
           }}
           secureTextEntry={isPassword && !showPassword}
-          selectionColor={DARK.accent.rose}
+          selectionColor={PALETTE.electric.cyan}
           {...props}
         />
 
@@ -83,23 +92,22 @@ const GlassInput = ({ label, icon, error, isPassword, ...props }: any) => {
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
               size={18}
-              color={DARK.text.secondary}
+              color={PALETTE.slate[400]}
             />
           </Pressable>
         )}
       </View>
       {error && (
-        <Animated.Text entering={FadeInUp} style={styles.errorText}>
+        <Animated.Text
+          entering={FadeInUp}
+          style={[styles.errorText, { color: PALETTE.status.error }]}
+        >
           {error}
         </Animated.Text>
       )}
     </View>
   )
 }
-
-// =============================================================================
-// LOGIC
-// =============================================================================
 
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -110,6 +118,7 @@ type SignInForm = z.infer<typeof signInSchema>
 
 export default function SignInScreen() {
   const insets = useSafeAreaInsets()
+  const { colors } = useTheme()
   const [isLoading, setIsLoading] = useState(false)
 
   const signIn = useAuthStore((s) => s.signIn)
@@ -174,17 +183,23 @@ export default function SignInScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <StatusBar barStyle='light-content' />
 
-      {/* Background */}
       <LinearGradient
-        colors={[DARK.bg.primary, '#1A1E29', DARK.bg.primary]}
+        colors={[
+          PALETTE.midnight.obsidian,
+          PALETTE.midnight.slate,
+          PALETTE.midnight.obsidian,
+        ]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Ambient Glow */}
-      <View style={styles.orb} />
+      <View
+        style={[styles.orb, { backgroundColor: PALETTE.electric.indigo }]}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -199,7 +214,6 @@ export default function SignInScreen() {
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
           <Animated.View entering={FadeInDown.delay(100).duration(400)}>
             <Pressable style={styles.backButton} onPress={() => router.back()}>
               <Ionicons name='arrow-back' size={24} color='#FFF' />
@@ -207,18 +221,16 @@ export default function SignInScreen() {
 
             <View style={styles.header}>
               <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.subtitle, { color: PALETTE.slate[400] }]}>
                 Let's get back to building your empire.
               </Text>
             </View>
           </Animated.View>
 
-          {/* Form Card */}
           <Animated.View
             entering={FadeInDown.delay(200).duration(500)}
             style={styles.card}
           >
-            {/* Glass Background */}
             <BlurView
               intensity={30}
               tint='dark'
@@ -241,6 +253,7 @@ export default function SignInScreen() {
                     keyboardType='email-address'
                     autoCapitalize='none'
                     autoComplete='email'
+                    colors={colors}
                   />
                 )}
               />
@@ -259,6 +272,7 @@ export default function SignInScreen() {
                     error={errors.password?.message}
                     isPassword
                     autoCapitalize='none'
+                    colors={colors}
                   />
                 )}
               />
@@ -267,7 +281,11 @@ export default function SignInScreen() {
                 style={styles.forgotButton}
                 onPress={() => router.push('/(auth)/forgot-password')}
               >
-                <Text style={styles.forgotText}>Forgot password?</Text>
+                <Text
+                  style={[styles.forgotText, { color: PALETTE.electric.cyan }]}
+                >
+                  Forgot password?
+                </Text>
               </Pressable>
 
               <Pressable
@@ -279,29 +297,37 @@ export default function SignInScreen() {
                 ]}
               >
                 <LinearGradient
-                  colors={DARK.gradients.primary as [string, string]}
+                  colors={GRADIENTS.electric}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.btnGradient}
                 >
                   {isLoading ? (
-                    <ActivityIndicator color='#FFF' />
+                    <ActivityIndicator color={PALETTE.midnight.obsidian} />
                   ) : (
-                    <Text style={styles.primaryButtonText}>Sign In</Text>
+                    <Text
+                      style={[
+                        styles.primaryButtonText,
+                        { color: PALETTE.midnight.obsidian },
+                      ]}
+                    >
+                      Sign In
+                    </Text>
                   )}
                 </LinearGradient>
               </Pressable>
             </View>
           </Animated.View>
 
-          {/* Social & Footer */}
           <Animated.View
             entering={FadeInDown.delay(300).duration(600)}
             style={styles.footerSection}
           >
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
+              <Text style={[styles.dividerText, { color: PALETTE.slate[500] }]}>
+                or continue with
+              </Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -310,7 +336,6 @@ export default function SignInScreen() {
                 <Ionicons name='logo-google' size={22} color='#FFF' />
               </Pressable>
 
-              {/* Hide Apple on Android */}
               {Platform.OS === 'ios' && (
                 <Pressable style={styles.socialButton} onPress={handleApple}>
                   <Ionicons name='logo-apple' size={24} color='#FFF' />
@@ -319,17 +344,22 @@ export default function SignInScreen() {
             </View>
 
             <View style={styles.loginRow}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
+              <Text style={[styles.footerText, { color: PALETTE.slate[400] }]}>
+                Don't have an account?{' '}
+              </Text>
               <Pressable
                 onPress={() => router.push('/(auth)/sign-up')}
                 hitSlop={10}
               >
-                <Text style={styles.footerLink}>Sign Up</Text>
+                <Text
+                  style={[styles.footerLink, { color: PALETTE.electric.cyan }]}
+                >
+                  Sign Up
+                </Text>
               </Pressable>
             </View>
           </Animated.View>
 
-          {/* Spacer for Scrolling */}
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -340,7 +370,6 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   orb: {
     position: 'absolute',
@@ -349,13 +378,12 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: '#8B5CF6',
     opacity: 0.15,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    justifyContent: 'center', // Centers content on large screens
+    justifyContent: 'center',
   },
   backButton: {
     width: 40,
@@ -378,30 +406,24 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: 15,
-    color: DARK.text.secondary,
   },
-
-  // Card Style
   card: {
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(15, 17, 21, 0.4)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
   },
   cardContent: {
     padding: 20,
     gap: 16,
   },
-
-  // Input
   inputContainer: {
     gap: 6,
   },
   label: {
     fontFamily: FONTS.medium,
     fontSize: 13,
-    color: DARK.text.secondary,
     marginLeft: 4,
   },
   inputWrapper: {
@@ -428,13 +450,10 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   errorText: {
-    color: DARK.error,
     fontSize: 12,
     fontFamily: FONTS.regular,
     marginLeft: 4,
   },
-
-  // Buttons
   forgotButton: {
     alignSelf: 'flex-end',
     marginTop: -4,
@@ -442,17 +461,12 @@ const styles = StyleSheet.create({
   forgotText: {
     fontFamily: FONTS.medium,
     fontSize: 13,
-    color: DARK.accent.rose,
   },
   primaryButton: {
     height: 52,
     borderRadius: 26,
     marginTop: 8,
-    shadowColor: DARK.accent.rose,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   btnGradient: {
     flex: 1,
@@ -463,10 +477,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-    color: '#FFF',
   },
-
-  // Footer
   footerSection: {
     marginTop: 24,
   },
@@ -483,7 +494,6 @@ const styles = StyleSheet.create({
   dividerText: {
     fontFamily: FONTS.regular,
     fontSize: 13,
-    color: DARK.text.tertiary,
     marginHorizontal: 16,
   },
   socialButtons: {
@@ -509,11 +519,9 @@ const styles = StyleSheet.create({
   footerText: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-    color: DARK.text.secondary,
   },
   footerLink: {
     fontFamily: FONTS.semiBold,
     fontSize: 14,
-    color: DARK.accent.rose,
   },
 })

@@ -1,3 +1,5 @@
+// app/_layout.tsx
+
 import { useEffect, useState } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
@@ -16,15 +18,74 @@ import { OfflineBar } from '@/src/components/shared/OfflineBar'
 import { CelebrationOrchestrator } from '@/src/components/celebrations/CelebrationOrchestrator'
 import { useAuthStore } from '@/src/store/authStore'
 import { usePremiumStore } from '@/src/store/premiumStore'
-import { COLORS } from '@/src/constants/theme'
 import { initSupabaseAppStateHandler } from '@/src/lib/supabase'
 import { useNotificationSetup } from '@/src/hooks/useNotificationSetup'
+
+// NEW: Import theme provider
+import { ThemeProvider, useTheme } from '@/src/context/ThemeContext'
 
 SplashScreen.preventAutoHideAsync()
 
 function NotificationHandler() {
   useNotificationSetup()
   return null
+}
+
+function AppContent() {
+  const { colors, isDark } = useTheme()
+
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <OfflineBar />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+          animation: 'slide_from_right',
+        }}
+      >
+        <Stack.Screen name='index' />
+        <Stack.Screen name='(auth)' />
+        <Stack.Screen name='(onboarding)' />
+        <Stack.Screen name='(tabs)' />
+        <Stack.Screen
+          name='(modals)/new-dream'
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name='(modals)/new-action'
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name='(modals)/premium'
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name='(modals)/dream-detail'
+          options={{ presentation: 'card', animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name='(modals)/ai-coach'
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+      </Stack>
+      <CelebrationOrchestrator />
+    </>
+  )
 }
 
 export default function RootLayout() {
@@ -75,57 +136,12 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ToastProvider>
-          <NotificationHandler />
-          <StatusBar style='light' />
-          <OfflineBar />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: COLORS.background },
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen name='index' />
-            <Stack.Screen name='(auth)' />
-            <Stack.Screen name='(onboarding)' />
-            <Stack.Screen name='(tabs)' />
-            <Stack.Screen
-              name='(modals)/new-dream'
-              options={{
-                presentation: 'modal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name='(modals)/new-action'
-              options={{
-                presentation: 'modal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name='(modals)/premium'
-              options={{
-                presentation: 'modal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name='(modals)/dream-detail'
-              options={{ presentation: 'card', animation: 'slide_from_right' }}
-            />
-            <Stack.Screen
-              name='(modals)/ai-coach'
-              options={{
-                headerShown: false,
-                presentation: 'modal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-          </Stack>
-          <CelebrationOrchestrator />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <NotificationHandler />
+            <AppContent />
+          </ToastProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   )

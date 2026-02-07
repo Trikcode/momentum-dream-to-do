@@ -1,4 +1,3 @@
-// app/(modals)/ai-coach.tsx
 import React, { useState, useRef, useEffect } from 'react'
 import {
   StyleSheet,
@@ -33,29 +32,17 @@ import Animated, {
 import * as Haptics from 'expo-haptics'
 
 import { useAuthStore } from '@/src/store/authStore'
-import { useAIChatStore } from '@/src/store/aiChatStore' // <--- NEW IMPORT
+import { useAIChatStore } from '@/src/store/aiChatStore'
 import { generateAIResponse, ChatMessage } from '@/src/lib/minimax'
-import { FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 import { usePremiumStore } from '@/src/store/premiumStore'
-
-// =============================================================================
-// THEME
-// =============================================================================
-const THEME = {
-  colors: {
-    background: '#0F1115',
-    primary: ['#A855F7', '#7C3AED'] as const,
-    userBubble: ['#F43F5E', '#E11D48'] as const,
-    aiBubble: 'rgba(255,255,255,0.08)',
-    text: '#FFFFFF',
-    textSecondary: '#94A3B8',
-    border: 'rgba(255,255,255,0.1)',
-  },
-}
-
-// =============================================================================
-// COMPONENTS
-// =============================================================================
 
 const MessageBubble = ({ message }: { message: ChatMessage }) => {
   const isUser = message.role === 'user'
@@ -69,17 +56,21 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
       {!isUser && (
         <View style={styles.avatarContainer}>
           <LinearGradient
-            colors={THEME.colors.primary}
+            colors={GRADIENTS.electric}
             style={styles.avatarGradient}
           >
-            <Ionicons name='sparkles' size={10} color='#FFF' />
+            <Ionicons
+              name='sparkles'
+              size={10}
+              color={PALETTE.midnight.obsidian}
+            />
           </LinearGradient>
         </View>
       )}
 
       {isUser ? (
         <LinearGradient
-          colors={THEME.colors.userBubble}
+          colors={GRADIENTS.electricAlt}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.bubble, styles.userBubble]}
@@ -88,7 +79,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
         </LinearGradient>
       ) : (
         <View style={[styles.bubble, styles.aiBubble]}>
-          <Text style={[styles.messageText, { color: '#E2E8F0' }]}>
+          <Text style={[styles.messageText, { color: PALETTE.slate[200] }]}>
             {message.content}
           </Text>
         </View>
@@ -133,10 +124,14 @@ const TypingIndicator = () => {
     <View style={styles.typingRow}>
       <View style={styles.avatarContainer}>
         <LinearGradient
-          colors={THEME.colors.primary}
+          colors={GRADIENTS.electric}
           style={styles.avatarGradient}
         >
-          <Ionicons name='sparkles' size={10} color='#FFF' />
+          <Ionicons
+            name='sparkles'
+            size={10}
+            color={PALETTE.midnight.obsidian}
+          />
         </LinearGradient>
       </View>
       <View style={styles.typingBubble}>
@@ -148,7 +143,6 @@ const TypingIndicator = () => {
   )
 }
 
-// Minimal Quick Actions (Horizontal Chips)
 const QUICK_ACTIONS = [
   {
     icon: 'flash-outline',
@@ -189,7 +183,11 @@ const QuickActions = ({ onSelect }: { onSelect: (t: string) => void }) => (
             onSelect(item.text)
           }}
         >
-          <Ionicons name={item.icon as any} size={14} color='#A855F7' />
+          <Ionicons
+            name={item.icon as any}
+            size={14}
+            color={PALETTE.electric.cyan}
+          />
           <Text style={styles.actionText}>{item.label}</Text>
         </Pressable>
       ))}
@@ -197,15 +195,18 @@ const QuickActions = ({ onSelect }: { onSelect: (t: string) => void }) => (
   </Animated.View>
 )
 
-// Minimal Welcome View (No Card)
 const WelcomeView = ({ name }: { name: string }) => (
   <Animated.View
     entering={FadeIn.duration(600)}
     style={styles.welcomeContainer}
   >
     <View style={styles.welcomeLogo}>
-      <LinearGradient colors={THEME.colors.primary} style={styles.logoGradient}>
-        <Ionicons name='chatbubble-ellipses' size={32} color='#FFF' />
+      <LinearGradient colors={GRADIENTS.electric} style={styles.logoGradient}>
+        <Ionicons
+          name='chatbubble-ellipses'
+          size={32}
+          color={PALETTE.midnight.obsidian}
+        />
       </LinearGradient>
     </View>
     <Text style={styles.welcomeTitle}>Hi {name}</Text>
@@ -214,10 +215,6 @@ const WelcomeView = ({ name }: { name: string }) => (
     </Text>
   </Animated.View>
 )
-
-// =============================================================================
-// MAIN SCREEN
-// =============================================================================
 
 export default function AICoachScreen() {
   const insets = useSafeAreaInsets()
@@ -228,7 +225,7 @@ export default function AICoachScreen() {
   const { messages, addMessage, clearChat, freeUsageCount, incrementUsage } =
     useAIChatStore()
 
-  const { isPremium, getDreamsLimit, setShowPaywall } = usePremiumStore()
+  const { isPremium } = usePremiumStore()
 
   const FREE_LIMIT = 5
   const remainingFree = Math.max(0, FREE_LIMIT - freeUsageCount)
@@ -237,17 +234,14 @@ export default function AICoachScreen() {
   const [inputText, setInputText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Keyboard Animation
   const keyboardHeight = useRef(new RNAnimated.Value(0)).current
 
-  // Scroll to bottom on load if there are messages
   useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => scrollToBottom(), 500)
     }
   }, [])
 
-  // Keyboard Handler
   useEffect(() => {
     const keyboardWillShow = (e: any) => {
       RNAnimated.timing(keyboardHeight, {
@@ -286,7 +280,6 @@ export default function AICoachScreen() {
     }, 100)
   }
 
-  // Clear Chat Logic (Premium Only)
   const handleClearChat = () => {
     Alert.alert(
       'Start New Chat?',
@@ -330,11 +323,9 @@ export default function AICoachScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
 
-    // Optimistic Update
     const userMsg: ChatMessage = { role: 'user', content: msgText }
-    addMessage(userMsg) // Save to persistent store
+    addMessage(userMsg)
 
-    // Increment usage for free users
     if (!isPremium) {
       incrementUsage()
     }
@@ -346,11 +337,10 @@ export default function AICoachScreen() {
     try {
       const aiResponse = await generateAIResponse(messages, msgText, userName)
       const aiMsg: ChatMessage = { role: 'assistant', content: aiResponse }
-      addMessage(aiMsg) // Save to persistent store
+      addMessage(aiMsg)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch (err) {
       console.error('AI error:', err)
-      // We don't save error messages to store usually, just show them locally or alert
       Alert.alert(
         'Connection Error',
         'Could not reach the coach. Please try again.',
@@ -362,16 +352,16 @@ export default function AICoachScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <StatusBar barStyle='light-content' />
 
-      {/* Background */}
       <LinearGradient
-        colors={[THEME.colors.background, '#151A23']}
+        colors={[PALETTE.midnight.obsidian, PALETTE.midnight.slate]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.headerContent}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -388,10 +378,13 @@ export default function AICoachScreen() {
             </View>
           </View>
 
-          {/* New Chat Button (Only visible if messages exist & Premium/History enabled) */}
           {messages.length > 0 ? (
             <Pressable onPress={handleClearChat} style={styles.backButton}>
-              <Ionicons name='trash-outline' size={20} color='#94A3B8' />
+              <Ionicons
+                name='trash-outline'
+                size={20}
+                color={PALETTE.slate[400]}
+              />
             </Pressable>
           ) : (
             <View style={{ width: 40 }} />
@@ -399,7 +392,6 @@ export default function AICoachScreen() {
         </View>
       </View>
 
-      {/* Chat Area */}
       <RNAnimated.View style={{ flex: 1, marginBottom: keyboardHeight }}>
         <ScrollView
           ref={scrollViewRef}
@@ -422,7 +414,6 @@ export default function AICoachScreen() {
         </ScrollView>
       </RNAnimated.View>
 
-      {/* Input Bar */}
       <RNAnimated.View
         style={[
           styles.inputContainer,
@@ -432,14 +423,20 @@ export default function AICoachScreen() {
           },
         ]}
       >
-        <BlurView intensity={80} tint='dark' style={StyleSheet.absoluteFill} />
+        {Platform.OS === 'ios' && (
+          <BlurView
+            intensity={80}
+            tint='dark'
+            style={StyleSheet.absoluteFill}
+          />
+        )}
         <View style={styles.inputBorder} />
 
         <View style={styles.inputRow}>
           <TextInput
             style={styles.textInput}
             placeholder={'Ask for advice...'}
-            placeholderTextColor='rgba(255,255,255,0.4)'
+            placeholderTextColor={PALETTE.slate[500]}
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -447,6 +444,7 @@ export default function AICoachScreen() {
             returnKeyType='send'
             onSubmitEditing={() => handleSend()}
             blurOnSubmit={false}
+            selectionColor={PALETTE.electric.cyan}
           />
 
           <TouchableOpacity
@@ -456,13 +454,20 @@ export default function AICoachScreen() {
             activeOpacity={0.7}
           >
             <LinearGradient
-              colors={THEME.colors.primary}
+              colors={GRADIENTS.electric}
               style={StyleSheet.absoluteFill}
             />
             {isLoading ? (
-              <ActivityIndicator size='small' color='#FFF' />
+              <ActivityIndicator
+                size='small'
+                color={PALETTE.midnight.obsidian}
+              />
             ) : (
-              <Ionicons name='arrow-up' size={20} color='#FFF' />
+              <Ionicons
+                name='arrow-up'
+                size={20}
+                color={PALETTE.midnight.obsidian}
+              />
             )}
           </TouchableOpacity>
         </View>
@@ -471,21 +476,14 @@ export default function AICoachScreen() {
   )
 }
 
-// =============================================================================
-// STYLES
-// =============================================================================
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
   },
-
-  // Header
   header: {
-    backgroundColor: 'rgba(15, 17, 21, 0.95)',
+    backgroundColor: 'rgba(2, 6, 23, 0.95)',
     borderBottomWidth: 1,
-    borderBottomColor: THEME.colors.border,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
     zIndex: 20,
   },
   headerContent: {
@@ -521,21 +519,17 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#10B981',
+    backgroundColor: PALETTE.electric.emerald,
   },
   statusText: {
     fontFamily: FONTS.regular,
     fontSize: 11,
-    color: THEME.colors.textSecondary,
+    color: PALETTE.slate[400],
   },
-
-  // Scroll Content
   scrollContent: {
     padding: 20,
     paddingTop: 30,
   },
-
-  // Welcome View (Minimal)
   welcomeContainer: {
     alignItems: 'center',
     marginTop: 40,
@@ -543,10 +537,7 @@ const styles = StyleSheet.create({
   },
   welcomeLogo: {
     marginBottom: 20,
-    shadowColor: '#A855F7',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   logoGradient: {
     width: 64,
@@ -564,26 +555,24 @@ const styles = StyleSheet.create({
   welcomeSubtitle: {
     fontFamily: FONTS.regular,
     fontSize: 15,
-    color: THEME.colors.textSecondary,
+    color: PALETTE.slate[400],
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 280,
   },
-
-  // Minimal Quick Actions (Chips)
   quickActionContainer: {
     marginBottom: 20,
   },
   quickActionScroll: {
     gap: 12,
-    paddingHorizontal: 4, // slight offset
+    paddingHorizontal: 4,
   },
   actionChip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: THEME.colors.border,
+    borderColor: 'rgba(255,255,255,0.1)',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
@@ -597,15 +586,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#FFF',
   },
-
-  // Messages
   messageRow: {
     flexDirection: 'row',
     marginBottom: 16,
   },
   userRow: { justifyContent: 'flex-end' },
   aiRow: { justifyContent: 'flex-start' },
-
   avatarContainer: {
     marginRight: 8,
     justifyContent: 'flex-end',
@@ -627,10 +613,10 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   aiBubble: {
-    backgroundColor: THEME.colors.aiBubble,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderBottomLeftRadius: 4,
     borderWidth: 1,
-    borderColor: THEME.colors.border,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   messageText: {
     fontFamily: FONTS.regular,
@@ -638,8 +624,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     lineHeight: 22,
   },
-
-  // Typing
   typingRow: {
     flexDirection: 'row',
     marginBottom: 20,
@@ -648,7 +632,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: THEME.colors.aiBubble,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 18,
@@ -658,18 +642,17 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: THEME.colors.textSecondary,
+    backgroundColor: PALETTE.slate[400],
   },
-
-  // Input Bar (Absolute)
   inputContainer: {
     position: 'absolute',
     left: 0,
     right: 0,
     borderTopWidth: 1,
-    borderTopColor: THEME.colors.border,
+    borderTopColor: 'rgba(255,255,255,0.1)',
     paddingHorizontal: 16,
     paddingTop: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
   },
   inputBorder: {
     position: 'absolute',
@@ -685,7 +668,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: THEME.colors.border,
+    borderColor: 'rgba(255,255,255,0.1)',
     padding: 6,
   },
   textInput: {

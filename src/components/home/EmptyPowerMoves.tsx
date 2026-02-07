@@ -10,13 +10,19 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-  withDelay,
   Easing,
   FadeIn,
   FadeInUp,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 import { LANGUAGE } from '@/src/constants/language'
 
 interface EmptyPowerMovesProps {
@@ -31,7 +37,6 @@ export function EmptyPowerMoves({
   const pulseScale = useSharedValue(1)
 
   useEffect(() => {
-    // Float animation
     floatY.value = withRepeat(
       withSequence(
         withTiming(-8, { duration: 2500, easing: Easing.inOut(Easing.quad) }),
@@ -41,7 +46,6 @@ export function EmptyPowerMoves({
       true,
     )
 
-    // Subtle rotation
     rotate.value = withRepeat(
       withSequence(
         withTiming(-2, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
@@ -76,21 +80,23 @@ export function EmptyPowerMoves({
     router.push('/(modals)/new-action')
   }
 
-  // ============================================================================
-  // VARIANT: ALL DONE (Success State)
-  // ============================================================================
   if (variant === 'all-done') {
     return (
       <Animated.View entering={FadeIn.duration(600)} style={styles.container}>
         <Animated.View style={[styles.iconWrapper, pulseStyle]}>
-          {/* Neon Glow */}
-          <View style={[styles.glow, { backgroundColor: DARK.accent.gold }]} />
+          <View
+            style={[styles.glow, { backgroundColor: PALETTE.electric.emerald }]}
+          />
 
           <LinearGradient
-            colors={[DARK.accent.gold, '#B45309']}
+            colors={GRADIENTS.secondary}
             style={styles.iconCircle}
           >
-            <Ionicons name='trophy' size={48} color='#FFF' />
+            <Ionicons
+              name='trophy'
+              size={48}
+              color={PALETTE.midnight.obsidian}
+            />
           </LinearGradient>
         </Animated.View>
 
@@ -104,7 +110,7 @@ export function EmptyPowerMoves({
 
         <Animated.View entering={FadeInUp.delay(400).duration(500)}>
           <Pressable onPress={handleAddMove} style={styles.secondaryButton}>
-            <Ionicons name='add' size={18} color={DARK.accent.rose} />
+            <Ionicons name='add' size={18} color={PALETTE.electric.cyan} />
             <Text style={styles.secondaryButtonText}>Add bonus move</Text>
           </Pressable>
         </Animated.View>
@@ -112,20 +118,15 @@ export function EmptyPowerMoves({
     )
   }
 
-  // ============================================================================
-  // VARIANT: NO MOVES (Empty State)
-  // ============================================================================
   return (
     <Animated.View entering={FadeIn.duration(600)} style={styles.container}>
       <Animated.View style={[styles.iconWrapper, floatStyle]}>
-        {/* Neon Glow */}
-        <View style={[styles.glow, { backgroundColor: DARK.accent.rose }]} />
+        <View
+          style={[styles.glow, { backgroundColor: PALETTE.electric.cyan }]}
+        />
 
-        <LinearGradient
-          colors={DARK.gradients.primary as [string, string]}
-          style={styles.iconCircle}
-        >
-          <Ionicons name='flash' size={48} color='#FFF' />
+        <LinearGradient colors={GRADIENTS.electric} style={styles.iconCircle}>
+          <Ionicons name='flash' size={48} color={PALETTE.midnight.obsidian} />
         </LinearGradient>
       </Animated.View>
 
@@ -148,12 +149,16 @@ export function EmptyPowerMoves({
               ]}
             >
               <LinearGradient
-                colors={DARK.gradients.primary as [string, string]}
+                colors={GRADIENTS.electric}
                 style={StyleSheet.absoluteFill}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               />
-              <Ionicons name='add' size={22} color='#FFF' />
+              <Ionicons
+                name='add'
+                size={22}
+                color={PALETTE.midnight.obsidian}
+              />
               <Text style={styles.primaryButtonText}>
                 Add {LANGUAGE.powerMoves.singular}
               </Text>
@@ -188,7 +193,6 @@ const styles = StyleSheet.create({
     bottom: 15,
     borderRadius: 50,
     opacity: 0.5,
-    // Web support
   },
   iconCircle: {
     width: 90,
@@ -202,20 +206,18 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: FONTS.bold,
     fontSize: 20,
-    color: DARK.text.primary,
+    color: '#FFF',
     textAlign: 'center',
     marginBottom: SPACING.xs,
   },
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: SPACING.lg,
   },
-
-  // Primary Gradient Button
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -225,15 +227,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: RADIUS.full,
     overflow: 'hidden',
-    ...DARK.glow.rose,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   primaryButtonText: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-    color: '#FFF',
+    color: PALETTE.midnight.obsidian,
   },
-
-  // Secondary Button (Outline/Ghost)
   secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -248,6 +248,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontFamily: FONTS.medium,
     fontSize: 14,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
   },
 })

@@ -1,4 +1,3 @@
-// app/(modals)/new-action.tsx
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
@@ -31,12 +30,17 @@ import Animated, {
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 
-// Store & Components
 import { Button } from '@/src/components/ui/Button'
 import { useDreamStore } from '@/src/store/dreamStore'
 import { useToast } from '@/src/components/shared/Toast'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
-import { LANGUAGE } from '@/src/constants/language'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 
 const { width, height } = Dimensions.get('window')
 
@@ -48,14 +52,26 @@ const DIFFICULTY_OPTIONS: {
   sparks: number
   color: string
 }[] = [
-  { value: 'easy', label: 'Quick Win', sparks: 5, color: '#10B981' }, // Emerald
-  { value: 'medium', label: 'Power Up', sparks: 10, color: DARK.accent.gold },
-  { value: 'hard', label: 'Boss Level', sparks: 20, color: DARK.accent.rose },
+  {
+    value: 'easy',
+    label: 'Quick Win',
+    sparks: 5,
+    color: PALETTE.electric.emerald,
+  },
+  {
+    value: 'medium',
+    label: 'Power Up',
+    sparks: 10,
+    color: PALETTE.status.warning,
+  },
+  {
+    value: 'hard',
+    label: 'Boss Level',
+    sparks: 20,
+    color: PALETTE.electric.cyan,
+  },
 ]
 
-// ============================================================================
-// ANIMATED ATMOSPHERE
-// ============================================================================
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   const scale = useSharedValue(1)
   const opacity = useSharedValue(0.3)
@@ -104,17 +120,12 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           width: size,
           height: size,
           borderRadius: size / 2,
-          filter: 'blur(60px)',
         },
         style,
       ]}
     />
   )
 }
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
 
 export default function NewActionModal() {
   const insets = useSafeAreaInsets()
@@ -131,21 +142,18 @@ export default function NewActionModal() {
 
   const activeDreams = dreams.filter((d) => d.status === 'active')
 
-  // Load dreams if empty
   useFocusEffect(
     useCallback(() => {
       if (dreams.length === 0) fetchDreams()
     }, [dreams.length, fetchDreams]),
   )
 
-  // Auto-select first dream
   useEffect(() => {
     if (!selectedDreamId && activeDreams.length > 0) {
       setSelectedDreamId(activeDreams[0].id)
     }
   }, [activeDreams.length])
 
-  // Custom Toggle Animation
   const togglePos = useSharedValue(2)
   useEffect(() => {
     togglePos.value = withTiming(isRecurring ? 22 : 2, { duration: 250 })
@@ -155,7 +163,6 @@ export default function NewActionModal() {
     transform: [{ translateX: togglePos.value }],
   }))
 
-  // Focus Animation
   const focusProgress = useSharedValue(0)
   useEffect(() => {
     focusProgress.value = withTiming(isFocused ? 1 : 0)
@@ -165,7 +172,7 @@ export default function NewActionModal() {
     const borderColor = interpolateColor(
       focusProgress.value,
       [0, 1],
-      ['rgba(255,255,255,0.1)', DARK.accent.gold],
+      ['rgba(255,255,255,0.1)', PALETTE.electric.cyan],
     )
     return { borderColor }
   })
@@ -215,37 +222,47 @@ export default function NewActionModal() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* BACKGROUND */}
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={[DARK.bg.primary, '#181820', DARK.bg.primary]}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
         />
         <BreathingBlob
-          color={DARK.accent.gold}
+          color={PALETTE.electric.cyan}
           size={300}
           top={-50}
           left={-100}
         />
         <BreathingBlob
-          color={DARK.accent.rose}
+          color={PALETTE.electric.indigo}
           size={250}
           top={height * 0.4}
           left={width * 0.6}
           delay={1000}
         />
+        {Platform.OS === 'ios' && (
+          <BlurView
+            intensity={40}
+            tint='dark'
+            style={StyleSheet.absoluteFill}
+          />
+        )}
       </View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* HEADER */}
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
           <Pressable onPress={() => router.back()} style={styles.closeButton}>
-            <Ionicons name='close' size={20} color={DARK.text.secondary} />
+            <Ionicons name='close' size={20} color={PALETTE.slate[400]} />
           </Pressable>
           <Text style={styles.headerTitle}>New Power Move</Text>
           <View style={{ width: 36 }} />
@@ -257,16 +274,17 @@ export default function NewActionModal() {
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
-          {/* 1. INPUT CARD */}
           <Animated.View entering={FadeInUp.delay(100).duration(500)}>
             <Text style={styles.label}>What needs to happen?</Text>
 
             <Animated.View style={[styles.inputWrapper, inputContainerStyle]}>
-              <BlurView
-                intensity={20}
-                tint='dark'
-                style={StyleSheet.absoluteFill}
-              />
+              {Platform.OS === 'ios' && (
+                <BlurView
+                  intensity={20}
+                  tint='dark'
+                  style={StyleSheet.absoluteFill}
+                />
+              )}
 
               <View style={styles.inputInner}>
                 <View
@@ -274,7 +292,7 @@ export default function NewActionModal() {
                     styles.iconBox,
                     {
                       backgroundColor: isFocused
-                        ? 'rgba(245, 158, 11, 0.2)'
+                        ? `${PALETTE.electric.cyan}20`
                         : 'rgba(255,255,255,0.05)',
                     },
                   ]}
@@ -282,32 +300,33 @@ export default function NewActionModal() {
                   <Ionicons
                     name='flash'
                     size={18}
-                    color={isFocused ? DARK.accent.gold : DARK.text.muted}
+                    color={
+                      isFocused ? PALETTE.electric.cyan : PALETTE.slate[600]
+                    }
                   />
                 </View>
                 <TextInput
                   style={styles.input}
                   placeholder='e.g., Book flight to Tokyo...'
-                  placeholderTextColor={DARK.text.muted}
+                  placeholderTextColor={PALETTE.slate[500]}
                   value={title}
                   onChangeText={setTitle}
                   maxLength={150}
                   multiline
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
-                  selectionColor={DARK.accent.gold}
+                  selectionColor={PALETTE.electric.cyan}
                 />
               </View>
             </Animated.View>
           </Animated.View>
 
-          {/* 2. DREAM SELECTOR */}
           <Animated.View entering={FadeInUp.delay(200).duration(500)}>
             <Text style={styles.label}>Connect to a Mission</Text>
 
             {dreamsLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator color={DARK.accent.rose} />
+                <ActivityIndicator color={PALETTE.electric.cyan} />
                 <Text style={styles.loadingText}>Syncing dreams...</Text>
               </View>
             ) : activeDreams.length === 0 ? (
@@ -318,7 +337,7 @@ export default function NewActionModal() {
                 <Ionicons
                   name='add-circle-outline'
                   size={24}
-                  color={DARK.text.muted}
+                  color={PALETTE.slate[600]}
                 />
                 <Text style={styles.emptyDreamsText}>
                   No active missions. Create one first!
@@ -341,14 +360,17 @@ export default function NewActionModal() {
                       }}
                       style={[
                         styles.dreamPill,
-                        isSelected && styles.dreamPillSelected,
+                        isSelected && {
+                          backgroundColor: PALETTE.electric.cyan,
+                          borderColor: PALETTE.electric.cyan,
+                        },
                       ]}
                     >
                       <Text
                         style={[
                           styles.dreamPillText,
                           isSelected && {
-                            color: '#FFF',
+                            color: PALETTE.midnight.obsidian,
                             fontFamily: FONTS.bold,
                           },
                         ]}
@@ -362,7 +384,6 @@ export default function NewActionModal() {
             )}
           </Animated.View>
 
-          {/* 3. DIFFICULTY GRID */}
           <Animated.View entering={FadeInUp.delay(300).duration(500)}>
             <Text style={styles.label}>Energy Required</Text>
             <View style={styles.difficultyGrid}>
@@ -406,7 +427,6 @@ export default function NewActionModal() {
             </View>
           </Animated.View>
 
-          {/* 4. RECURRING TOGGLE */}
           <Animated.View entering={FadeInUp.delay(400).duration(500)}>
             <Pressable
               onPress={() => {
@@ -421,7 +441,7 @@ export default function NewActionModal() {
                     styles.iconBox,
                     {
                       backgroundColor: isRecurring
-                        ? DARK.accent.rose + '20'
+                        ? `${PALETTE.electric.emerald}20`
                         : 'rgba(255,255,255,0.05)',
                     },
                   ]}
@@ -429,7 +449,11 @@ export default function NewActionModal() {
                   <Ionicons
                     name='repeat'
                     size={20}
-                    color={isRecurring ? DARK.accent.rose : DARK.text.muted}
+                    color={
+                      isRecurring
+                        ? PALETTE.electric.emerald
+                        : PALETTE.slate[600]
+                    }
                   />
                 </View>
                 <View>
@@ -440,11 +464,10 @@ export default function NewActionModal() {
                 </View>
               </View>
 
-              {/* Custom Toggle Switch */}
               <View
                 style={[
                   styles.toggleTrack,
-                  isRecurring && { backgroundColor: DARK.accent.rose },
+                  isRecurring && { backgroundColor: PALETTE.electric.emerald },
                 ]}
               >
                 <Animated.View style={[styles.toggleThumb, toggleStyle]} />
@@ -453,7 +476,6 @@ export default function NewActionModal() {
           </Animated.View>
         </ScrollView>
 
-        {/* CREATE BUTTON (Floating) */}
         <Animated.View
           entering={FadeInUp.delay(500).duration(500)}
           style={[
@@ -461,11 +483,13 @@ export default function NewActionModal() {
             { paddingBottom: insets.bottom + SPACING.md },
           ]}
         >
-          <BlurView
-            intensity={80}
-            tint='dark'
-            style={StyleSheet.absoluteFill}
-          />
+          {Platform.OS === 'ios' && (
+            <BlurView
+              intensity={80}
+              tint='dark'
+              style={StyleSheet.absoluteFill}
+            />
+          )}
           <View style={styles.dockBorder} />
 
           <View style={styles.dockContent}>
@@ -476,8 +500,15 @@ export default function NewActionModal() {
               disabled={!title.trim() || !selectedDreamId}
               fullWidth
               size='lg'
-              icon={<Ionicons name='flash' size={18} color='#FFF' />}
+              icon={
+                <Ionicons
+                  name='flash'
+                  size={18}
+                  color={PALETTE.midnight.obsidian}
+                />
+              }
               iconPosition='left'
+              style={styles.actionButton}
             />
           </View>
         </Animated.View>
@@ -489,7 +520,6 @@ export default function NewActionModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   header: {
     flexDirection: 'row',
@@ -520,14 +550,12 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: FONTS.bold,
     fontSize: 13,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     marginBottom: SPACING.sm,
     marginTop: SPACING.lg,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-
-  // Input
   inputWrapper: {
     borderRadius: RADIUS.lg,
     overflow: 'hidden',
@@ -546,7 +574,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.medium,
     fontSize: 18,
     color: '#FFF',
-    marginTop: 2, // align with icon
+    marginTop: 2,
   },
   iconBox: {
     width: 36,
@@ -555,8 +583,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // Dreams
   dreamsScroll: {
     gap: 8,
     paddingVertical: 4,
@@ -569,14 +595,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  dreamPillSelected: {
-    backgroundColor: DARK.accent.rose,
-    borderColor: DARK.accent.rose,
-  },
   dreamPillText: {
     fontSize: 14,
     fontFamily: FONTS.medium,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
   },
   loadingContainer: {
     padding: SPACING.md,
@@ -585,7 +607,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: DARK.text.muted,
+    color: PALETTE.slate[600],
     fontSize: 14,
   },
   emptyDreamsCard: {
@@ -598,12 +620,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   emptyDreamsText: {
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     marginTop: 8,
     fontSize: 14,
   },
-
-  // Difficulty
   difficultyGrid: {
     flexDirection: 'row',
     gap: 8,
@@ -627,15 +647,13 @@ const styles = StyleSheet.create({
   difficultyLabel: {
     fontFamily: FONTS.bold,
     fontSize: 12,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     marginBottom: 4,
   },
   sparksText: {
     fontFamily: FONTS.medium,
     fontSize: 10,
   },
-
-  // Recurring
   recurringOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -660,10 +678,8 @@ const styles = StyleSheet.create({
   recurringHint: {
     fontFamily: FONTS.regular,
     fontSize: 12,
-    color: DARK.text.muted,
+    color: PALETTE.slate[500],
   },
-
-  // Toggle
   toggleTrack: {
     width: 48,
     height: 28,
@@ -681,8 +697,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 2,
   },
-
-  // Bottom Dock
   bottomDock: {
     position: 'absolute',
     bottom: 0,
@@ -691,6 +705,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
     overflow: 'hidden',
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
   },
   dockBorder: {
     position: 'absolute',
@@ -703,5 +718,8 @@ const styles = StyleSheet.create({
   dockContent: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
+  },
+  actionButton: {
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
 })

@@ -1,5 +1,4 @@
-// app/(modals)/premium.tsx
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import {
   View,
   Text,
@@ -8,13 +7,13 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
-  Dimensions,
+  Platform,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
-import { Feather, FontAwesome6, Ionicons } from '@expo/vector-icons'
+import { FontAwesome6, Ionicons } from '@expo/vector-icons'
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -26,16 +25,22 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated'
-import { PurchasesPackage, PACKAGE_TYPE } from 'react-native-purchases'
+import { PACKAGE_TYPE } from 'react-native-purchases'
 import * as Haptics from 'expo-haptics'
 
 import { PlanCard } from '@/src/components/premium/PlanCard'
 import { FeatureComparison } from '@/src/components/premium/FeatureComparison'
 import { SuccessModal } from '@/src/components/premium/SuccessModal'
 import { usePremiumStore } from '@/src/store/premiumStore'
-import { DARK, FONTS, SPACING, RADIUS, SHADOWS } from '@/src/constants/theme'
-
-const { width } = Dimensions.get('window')
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
+import { revenueCatService } from '@/src/lib/revenueCat'
 
 export default function PremiumScreen() {
   const insets = useSafeAreaInsets()
@@ -90,7 +95,6 @@ export default function PremiumScreen() {
     }
   }, [purchaseError])
 
-  // Auto-select yearly package
   useEffect(() => {
     if (offerings?.availablePackages && !selectedPackage) {
       const yearlyPkg = offerings.availablePackages.find(
@@ -132,56 +136,70 @@ export default function PremiumScreen() {
 
   const packages = offerings?.availablePackages || []
 
-  // Get CTA text based on trial eligibility
   const getCtaText = () => {
     if (!selectedPackage) return 'Select a Plan'
 
-    const hasTrialForSelected =
-      introEligibility[selectedPackage.product.identifier]
+    const hasTrial = revenueCatService.hasFreeTrial(selectedPackage)
+    const trialDur = revenueCatService.getFreeTrialDuration(selectedPackage)
 
-    if (hasTrialForSelected && selectedPackage.product.introPrice) {
-      const intro = selectedPackage.product.introPrice
-      return `Start Free ${intro.periodNumberOfUnits}-${intro.periodUnit.toLowerCase()} Trial`
+    if (hasTrial && trialDur) {
+      return `Start ${trialDur} Free Trial`
     }
 
     return `Start Premium ${selectedPackage.product.priceString}`
   }
 
-  // Get subtitle text
   const getSubtitleText = () => {
     if (!selectedPackage) return ''
 
-    const hasTrialForSelected =
-      introEligibility[selectedPackage.product.identifier]
+    const hasTrial = revenueCatService.hasFreeTrial(selectedPackage)
 
-    if (hasTrialForSelected && selectedPackage.product.introPrice) {
-      return `Then ${selectedPackage.product.priceString}/${selectedPackage.packageType === PACKAGE_TYPE.ANNUAL ? 'year' : 'month'}`
+    if (hasTrial) {
+      const period =
+        selectedPackage.packageType === PACKAGE_TYPE.ANNUAL ? 'year' : 'month'
+      return `Then ${selectedPackage.product.priceString}/${period}`
     }
 
     return 'Cancel anytime'
   }
 
   return (
-    <View style={styles.container}>
-      {/* Background */}
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <View style={StyleSheet.absoluteFill}>
         <LinearGradient
-          colors={['#1F1205', '#000', '#1F0510']}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         />
-        <View style={[styles.glowSpot, styles.glowSpot1]} />
-        <View style={[styles.glowSpot, styles.glowSpot2]} />
+        <View
+          style={[
+            styles.glowSpot,
+            styles.glowSpot1,
+            { backgroundColor: PALETTE.electric.cyan },
+          ]}
+        />
+        <View
+          style={[
+            styles.glowSpot,
+            styles.glowSpot2,
+            { backgroundColor: PALETTE.electric.indigo },
+          ]}
+        />
       </View>
 
-      {/* Close Button */}
       <Animated.View
         entering={FadeIn.delay(300)}
         style={[styles.closeButton, { top: insets.top + SPACING.sm }]}
       >
         <Pressable onPress={handleClose} style={styles.closeButtonInner}>
-          <Ionicons name='close' size={24} color={DARK.text.secondary} />
+          <Ionicons name='close' size={24} color={PALETTE.slate[400]} />
         </Pressable>
       </Animated.View>
 
@@ -193,19 +211,28 @@ export default function PremiumScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <Animated.View
           entering={FadeInDown.delay(100).duration(600)}
           style={styles.header}
         >
           <View style={styles.diamondContainer}>
-            <Animated.View style={[styles.glow, glowStyle]} />
+            <Animated.View
+              style={[
+                styles.glow,
+                glowStyle,
+                { backgroundColor: PALETTE.electric.cyan },
+              ]}
+            />
             <Animated.View style={diamondStyle}>
               <LinearGradient
-                colors={[DARK.accent.gold, '#B45309']}
+                colors={GRADIENTS.electric}
                 style={styles.diamondIcon}
               >
-                <Ionicons name='diamond' size={48} color='#FFF' />
+                <Ionicons
+                  name='diamond'
+                  size={48}
+                  color={PALETTE.midnight.obsidian}
+                />
               </LinearGradient>
             </Animated.View>
           </View>
@@ -216,13 +243,16 @@ export default function PremiumScreen() {
             your growth.
           </Text>
 
-          {/* Trial Badge */}
           {isTrialEligible && trialDuration && (
             <Animated.View
               entering={FadeIn.delay(400)}
               style={styles.trialBadge}
             >
-              <Ionicons name='gift' size={16} color={DARK.accent.gold} />
+              <Ionicons
+                name='gift'
+                size={16}
+                color={PALETTE.electric.emerald}
+              />
               <Text style={styles.trialBadgeText}>
                 {trialDuration.toUpperCase()} FREE TRIAL
               </Text>
@@ -230,7 +260,6 @@ export default function PremiumScreen() {
           )}
         </Animated.View>
 
-        {/* Plans */}
         <Animated.View
           entering={FadeInUp.delay(300).duration(600)}
           style={styles.plansSection}
@@ -248,13 +277,12 @@ export default function PremiumScreen() {
             ))
           ) : (
             <View style={styles.loadingPlans}>
-              <ActivityIndicator color={DARK.accent.gold} />
+              <ActivityIndicator color={PALETTE.electric.cyan} />
               <Text style={styles.loadingText}>Loading premium plans...</Text>
             </View>
           )}
         </Animated.View>
 
-        {/* Features */}
         <Animated.View
           entering={FadeInUp.delay(500).duration(600)}
           style={styles.featuresSection}
@@ -263,7 +291,6 @@ export default function PremiumScreen() {
           <FeatureComparison />
         </Animated.View>
 
-        {/* Guarantee */}
         <Animated.View
           entering={FadeInUp.delay(550)}
           style={styles.guaranteeCard}
@@ -271,7 +298,7 @@ export default function PremiumScreen() {
           <Ionicons
             name='shield-checkmark'
             size={24}
-            color={DARK.accent.emerald}
+            color={PALETTE.electric.emerald}
           />
           <View style={styles.guaranteeContent}>
             <Text style={styles.guaranteeTitle}>100% Money-Back Guarantee</Text>
@@ -282,7 +309,6 @@ export default function PremiumScreen() {
           </View>
         </Animated.View>
 
-        {/* Testimonial */}
         <Animated.View
           entering={FadeInUp.delay(600)}
           style={styles.testimonialCard}
@@ -290,7 +316,7 @@ export default function PremiumScreen() {
           <FontAwesome6
             name='quote-left'
             size={24}
-            color={DARK.accent.gold}
+            color={PALETTE.electric.cyan}
             style={{ opacity: 0.5 }}
           />
           <Text style={styles.testimonialText}>
@@ -308,7 +334,6 @@ export default function PremiumScreen() {
           </View>
         </Animated.View>
 
-        {/* Restore */}
         <Pressable onPress={handleRestore} style={styles.restoreButton}>
           <Text style={styles.restoreText}>Already purchased? Restore</Text>
         </Pressable>
@@ -320,7 +345,6 @@ export default function PremiumScreen() {
         </Text>
       </ScrollView>
 
-      {/* Bottom CTA */}
       <Animated.View
         entering={FadeInUp.delay(400)}
         style={[
@@ -328,7 +352,13 @@ export default function PremiumScreen() {
           { paddingBottom: insets.bottom + SPACING.md },
         ]}
       >
-        <BlurView intensity={80} tint='dark' style={StyleSheet.absoluteFill} />
+        {Platform.OS === 'ios' && (
+          <BlurView
+            intensity={80}
+            tint='dark'
+            style={StyleSheet.absoluteFill}
+          />
+        )}
         <View style={styles.ctaBorder} />
 
         <View style={styles.ctaContent}>
@@ -340,18 +370,25 @@ export default function PremiumScreen() {
             <LinearGradient
               colors={
                 selectedPackage && !isLoading
-                  ? [DARK.accent.gold, '#B45309']
-                  : ['#333', '#444']
+                  ? GRADIENTS.electric
+                  : ([PALETTE.slate[700], PALETTE.slate[600]] as [
+                      string,
+                      string,
+                    ])
               }
               style={styles.purchaseGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
               {isLoading ? (
-                <ActivityIndicator color='#FFF' />
+                <ActivityIndicator color={PALETTE.midnight.obsidian} />
               ) : (
                 <>
-                  <Ionicons name='diamond' size={20} color='#FFF' />
+                  <Ionicons
+                    name='diamond'
+                    size={20}
+                    color={PALETTE.midnight.obsidian}
+                  />
                   <Text style={styles.purchaseText}>{getCtaText()}</Text>
                 </>
               )}
@@ -362,7 +399,6 @@ export default function PremiumScreen() {
         </View>
       </Animated.View>
 
-      {/* Success Modal */}
       {showSuccess && (
         <SuccessModal
           isTrial={subscriptionInfo?.isTrial}
@@ -378,27 +414,24 @@ export default function PremiumScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1 },
 
   glowSpot: {
     position: 'absolute',
     borderRadius: 150,
+    opacity: 0.15,
   },
   glowSpot1: {
     top: -100,
     left: -50,
     width: 300,
     height: 300,
-    backgroundColor: DARK.accent.gold,
-    opacity: 0.15,
   },
   glowSpot2: {
     bottom: 0,
     right: -50,
     width: 300,
     height: 300,
-    backgroundColor: DARK.accent.rose,
-    opacity: 0.1,
   },
 
   closeButton: { position: 'absolute', right: SPACING.md, zIndex: 100 },
@@ -414,7 +447,6 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.lg },
 
-  // Header
   header: { alignItems: 'center', marginBottom: SPACING.xl },
   diamondContainer: {
     width: 120,
@@ -428,7 +460,6 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: DARK.accent.gold,
   },
   diamondIcon: {
     width: 90,
@@ -441,80 +472,75 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: FONTS.bold,
     fontSize: 26,
-    color: DARK.text.primary,
+    color: '#FFF',
     textAlign: 'center',
     marginBottom: SPACING.sm,
   },
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: 15,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     textAlign: 'center',
     lineHeight: 22,
   },
 
-  // Trial Badge
   trialBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: `${PALETTE.electric.emerald}15`,
     paddingHorizontal: SPACING.md,
     paddingVertical: 8,
     borderRadius: RADIUS.full,
     marginTop: SPACING.md,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: `${PALETTE.electric.emerald}30`,
   },
   trialBadgeText: {
     fontFamily: FONTS.bold,
     fontSize: 12,
-    color: DARK.accent.gold,
+    color: PALETTE.electric.emerald,
     letterSpacing: 0.5,
   },
 
-  // Plans
   plansSection: { marginBottom: SPACING.xl, gap: SPACING.sm },
   loadingPlans: { alignItems: 'center', padding: SPACING.xl, gap: SPACING.md },
-  loadingText: { color: DARK.text.muted, fontFamily: FONTS.regular },
+  loadingText: { color: PALETTE.slate[600], fontFamily: FONTS.regular },
 
-  // Features
   featuresSection: { marginBottom: SPACING.xl },
   sectionTitle: {
     fontFamily: FONTS.semiBold,
     fontSize: 18,
-    color: DARK.text.primary,
+    color: '#FFF',
     marginBottom: SPACING.md,
     textAlign: 'center',
   },
 
-  // Guarantee
   guaranteeCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: SPACING.md,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    backgroundColor: `${PALETTE.electric.emerald}10`,
     borderRadius: RADIUS.xl,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: `${PALETTE.electric.emerald}20`,
   },
   guaranteeContent: { flex: 1 },
   guaranteeTitle: {
     fontFamily: FONTS.semiBold,
     fontSize: 14,
-    color: DARK.accent.emerald,
+    color: PALETTE.electric.emerald,
     marginBottom: 4,
   },
   guaranteeText: {
     fontFamily: FONTS.regular,
     fontSize: 13,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     lineHeight: 18,
   },
 
-  // Testimonial
   testimonialCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: RADIUS.xl,
@@ -526,7 +552,7 @@ const styles = StyleSheet.create({
   testimonialText: {
     fontFamily: FONTS.regular,
     fontSize: 15,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     lineHeight: 22,
     fontStyle: 'italic',
     marginBottom: SPACING.md,
@@ -537,19 +563,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: DARK.accent.gold,
+    backgroundColor: PALETTE.electric.cyan,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontWeight: 'bold', color: '#000' },
+  avatarText: { fontWeight: 'bold', color: PALETTE.midnight.obsidian },
   testimonialName: { color: '#FFF', fontFamily: FONTS.semiBold, fontSize: 14 },
   testimonialRole: {
-    color: DARK.accent.gold,
+    color: PALETTE.electric.cyan,
     fontSize: 12,
     fontFamily: FONTS.regular,
   },
 
-  // Restore
   restoreButton: {
     alignItems: 'center',
     padding: SPACING.md,
@@ -557,20 +582,25 @@ const styles = StyleSheet.create({
   restoreText: {
     fontFamily: FONTS.medium,
     fontSize: 14,
-    color: DARK.text.tertiary,
+    color: PALETTE.slate[500],
     textDecorationLine: 'underline',
   },
   legal: {
     fontFamily: FONTS.regular,
     fontSize: 10,
-    color: DARK.text.muted,
+    color: PALETTE.slate[600],
     textAlign: 'center',
     lineHeight: 14,
     marginBottom: 20,
   },
 
-  // Bottom CTA
-  bottomCTA: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  bottomCTA: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+  },
   ctaBorder: {
     position: 'absolute',
     top: 0,
@@ -583,6 +613,7 @@ const styles = StyleSheet.create({
   purchaseButton: {
     borderRadius: RADIUS.lg,
     overflow: 'hidden',
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   purchaseGradient: {
     flexDirection: 'row',
@@ -591,11 +622,15 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  purchaseText: { fontFamily: FONTS.bold, fontSize: 16, color: '#FFF' },
+  purchaseText: {
+    fontFamily: FONTS.bold,
+    fontSize: 16,
+    color: PALETTE.midnight.obsidian,
+  },
   cancelAnytime: {
     fontFamily: FONTS.regular,
     fontSize: 12,
-    color: DARK.text.muted,
+    color: PALETTE.slate[500],
     textAlign: 'center',
     marginTop: 12,
   },

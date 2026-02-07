@@ -1,4 +1,3 @@
-// app/(onboarding)/pick-dreams.tsx
 import React, { useState, useEffect } from 'react'
 import {
   View,
@@ -30,14 +29,18 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import { useTheme } from '@/src/context/ThemeContext'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 
 const { width, height } = Dimensions.get('window')
 const CARD_WIDTH = (width - SPACING.lg * 2 - SPACING.md) / 2
 
-// ============================================================================
-// DATA (STRICT: Original IDs kept for Database Compatibility)
-// ============================================================================
 const CATEGORIES = [
   {
     id: 'health',
@@ -97,9 +100,6 @@ const CATEGORIES = [
   },
 ]
 
-// ============================================================================
-// AMBIENT BACKGROUND
-// ============================================================================
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   const scale = useSharedValue(1)
   const translateY = useSharedValue(0)
@@ -151,7 +151,6 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           borderRadius: size / 2,
           backgroundColor: color,
           opacity: 0.3,
-          filter: 'blur(50px)', // Web/Expo 50+
         },
         style,
       ]}
@@ -159,9 +158,6 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   )
 }
 
-// ============================================================================
-// COMPONENT: DREAM CARD (The "Alive" Component)
-// ============================================================================
 const DreamCard = ({ item, isSelected, onToggle, index }: any) => {
   const scale = useSharedValue(1)
   const progress = useSharedValue(isSelected ? 1 : 0)
@@ -173,7 +169,6 @@ const DreamCard = ({ item, isSelected, onToggle, index }: any) => {
     })
   }, [isSelected])
 
-  // Card Styles
   const animatedCardStyle = useAnimatedStyle(() => {
     const borderColor = interpolateColor(
       progress.value,
@@ -183,7 +178,7 @@ const DreamCard = ({ item, isSelected, onToggle, index }: any) => {
     const backgroundColor = interpolateColor(
       progress.value,
       [0, 1],
-      ['rgba(20, 20, 30, 0.4)', 'rgba(20, 20, 30, 0.8)'], // Subtle darken on select
+      ['rgba(20, 20, 30, 0.4)', 'rgba(20, 20, 30, 0.8)'],
     )
 
     return {
@@ -193,18 +188,16 @@ const DreamCard = ({ item, isSelected, onToggle, index }: any) => {
     }
   })
 
-  // Icon Animation
   const iconStyle = useAnimatedStyle(() => ({
     transform: [{ scale: interpolate(progress.value, [0, 1], [1, 1.15]) }],
     opacity: interpolate(progress.value, [0, 1], [0.6, 1]),
   }))
 
-  // Text Animation
   const textStyle = useAnimatedStyle(() => ({
     color: interpolateColor(
       progress.value,
       [0, 1],
-      [DARK.text.secondary, '#FFF'],
+      [PALETTE.slate[400], '#FFF'],
     ),
   }))
 
@@ -222,7 +215,6 @@ const DreamCard = ({ item, isSelected, onToggle, index }: any) => {
       onPressOut={handlePressOut}
     >
       <Animated.View style={[styles.card, animatedCardStyle]}>
-        {/* Inner Glow when selected */}
         <Animated.View style={[styles.cardGlow, { opacity: progress }]}>
           <LinearGradient
             colors={[item.color, 'transparent']}
@@ -232,7 +224,6 @@ const DreamCard = ({ item, isSelected, onToggle, index }: any) => {
           />
         </Animated.View>
 
-        {/* Header (Icon + Check) */}
         <View style={styles.cardHeader}>
           <Animated.View
             style={[
@@ -264,7 +255,6 @@ const DreamCard = ({ item, isSelected, onToggle, index }: any) => {
           )}
         </View>
 
-        {/* Footer (Text) */}
         <View>
           <Animated.Text style={[styles.cardLabel, textStyle]}>
             {item.label}
@@ -276,25 +266,22 @@ const DreamCard = ({ item, isSelected, onToggle, index }: any) => {
   )
 }
 
-// ============================================================================
-// MAIN SCREEN
-// ============================================================================
 export default function PickDreamsScreen() {
   const insets = useSafeAreaInsets()
+  const { colors } = useTheme()
   const [selected, setSelected] = useState<string[]>([])
 
   const toggleSelection = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((i) => i !== id)
-      if (prev.length >= 3) return [...prev.slice(1), id] // Keep max 3, rotate
+      if (prev.length >= 3) return [...prev.slice(1), id]
       return [...prev, id]
     })
   }
 
   const handleContinue = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    // Pass real data in production
     router.push({
       pathname: '/(onboarding)/first-dream',
       params: { categories: selected.join(',') },
@@ -302,28 +289,26 @@ export default function PickDreamsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <StatusBar barStyle='light-content' />
 
-      {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
+        <View style={{ flex: 1, backgroundColor: PALETTE.midnight.obsidian }} />
         <LinearGradient
-          colors={[DARK.bg.primary, '#12121a', DARK.bg.primary]}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
         />
         <BreathingBlob
-          color={DARK.accent.rose}
+          color={PALETTE.electric.cyan}
           size={300}
           top={-60}
           left={-100}
-        />
-        <BreathingBlob
-          color='#4F46E5'
-          size={280}
-          top={height * 0.4}
-          left={width * 0.5}
-          delay={1000}
         />
 
         {Platform.OS === 'ios' && (
@@ -335,25 +320,30 @@ export default function PickDreamsScreen() {
         )}
       </View>
 
-      {/* HEADER */}
       <View style={[styles.header, { marginTop: insets.top }]}>
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack} />
-          <Animated.View style={[styles.progressFill, { width: '33%' }]} />
+          <Animated.View
+            style={[
+              styles.progressFill,
+              { width: '33%', backgroundColor: PALETTE.electric.cyan },
+            ]}
+          />
         </View>
 
         <Animated.View entering={FadeInDown.delay(200).springify()}>
           <Text style={styles.headerTitle}>
             Where will you{'\n'}
-            <Text style={{ color: DARK.accent.gold }}>direct your power?</Text>
+            <Text style={{ color: PALETTE.electric.emerald }}>
+              direct your power?
+            </Text>
           </Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerSubtitle, { color: PALETTE.slate[400] }]}>
             Select up to 3 focus areas to start.
           </Text>
         </Animated.View>
       </View>
 
-      {/* CONTENT GRID */}
       <ScrollView
         contentContainerStyle={styles.gridContent}
         showsVerticalScrollIndicator={false}
@@ -375,21 +365,25 @@ export default function PickDreamsScreen() {
         </View>
       </ScrollView>
 
-      {/* FLOATING DOCK */}
       <Animated.View
         entering={FadeInDown.delay(800).springify()}
         style={[styles.floatingDockContainer, { bottom: insets.bottom + 10 }]}
       >
-        <BlurView intensity={50} tint='dark' style={StyleSheet.absoluteFill} />
+        {Platform.OS === 'ios' && (
+          <BlurView
+            intensity={50}
+            tint='dark'
+            style={StyleSheet.absoluteFill}
+          />
+        )}
         <View style={styles.dockBorder} />
 
         <View style={styles.dockInner}>
-          {/* Counter */}
           <View style={styles.counterBadge}>
             <Text style={styles.counterText}>
               <Text
                 style={{
-                  color: selected.length > 0 ? DARK.accent.rose : '#666',
+                  color: selected.length > 0 ? PALETTE.electric.cyan : '#666',
                   fontFamily: FONTS.bold,
                 }}
               >
@@ -399,7 +393,6 @@ export default function PickDreamsScreen() {
             </Text>
           </View>
 
-          {/* Action */}
           <Pressable
             onPress={handleContinue}
             disabled={selected.length === 0}
@@ -410,9 +403,7 @@ export default function PickDreamsScreen() {
           >
             <LinearGradient
               colors={
-                selected.length > 0
-                  ? (DARK.gradients.primary as [string, string])
-                  : ['#333', '#444']
+                selected.length > 0 ? GRADIENTS.electric : ['#333', '#444']
               }
               style={StyleSheet.absoluteFill}
               start={{ x: 0, y: 0 }}
@@ -427,16 +418,10 @@ export default function PickDreamsScreen() {
   )
 }
 
-// ============================================================================
-// STYLES
-// ============================================================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
-
-  // Header
   header: {
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.lg,
@@ -455,7 +440,6 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: DARK.accent.rose,
     borderRadius: 2,
   },
   headerTitle: {
@@ -469,14 +453,11 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     fontFamily: FONTS.regular,
-    color: DARK.text.secondary,
     lineHeight: 24,
   },
-
-  // Grid
   gridContent: {
     paddingHorizontal: SPACING.lg,
-    paddingBottom: 120, // Clear the dock
+    paddingBottom: 120,
   },
   grid: {
     flexDirection: 'row',
@@ -484,11 +465,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: SPACING.md,
   },
-
-  // Card
   card: {
     width: CARD_WIDTH,
-    height: CARD_WIDTH * 1.25, // Elegant vertical aspect ratio
+    height: CARD_WIDTH * 1.25,
     borderRadius: RADIUS['2xl'],
     padding: SPACING.md,
     justifyContent: 'space-between',
@@ -529,8 +508,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)',
     lineHeight: 14,
   },
-
-  // Floating Dock
   floatingDockContainer: {
     position: 'absolute',
     left: SPACING.lg,

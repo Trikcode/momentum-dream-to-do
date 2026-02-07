@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { View, StyleSheet, Pressable, Dimensions } from 'react-native'
+import { View, StyleSheet, Pressable, Platform } from 'react-native'
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { BlurView } from 'expo-blur'
 import { Ionicons } from '@expo/vector-icons'
@@ -12,11 +12,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { DARK, SPACING, SPRING_CONFIGS } from '@/src/constants/theme'
-
-// -----------------------------------------------------------------------------
-// CONFIG
-// -----------------------------------------------------------------------------
+import { SPACING, SPRING_CONFIGS, PALETTE } from '@/src/constants/new-theme'
 
 interface TabConfig {
   name: string
@@ -28,7 +24,7 @@ interface TabConfig {
 const TAB_CONFIG: Record<string, TabConfig> = {
   index: {
     name: 'index',
-    icon: 'sunny-outline', // Updated icon (Sun = Today/Brightness)
+    icon: 'sunny-outline',
     iconFocused: 'sunny',
     label: 'Today',
   },
@@ -52,10 +48,6 @@ const TAB_CONFIG: Record<string, TabConfig> = {
   },
 }
 
-// -----------------------------------------------------------------------------
-// MAIN COMPONENT
-// -----------------------------------------------------------------------------
-
 export function CustomTabBar({
   state,
   descriptors,
@@ -65,50 +57,80 @@ export function CustomTabBar({
 
   return (
     <View style={styles.container}>
-      <BlurView
-        intensity={90}
-        tint='dark'
-        style={[styles.blurContainer, { paddingBottom: insets.bottom }]}
-      >
-        {/* Top Border Line for definition */}
-        <View style={styles.topBorder} />
+      {Platform.OS === 'ios' ? (
+        <BlurView
+          intensity={90}
+          tint='dark'
+          style={[styles.blurContainer, { paddingBottom: insets.bottom }]}
+        >
+          <View style={styles.topBorder} />
+          <View style={styles.tabsRow}>
+            {state.routes.map((route: any, index: number) => {
+              const isFocused = state.index === index
+              const tab = TAB_CONFIG[route.name]
 
-        <View style={styles.tabsRow}>
-          {state.routes.map((route: any, index: number) => {
-            const isFocused = state.index === index
-            const tab = TAB_CONFIG[route.name]
+              if (!tab) return null
 
-            if (!tab) return null
+              return (
+                <TabButton
+                  key={route.key}
+                  tab={tab}
+                  isFocused={isFocused}
+                  onPress={() => {
+                    const event = navigation.emit({
+                      type: 'tabPress',
+                      target: route.key,
+                      canPreventDefault: true,
+                    })
 
-            return (
-              <TabButton
-                key={route.key}
-                tab={tab}
-                isFocused={isFocused}
-                onPress={() => {
-                  const event = navigation.emit({
-                    type: 'tabPress',
-                    target: route.key,
-                    canPreventDefault: true,
-                  })
+                    if (!isFocused && !event.defaultPrevented) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                      navigation.navigate(route.name)
+                    }
+                  }}
+                />
+              )
+            })}
+          </View>
+        </BlurView>
+      ) : (
+        <View
+          style={[styles.androidContainer, { paddingBottom: insets.bottom }]}
+        >
+          <View style={styles.topBorder} />
+          <View style={styles.tabsRow}>
+            {state.routes.map((route: any, index: number) => {
+              const isFocused = state.index === index
+              const tab = TAB_CONFIG[route.name]
 
-                  if (!isFocused && !event.defaultPrevented) {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                    navigation.navigate(route.name)
-                  }
-                }}
-              />
-            )
-          })}
+              if (!tab) return null
+
+              return (
+                <TabButton
+                  key={route.key}
+                  tab={tab}
+                  isFocused={isFocused}
+                  onPress={() => {
+                    const event = navigation.emit({
+                      type: 'tabPress',
+                      target: route.key,
+                      canPreventDefault: true,
+                    })
+
+                    if (!isFocused && !event.defaultPrevented) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                      navigation.navigate(route.name)
+                    }
+                  }}
+                />
+              )
+            })}
+          </View>
         </View>
-      </BlurView>
+      )}
     </View>
   )
 }
-
-// -----------------------------------------------------------------------------
-// INDIVIDUAL TAB BUTTON
-// -----------------------------------------------------------------------------
 
 function TabButton({
   tab,
@@ -120,7 +142,7 @@ function TabButton({
   onPress: () => void
 }) {
   const scale = useSharedValue(1)
-  const animValue = useSharedValue(0) // 0 to 1 based on focus
+  const animValue = useSharedValue(0)
 
   useEffect(() => {
     animValue.value = withTiming(isFocused ? 1 : 0, { duration: 300 })
@@ -134,7 +156,6 @@ function TabButton({
     scale.value = withSpring(1, SPRING_CONFIGS.snappy)
   }
 
-  // Icon floats up slightly when active
   const animatedIconStyle = useAnimatedStyle(() => {
     const translateY = interpolate(animValue.value, [0, 1], [0, -4])
     return {
@@ -142,7 +163,6 @@ function TabButton({
     }
   })
 
-  // Dot scales up and gains opacity
   const dotStyle = useAnimatedStyle(() => {
     return {
       transform: [{ scale: withSpring(isFocused ? 1 : 0) }],
@@ -150,7 +170,6 @@ function TabButton({
     }
   })
 
-  // Active color logic
   const iconColor = isFocused ? '#FFFFFF' : 'rgba(255,255,255,0.4)'
 
   return (
@@ -161,25 +180,19 @@ function TabButton({
       style={styles.tabButton}
     >
       <View style={styles.innerContainer}>
-        {/* Icon */}
         <Animated.View style={animatedIconStyle}>
           <Ionicons
             name={isFocused ? tab.iconFocused : tab.icon}
-            size={26} // Slightly larger for tapability
+            size={26}
             color={iconColor}
           />
         </Animated.View>
 
-        {/* Active Dot Indicator */}
         <Animated.View style={[styles.activeDot, dotStyle]} />
       </View>
     </Pressable>
   )
 }
-
-// -----------------------------------------------------------------------------
-// STYLES
-// -----------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: {
@@ -189,11 +202,15 @@ const styles = StyleSheet.create({
     right: 0,
     width: '100%',
     zIndex: 100,
-    elevation: 20, // Shadow for Android
+    elevation: 20,
   },
   blurContainer: {
     width: '100%',
-    backgroundColor: 'rgba(10, 12, 16, 0.85)', // Dark semi-transparent
+    backgroundColor: 'rgba(2, 6, 23, 0.85)',
+  },
+  androidContainer: {
+    width: '100%',
+    backgroundColor: PALETTE.midnight.obsidian,
   },
   topBorder: {
     position: 'absolute',
@@ -206,9 +223,9 @@ const styles = StyleSheet.create({
   tabsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12, // Comfortable touch area
+    paddingVertical: 12,
     paddingHorizontal: SPACING.md,
-    height: 60, // Fixed height for consistency
+    height: 60,
   },
   tabButton: {
     flex: 1,
@@ -226,10 +243,10 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: DARK.accent.rose,
+    backgroundColor: PALETTE.electric.cyan,
     position: 'absolute',
-    bottom: 4, // Positions the dot near the bottom of the tab area
-    shadowColor: DARK.accent.rose,
+    bottom: 4,
+    shadowColor: PALETTE.electric.cyan,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,

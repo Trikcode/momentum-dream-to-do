@@ -1,3 +1,5 @@
+// app/(auth)/welcome.tsx
+
 import React, { useEffect } from 'react'
 import {
   View,
@@ -34,14 +36,36 @@ import Svg, {
   Circle,
 } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+
+// NEW: Import new theme system
+import { useTheme } from '@/src/context/ThemeContext'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 
 const { width, height } = Dimensions.get('window')
 
 // ============================================================================
-// 1. AMBIENT BACKGROUND (Warmer & Slower)
+// AMBIENT BACKGROUND
 // ============================================================================
-const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
+const BreathingBlob = ({
+  color,
+  size,
+  top,
+  left,
+  delay = 0,
+}: {
+  color: string
+  size: number
+  top: number
+  left: number
+  delay?: number
+}) => {
   const scale = useSharedValue(1)
   const opacity = useSharedValue(0.4)
 
@@ -89,7 +113,6 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           height: size,
           borderRadius: size / 2,
           backgroundColor: color,
-          filter: 'blur(60px)', // Web/New Expo
         },
         animatedStyle,
       ]}
@@ -98,9 +121,10 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
 }
 
 // ============================================================================
-// 2. HERO VISUAL: THE ASCENT
+// HERO VISUAL: THE ASCENT
 // ============================================================================
 const MomentumVisual = () => {
+  const { colors } = useTheme()
   const progress = useSharedValue(0)
   const AnimatedPath = Animated.createAnimatedComponent(Path)
   const AnimatedCircle = Animated.createAnimatedComponent(Circle)
@@ -119,7 +143,6 @@ const MomentumVisual = () => {
 
   const circleProps = useAnimatedProps(() => {
     const t = progress.value
-    // Smooth Bezier-like interpolation for the orb
     const x = interpolate(t, [0, 1], [40, 260])
     const y = interpolate(t, [0, 0.4, 1], [140, 100, 40], Extrapolation.CLAMP)
     return { cx: x, cy: y, opacity: t > 0.05 ? 1 : 0 }
@@ -130,11 +153,23 @@ const MomentumVisual = () => {
       <Svg width={300} height={180} viewBox='0 0 300 180'>
         <Defs>
           <SvgGradient id='chartGrad' x1='0' y1='0' x2='1' y2='0'>
-            <Stop offset='0' stopColor={DARK.accent.rose} stopOpacity='0.4' />
-            <Stop offset='1' stopColor={DARK.accent.gold} stopOpacity='1' />
+            <Stop
+              offset='0'
+              stopColor={PALETTE.electric.cyan}
+              stopOpacity='0.4'
+            />
+            <Stop
+              offset='1'
+              stopColor={PALETTE.electric.emerald}
+              stopOpacity='1'
+            />
           </SvgGradient>
           <SvgGradient id='fillGrad' x1='0' y1='0' x2='0' y2='1'>
-            <Stop offset='0' stopColor={DARK.accent.rose} stopOpacity='0.15' />
+            <Stop
+              offset='0'
+              stopColor={PALETTE.electric.cyan}
+              stopOpacity='0.15'
+            />
             <Stop offset='1' stopColor='transparent' stopOpacity='0' />
           </SvgGradient>
         </Defs>
@@ -166,8 +201,8 @@ const MomentumVisual = () => {
         {/* The Spark */}
         <AnimatedCircle
           r='8'
-          fill={DARK.bg.primary}
-          stroke={DARK.accent.gold}
+          fill={colors.background}
+          stroke={PALETTE.electric.emerald}
           strokeWidth='3'
           animatedProps={circleProps}
         />
@@ -177,10 +212,11 @@ const MomentumVisual = () => {
 }
 
 // ============================================================================
-// 3. MAIN SCREEN
+// MAIN SCREEN
 // ============================================================================
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets()
+  const { colors, isDark } = useTheme()
 
   const handleGetStarted = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
@@ -193,31 +229,23 @@ export default function WelcomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle='light-content' />
 
       {/* --- BACKGROUND LAYERS --- */}
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
-
-        {/* Soft radial gradient */}
+        {/* Base gradient */}
         <LinearGradient
-          colors={[DARK.bg.primary, '#1A1625', DARK.bg.primary]}
+          colors={GRADIENTS.midnight}
           style={StyleSheet.absoluteFill}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
         />
 
-        {/* Animated Orbs */}
+        {/* Animated Orbs - Electric colors */}
+
         <BreathingBlob
-          color={DARK.accent.rose}
-          size={320}
-          top={-40}
-          left={-80}
-          delay={0}
-        />
-        <BreathingBlob
-          color='#A855F7' // Violet
+          color={PALETTE.electric.indigo}
           size={280}
           top={height * 0.3}
           left={width * 0.4}
@@ -241,8 +269,18 @@ export default function WelcomeScreen() {
           entering={FadeInDown.delay(300).springify()}
           style={styles.header}
         >
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>DREAM TO DO</Text>
+          <View
+            style={[
+              styles.badge,
+              {
+                backgroundColor: `${PALETTE.electric.cyan}15`,
+                borderColor: `${PALETTE.electric.cyan}40`,
+              },
+            ]}
+          >
+            <Text style={[styles.badgeText, { color: PALETTE.electric.cyan }]}>
+              DREAM TO DO
+            </Text>
           </View>
           <Text style={styles.appName}>Momentum</Text>
         </Animated.View>
@@ -260,12 +298,22 @@ export default function WelcomeScreen() {
           entering={FadeInDown.delay(800).springify().damping(18)}
           style={styles.bottomSection}
         >
-          <View style={styles.glassCard}>
-            <BlurView
-              intensity={30}
-              tint='dark'
-              style={StyleSheet.absoluteFill}
-            />
+          <View
+            style={[
+              styles.glassCard,
+              {
+                backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+              },
+            ]}
+          >
+            {Platform.OS === 'ios' && (
+              <BlurView
+                intensity={30}
+                tint='dark'
+                style={StyleSheet.absoluteFill}
+              />
+            )}
             <View style={styles.glassBorder} />
 
             <View
@@ -276,15 +324,19 @@ export default function WelcomeScreen() {
             >
               <Text style={styles.headline}>
                 Design a life{'\n'}
-                <Text style={styles.highlight}>you love.</Text>
+                <Text
+                  style={[styles.highlight, { color: PALETTE.electric.cyan }]}
+                >
+                  you love.
+                </Text>
               </Text>
 
-              <Text style={styles.subheadline}>
+              <Text style={[styles.subheadline, { color: PALETTE.slate[400] }]}>
                 Turn "one day" into "today". The daily coach for ambitious women
                 ready to rise.
               </Text>
 
-              {/* Primary Button */}
+              {/* Primary Button - Electric gradient */}
               <Pressable
                 onPress={handleGetStarted}
                 style={({ pressed }) => [
@@ -293,18 +345,30 @@ export default function WelcomeScreen() {
                 ]}
               >
                 <LinearGradient
-                  colors={DARK.gradients.primary as [string, string]}
+                  colors={GRADIENTS.electric}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
                 />
-                <Text style={styles.primaryButtonText}>Start My Journey</Text>
+                <Text
+                  style={[
+                    styles.primaryButtonText,
+                    { color: PALETTE.midnight.obsidian },
+                  ]}
+                >
+                  Start My Journey
+                </Text>
                 <View style={styles.flare} />
               </Pressable>
 
               {/* Secondary Button */}
               <Pressable onPress={handleSignIn} style={styles.secondaryButton}>
-                <Text style={styles.secondaryButtonText}>
+                <Text
+                  style={[
+                    styles.secondaryButtonText,
+                    { color: PALETTE.slate[400] },
+                  ]}
+                >
                   I already have an account
                 </Text>
               </Pressable>
@@ -322,7 +386,6 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   content: {
     flex: 1,
@@ -335,16 +398,13 @@ const styles = StyleSheet.create({
     marginTop: SPACING['2xl'],
   },
   badge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)', // Gold tint
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 100,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.25)',
   },
   badgeText: {
-    color: '#F59E0B', // Gold
     fontSize: 10,
     fontFamily: FONTS.semiBold,
     letterSpacing: 2,
@@ -378,11 +438,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     overflow: 'hidden',
-    backgroundColor: 'rgba(25, 20, 30, 0.4)', // Slight purple tint for warmth
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   glassBorder: {
     position: 'absolute',
@@ -390,7 +448,7 @@ const styles = StyleSheet.create({
     left: '20%',
     right: '20%',
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   cardContent: {
     padding: 32,
@@ -404,13 +462,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
-  highlight: {
-    color: '#F43F5E', // Rose
-  },
+  highlight: {},
   subheadline: {
     fontSize: 16,
     fontFamily: FONTS.regular,
-    color: '#94A3B8', // Slate 400
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
@@ -425,14 +480,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#F43F5E',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   primaryButtonText: {
-    color: '#FFF',
     fontSize: 16,
     fontFamily: FONTS.semiBold,
     zIndex: 1,
@@ -443,7 +493,7 @@ const styles = StyleSheet.create({
     right: 0,
     width: 40,
     height: '100%',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     transform: [{ skewX: '-20deg' }, { translateX: 20 }],
   },
   buttonPressed: {
@@ -457,7 +507,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#64748B', // Slate 500
     fontSize: 14,
     fontFamily: FONTS.medium,
   },

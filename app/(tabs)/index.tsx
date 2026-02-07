@@ -1,4 +1,3 @@
-// app/(tabs)/index.tsx
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
@@ -9,7 +8,6 @@ import {
   Pressable,
   Dimensions,
   StatusBar,
-  Platform,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -29,26 +27,28 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { format } from 'date-fns'
 
-// Logic
 import { useRequestNotificationPermission } from '@/src/hooks/useNotificationSetup'
 import { useAuthStore } from '@/src/store/authStore'
 import { useDreamStore } from '@/src/store/dreamStore'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import { useTheme } from '@/src/context/ThemeContext'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 import { getMantra } from '@/src/constants/language'
 import {
   DREAM_CATEGORIES,
   DreamCategory,
 } from '@/src/constants/dreamCategories'
 
-// Components
 import { PowerMoveCard } from '@/src/components/home/PowerMoveCard'
 import { AICoachFab } from '@/src/components/home/AICoachFab'
 
 const { width } = Dimensions.get('window')
 
-// ============================================================================
-// HELPER: ATMOSPHERIC GLOW (Subtle background blob)
-// ============================================================================
 const AtmosphericGlow = () => {
   const scale = useSharedValue(1)
 
@@ -67,22 +67,25 @@ const AtmosphericGlow = () => {
     transform: [{ scale: scale.value }],
   }))
 
-  return <Animated.View style={[styles.atmosphericGlow, animatedStyle]} />
+  return (
+    <Animated.View
+      style={[
+        styles.atmosphericGlow,
+        { backgroundColor: PALETTE.electric.cyan },
+        animatedStyle,
+      ]}
+    />
+  )
 }
 
-// ============================================================================
-// HELPER: CATEGORY LOOKUP
-// ============================================================================
 const getCategoryBySlug = (slug: string | null | undefined): DreamCategory => {
   if (!slug) return DREAM_CATEGORIES[0]
   return DREAM_CATEGORIES.find((c) => c.slug === slug) ?? DREAM_CATEGORIES[0]
 }
 
-// ============================================================================
-// MAIN SCREEN
-// ============================================================================
 export default function HomeScreen() {
   const insets = useSafeAreaInsets()
+  const { colors, isDark } = useTheme()
   const [refreshing, setRefreshing] = useState(false)
   const [mantra, setMantra] = useState('')
   useRequestNotificationPermission()
@@ -97,7 +100,6 @@ export default function HomeScreen() {
     skipAction,
   } = useDreamStore()
 
-  // Initial Load
   useEffect(() => {
     loadData()
   }, [])
@@ -113,7 +115,6 @@ export default function HomeScreen() {
     setRefreshing(false)
   }
 
-  // --- DATA DERIVATION ---
   const activeDreams = dreams.filter((d) => d.status === 'active')
   const primaryDream = activeDreams[0]
   const pendingActions = todayActions.filter((a) => !a.is_completed)
@@ -123,7 +124,6 @@ export default function HomeScreen() {
   const firstName = profile?.full_name?.split(' ')[0] ?? 'Dreamer'
   const todayDate = format(new Date(), 'EEEE, MMM d')
 
-  // --- HANDLERS ---
   const handleAddPowerMove = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     primaryDream
@@ -144,17 +144,27 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle='light-content' />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={[DARK.bg.primary, '#12121A', DARK.bg.primary]}
+          colors={
+            isDark
+              ? [
+                  PALETTE.midnight.obsidian,
+                  PALETTE.midnight.slate,
+                  PALETTE.midnight.obsidian,
+                ]
+              : [
+                  colors.background,
+                  colors.backgroundSecondary,
+                  colors.background,
+                ]
+          }
           style={StyleSheet.absoluteFill}
         />
-        <AtmosphericGlow />
+        {isDark && <AtmosphericGlow />}
       </View>
 
       <ScrollView
@@ -168,29 +178,51 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={DARK.accent.rose}
+            tintColor={PALETTE.electric.cyan}
             progressViewOffset={insets.top + 20}
           />
         }
       >
-        {/* 1. EDITORIAL HEADER */}
         <Animated.View entering={FadeInDown.delay(100)} style={styles.header}>
-          <View style={styles.dateBadge}>
-            <Text style={styles.dateText}>{todayDate}</Text>
+          <View
+            style={[
+              styles.dateBadge,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.08)'
+                  : colors.surfaceMuted,
+              },
+            ]}
+          >
+            <Text style={[styles.dateText, { color: colors.textSecondary }]}>
+              {todayDate}
+            </Text>
           </View>
 
           <View style={styles.greetingContainer}>
-            <Text style={styles.greetingPrefix}>Good morning,</Text>
-            <Text style={styles.greetingName}>{firstName}.</Text>
+            <Text
+              style={[styles.greetingPrefix, { color: colors.textSecondary }]}
+            >
+              Good morning,
+            </Text>
+            <Text style={[styles.greetingName, { color: colors.text }]}>
+              {firstName}.
+            </Text>
           </View>
 
           <View style={styles.mantraContainer}>
-            <View style={styles.mantraLine} />
-            <Text style={styles.mantraText}>{mantra}</Text>
+            <View
+              style={[
+                styles.mantraLine,
+                { backgroundColor: PALETTE.electric.cyan },
+              ]}
+            />
+            <Text style={[styles.mantraText, { color: colors.textTertiary }]}>
+              {mantra}
+            </Text>
           </View>
         </Animated.View>
 
-        {/* 2. HERO CARD (Active Dream) */}
         <Animated.View
           entering={FadeInDown.delay(200)}
           style={styles.heroSection}
@@ -200,13 +232,18 @@ export default function HomeScreen() {
               dream={primaryDream}
               onPress={handleViewDream}
               otherDreamsCount={activeDreams.length - 1}
+              colors={colors}
+              isDark={isDark}
             />
           ) : (
-            <NoDreamCard onPress={handleCreateDream} />
+            <NoDreamCard
+              onPress={handleCreateDream}
+              colors={colors}
+              isDark={isDark}
+            />
           )}
         </Animated.View>
 
-        {/* 3. DAILY ACTIONS */}
         {primaryDream && (
           <View style={styles.actionsSection}>
             <Animated.View
@@ -214,35 +251,58 @@ export default function HomeScreen() {
               style={styles.sectionHeader}
             >
               <View>
-                <Text style={styles.sectionTitle}>Today's Momentum</Text>
-                <Text style={styles.sectionSubtitle}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  Today's Momentum
+                </Text>
+                <Text
+                  style={[
+                    styles.sectionSubtitle,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Small moves, massive impact.
                 </Text>
               </View>
               {totalCount > 0 && (
-                <View style={styles.progressBadge}>
-                  <Text style={styles.progressBadgeText}>
+                <View
+                  style={[
+                    styles.progressBadge,
+                    {
+                      backgroundColor: isDark
+                        ? 'rgba(255,255,255,0.1)'
+                        : colors.surfaceMuted,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.progressBadgeText, { color: colors.text }]}
+                  >
                     {completedCount}/{totalCount}
                   </Text>
                 </View>
               )}
             </Animated.View>
 
-            {/* Empty State */}
             {pendingActions.length === 0 && totalCount === 0 && (
               <Animated.View entering={FadeInUp.delay(400)}>
-                <EmptyActionsCard onAdd={handleAddPowerMove} />
+                <EmptyActionsCard
+                  onAdd={handleAddPowerMove}
+                  colors={colors}
+                  isDark={isDark}
+                />
               </Animated.View>
             )}
 
-            {/* All Done State */}
             {pendingActions.length === 0 && totalCount > 0 && (
               <Animated.View entering={FadeInUp.delay(400)}>
-                <AllDoneCard onAddMore={handleAddPowerMove} />
+                <AllDoneCard
+                  onAddMore={handleAddPowerMove}
+                  colors={colors}
+                  isDark={isDark}
+                />
               </Animated.View>
             )}
 
-            {/* List */}
             {pendingActions.length > 0 && (
               <View style={styles.actionsList}>
                 {pendingActions.map((action, index) => {
@@ -279,9 +339,16 @@ export default function HomeScreen() {
                     <Ionicons
                       name='add-circle-outline'
                       size={20}
-                      color={DARK.text.secondary}
+                      color={colors.textSecondary}
                     />
-                    <Text style={styles.addMoreText}>Add another move</Text>
+                    <Text
+                      style={[
+                        styles.addMoreText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      Add another move
+                    </Text>
                   </Pressable>
                 </Animated.View>
               </View>
@@ -297,113 +364,151 @@ export default function HomeScreen() {
   )
 }
 
-// =============================================================================
-// SUB-COMPONENT: ACTIVE DREAM CARD (Premium Feel)
-// =============================================================================
-function ActiveDreamCard({ dream, onPress, otherDreamsCount }: any) {
+function ActiveDreamCard({
+  dream,
+  onPress,
+  otherDreamsCount,
+  colors,
+  isDark,
+}: any) {
   const progress =
     dream.total_actions > 0
       ? (dream.completed_actions ?? 0) / dream.total_actions
       : 0
 
   const category = getCategoryBySlug(dream.category?.slug)
+  const accentColor = PALETTE.electric.cyan
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.cardContainer,
+        {
+          backgroundColor: isDark ? 'rgba(20, 20, 25, 0.6)' : colors.surface,
+        },
         pressed && { transform: [{ scale: 0.99 }] },
       ]}
     >
-      <BlurView intensity={30} tint='dark' style={StyleSheet.absoluteFill} />
+      {isDark && (
+        <BlurView intensity={30} tint='dark' style={StyleSheet.absoluteFill} />
+      )}
 
-      {/* Dynamic colored glow based on category */}
       <LinearGradient
-        colors={[category.color + '20', 'transparent']}
+        colors={[accentColor + '20', 'transparent']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
 
       <View
-        style={[styles.cardBorder, { borderColor: category.color + '40' }]}
+        style={[
+          styles.cardBorder,
+          { borderColor: isDark ? accentColor + '40' : colors.border },
+        ]}
       />
 
       <View style={styles.cardContent}>
-        {/* Header */}
         <View style={styles.cardTopRow}>
           <View
             style={[
               styles.categoryPill,
               {
-                backgroundColor: category.color + '20',
-                borderColor: category.color + '30',
+                backgroundColor: accentColor + '20',
+                borderColor: accentColor + '30',
               },
             ]}
           >
             <Ionicons
               name={category.icon as any}
               size={10}
-              color={category.color}
+              color={accentColor}
             />
-            <Text style={[styles.categoryPillText, { color: category.color }]}>
+            <Text style={[styles.categoryPillText, { color: accentColor }]}>
               PRIMARY FOCUS
             </Text>
           </View>
           {otherDreamsCount > 0 && (
-            <Text style={styles.moreDreamsText}>+{otherDreamsCount} more</Text>
+            <Text style={[styles.moreDreamsText, { color: colors.textMuted }]}>
+              +{otherDreamsCount} more
+            </Text>
           )}
         </View>
 
-        {/* Title */}
-        <Text style={styles.cardTitle} numberOfLines={2}>
+        <Text
+          style={[styles.cardTitle, { color: colors.text }]}
+          numberOfLines={2}
+        >
           {dream.title}
         </Text>
 
-        {/* Progress */}
         <View style={styles.progressSection}>
-          <View style={styles.track}>
+          <View
+            style={[
+              styles.track,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(255,255,255,0.1)'
+                  : colors.border,
+              },
+            ]}
+          >
             <View
               style={[
                 styles.fill,
                 {
                   width: `${Math.max(progress * 100, 5)}%`,
-                  backgroundColor: category.color,
+                  backgroundColor: accentColor,
                 },
               ]}
             />
           </View>
           <View style={styles.progressLabels}>
-            <Text style={styles.progressSubtext}>
+            <Text
+              style={[styles.progressSubtext, { color: colors.textTertiary }]}
+            >
               {Math.round(progress * 100)}% Momentum
             </Text>
-            <Text style={styles.progressSubtext}>
+            <Text
+              style={[styles.progressSubtext, { color: colors.textTertiary }]}
+            >
               {dream.completed_actions}/{dream.total_actions} moves
             </Text>
           </View>
         </View>
 
-        {/* Action Row */}
         <View style={styles.cardFooter}>
-          <Text style={[styles.viewLink, { color: category.color }]}>
+          <Text style={[styles.viewLink, { color: accentColor }]}>
             View Dashboard
           </Text>
-          <Ionicons name='arrow-forward' size={14} color={category.color} />
+          <Ionicons name='arrow-forward' size={14} color={accentColor} />
         </View>
       </View>
     </Pressable>
   )
 }
 
-// =============================================================================
-// SUB-COMPONENT: NO DREAM CARD
-// =============================================================================
-function NoDreamCard({ onPress }: { onPress: () => void }) {
+function NoDreamCard({
+  onPress,
+  colors,
+  isDark,
+}: {
+  onPress: () => void
+  colors: any
+  isDark: boolean
+}) {
   return (
-    <Pressable onPress={onPress} style={styles.cardContainer}>
-      <BlurView intensity={20} tint='dark' style={StyleSheet.absoluteFill} />
-      <View style={styles.cardBorder} />
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.cardContainer,
+        { backgroundColor: isDark ? 'rgba(20, 20, 25, 0.6)' : colors.surface },
+      ]}
+    >
+      {isDark && (
+        <BlurView intensity={20} tint='dark' style={StyleSheet.absoluteFill} />
+      )}
+      <View style={[styles.cardBorder, { borderColor: colors.border }]} />
 
       <View
         style={[
@@ -411,53 +516,127 @@ function NoDreamCard({ onPress }: { onPress: () => void }) {
           { alignItems: 'center', paddingVertical: SPACING.xl },
         ]}
       >
-        <View style={styles.emptyStateIcon}>
-          <Ionicons name='telescope' size={32} color={DARK.accent.rose} />
+        <View
+          style={[
+            styles.emptyStateIcon,
+            { backgroundColor: `${PALETTE.electric.cyan}15` },
+          ]}
+        >
+          <Ionicons name='telescope' size={32} color={PALETTE.electric.cyan} />
         </View>
-        <Text style={styles.emptyStateTitle}>No active focus</Text>
-        <Text style={styles.emptyStateDesc}>
+        <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+          No active focus
+        </Text>
+        <Text style={[styles.emptyStateDesc, { color: colors.textSecondary }]}>
           Choose a dream to start building momentum.
         </Text>
 
-        <View style={styles.primaryBtn}>
-          <Text style={styles.primaryBtnText}>Design Your Dream</Text>
-          <Ionicons name='arrow-forward' size={16} color='#FFF' />
-        </View>
+        <LinearGradient
+          colors={GRADIENTS.electric}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.primaryBtn}
+        >
+          <Text
+            style={[
+              styles.primaryBtnText,
+              { color: PALETTE.midnight.obsidian },
+            ]}
+          >
+            Design Your Dream
+          </Text>
+          <Ionicons
+            name='arrow-forward'
+            size={16}
+            color={PALETTE.midnight.obsidian}
+          />
+        </LinearGradient>
       </View>
     </Pressable>
   )
 }
 
-// =============================================================================
-// SUB-COMPONENT: EMPTY ACTIONS
-// =============================================================================
-function EmptyActionsCard({ onAdd }: { onAdd: () => void }) {
+function EmptyActionsCard({
+  onAdd,
+  colors,
+  isDark,
+}: {
+  onAdd: () => void
+  colors: any
+  isDark: boolean
+}) {
   return (
-    <View style={styles.dashedCard}>
+    <View
+      style={[
+        styles.dashedCard,
+        {
+          borderColor: isDark ? 'rgba(255,255,255,0.1)' : colors.border,
+          backgroundColor: isDark
+            ? 'rgba(255,255,255,0.02)'
+            : colors.surfaceMuted,
+        },
+      ]}
+    >
       <View style={styles.dashedContent}>
-        <Text style={styles.dashedTitle}>Ready to begin?</Text>
-        <Text style={styles.dashedDesc}>
+        <Text style={[styles.dashedTitle, { color: colors.text }]}>
+          Ready to begin?
+        </Text>
+        <Text style={[styles.dashedDesc, { color: colors.textSecondary }]}>
           Add your first power move for today.
         </Text>
-        <Pressable onPress={onAdd} style={styles.miniBtn}>
-          <Ionicons name='add' size={16} color='#FFF' />
-          <Text style={styles.miniBtnText}>Add Move</Text>
+        <Pressable
+          onPress={onAdd}
+          style={[
+            styles.miniBtn,
+            {
+              backgroundColor: isDark
+                ? 'rgba(255,255,255,0.1)'
+                : PALETTE.electric.cyan,
+            },
+          ]}
+        >
+          <Ionicons
+            name='add'
+            size={16}
+            color={isDark ? '#FFF' : PALETTE.midnight.obsidian}
+          />
+          <Text
+            style={[
+              styles.miniBtnText,
+              { color: isDark ? '#FFF' : PALETTE.midnight.obsidian },
+            ]}
+          >
+            Add Move
+          </Text>
         </Pressable>
       </View>
     </View>
   )
 }
 
-function AllDoneCard({ onAddMore }: { onAddMore: () => void }) {
+function AllDoneCard({
+  onAddMore,
+  colors,
+  isDark,
+}: {
+  onAddMore: () => void
+  colors: any
+  isDark: boolean
+}) {
   return (
-    <View style={styles.celebrationCard}>
+    <View
+      style={[
+        styles.celebrationCard,
+        { backgroundColor: `${PALETTE.electric.emerald}10` },
+      ]}
+    >
       <LinearGradient
-        colors={[DARK.accent.gold + '15', 'transparent']}
+        colors={[`${PALETTE.electric.emerald}15`, 'transparent']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={styles.cardBorder} />
+      <View style={[styles.cardBorder, { borderColor: colors.border }]} />
 
       <View
         style={[
@@ -465,30 +644,45 @@ function AllDoneCard({ onAddMore }: { onAddMore: () => void }) {
           { flexDirection: 'row', alignItems: 'center', gap: 16 },
         ]}
       >
-        <View style={styles.trophyIcon}>
-          <Ionicons name='trophy' size={24} color={DARK.accent.gold} />
+        <View
+          style={[
+            styles.trophyIcon,
+            { backgroundColor: `${PALETTE.electric.emerald}15` },
+          ]}
+        >
+          <Ionicons name='trophy' size={24} color={PALETTE.electric.emerald} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.celebrationTitle}>Unstoppable.</Text>
-          <Text style={styles.celebrationDesc}>
+          <Text style={[styles.celebrationTitle, { color: colors.text }]}>
+            Unstoppable.
+          </Text>
+          <Text
+            style={[styles.celebrationDesc, { color: colors.textSecondary }]}
+          >
             You've completed everything today.
           </Text>
         </View>
-        <Pressable onPress={onAddMore} style={styles.iconBtn}>
-          <Ionicons name='add' size={24} color={DARK.text.primary} />
+        <Pressable
+          onPress={onAddMore}
+          style={[
+            styles.iconBtn,
+            {
+              backgroundColor: isDark
+                ? 'rgba(255,255,255,0.1)'
+                : colors.surfaceMuted,
+            },
+          ]}
+        >
+          <Ionicons name='add' size={24} color={colors.text} />
         </Pressable>
       </View>
     </View>
   )
 }
 
-// =============================================================================
-// STYLES
-// =============================================================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   scrollView: {
     flex: 1,
@@ -503,26 +697,20 @@ const styles = StyleSheet.create({
     left: -50,
     width: width,
     height: 400,
-    backgroundColor: DARK.accent.rose,
     opacity: 0.15,
-    filter: 'blur(80px)', // Web
     borderRadius: 200,
   },
-
-  // Header
   header: {
     marginBottom: SPACING.xl,
   },
   dateBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: RADIUS.sm,
     marginBottom: SPACING.sm,
   },
   dateText: {
-    color: DARK.text.secondary,
     fontSize: 12,
     fontFamily: FONTS.medium,
     textTransform: 'uppercase',
@@ -532,12 +720,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   greetingPrefix: {
-    color: DARK.text.secondary,
     fontSize: 20,
     fontFamily: FONTS.regular,
   },
   greetingName: {
-    color: DARK.text.primary,
     fontSize: 34,
     fontFamily: FONTS.bold,
     lineHeight: 40,
@@ -550,31 +736,25 @@ const styles = StyleSheet.create({
   mantraLine: {
     width: 2,
     height: '100%',
-    backgroundColor: DARK.accent.rose,
     borderRadius: 1,
   },
   mantraText: {
     flex: 1,
-    color: 'rgba(255,255,255,0.6)',
     fontStyle: 'italic',
     fontSize: 14,
     fontFamily: FONTS.regular,
   },
-
-  // Hero Section (Dream Card)
   heroSection: {
     marginBottom: SPACING['2xl'],
   },
   cardContainer: {
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
-    backgroundColor: 'rgba(20, 20, 25, 0.6)',
     minHeight: 180,
   },
   cardBorder: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: RADIUS.xl,
   },
   cardContent: {
@@ -602,13 +782,11 @@ const styles = StyleSheet.create({
   },
   moreDreamsText: {
     fontSize: 12,
-    color: DARK.text.muted,
     fontFamily: FONTS.medium,
   },
   cardTitle: {
     fontSize: 22,
     fontFamily: FONTS.bold,
-    color: '#FFF',
     marginBottom: SPACING.lg,
     lineHeight: 30,
   },
@@ -617,7 +795,6 @@ const styles = StyleSheet.create({
   },
   track: {
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 2,
     marginBottom: 8,
     overflow: 'hidden',
@@ -632,7 +809,6 @@ const styles = StyleSheet.create({
   },
   progressSubtext: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
     fontFamily: FONTS.medium,
   },
   cardFooter: {
@@ -644,13 +820,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONTS.semiBold,
   },
-
-  // Empty State Specifics
   emptyStateIcon: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.md,
@@ -658,12 +831,10 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontFamily: FONTS.bold,
-    color: '#FFF',
     marginBottom: 4,
   },
   emptyStateDesc: {
     fontSize: 14,
-    color: DARK.text.secondary,
     textAlign: 'center',
     marginBottom: SPACING.lg,
   },
@@ -671,18 +842,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: DARK.accent.rose,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: RADIUS.full,
   },
   primaryBtnText: {
-    color: '#FFF',
     fontFamily: FONTS.bold,
     fontSize: 14,
   },
-
-  // Actions Section
   actionsSection: {
     gap: SPACING.md,
   },
@@ -695,33 +862,25 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: FONTS.bold,
-    color: '#FFF',
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: DARK.text.secondary,
     fontFamily: FONTS.regular,
   },
   progressBadge: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: RADIUS.sm,
   },
   progressBadgeText: {
     fontSize: 12,
-    color: '#FFF',
     fontFamily: FONTS.medium,
   },
-
-  // Empty Actions Dashed
   dashedCard: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
     borderStyle: 'dashed',
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
-    backgroundColor: 'rgba(255,255,255,0.02)',
   },
   dashedContent: {
     alignItems: 'center',
@@ -730,11 +889,9 @@ const styles = StyleSheet.create({
   dashedTitle: {
     fontSize: 16,
     fontFamily: FONTS.semiBold,
-    color: '#FFF',
   },
   dashedDesc: {
     fontSize: 14,
-    color: DARK.text.secondary,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -742,47 +899,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: RADIUS.full,
   },
   miniBtnText: {
-    color: '#FFF',
     fontSize: 13,
     fontFamily: FONTS.medium,
   },
-
-  // Celebration Card
   celebrationCard: {
     borderRadius: RADIUS.lg,
-    backgroundColor: 'rgba(245, 158, 11, 0.05)',
     overflow: 'hidden',
   },
   trophyIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   celebrationTitle: {
     fontSize: 16,
     fontFamily: FONTS.bold,
-    color: '#FFF',
   },
   celebrationDesc: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
   },
   iconBtn: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20,
   },
-
-  // List
   actionsList: {
     gap: SPACING.sm,
   },
@@ -796,7 +942,6 @@ const styles = StyleSheet.create({
   },
   addMoreText: {
     fontSize: 14,
-    color: DARK.text.secondary,
     fontFamily: FONTS.medium,
   },
 })

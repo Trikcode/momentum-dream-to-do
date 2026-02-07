@@ -1,3 +1,4 @@
+// src/components/celebrations/SuccessCheck.tsx
 import React, { useEffect } from 'react'
 import { View, StyleSheet } from 'react-native'
 import Animated, {
@@ -10,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
-import { DARK } from '@/src/constants/theme'
+import { PALETTE, GRADIENTS, SHADOWS } from '@/src/constants/new-theme'
 
 interface SuccessCheckProps {
   size?: number
@@ -24,13 +25,11 @@ export function SuccessCheck({ size = 100, delay = 0 }: SuccessCheckProps) {
   const ringOpacity = useSharedValue(0)
 
   useEffect(() => {
-    // 1. Pop Circle
     scale.value = withDelay(
       delay,
       withSpring(1, { damping: 12, stiffness: 100 }),
     )
 
-    // 2. Expand Ring (Shockwave)
     ringOpacity.value = withDelay(
       delay + 100,
       withTiming(0.6, { duration: 100 }),
@@ -41,7 +40,6 @@ export function SuccessCheck({ size = 100, delay = 0 }: SuccessCheckProps) {
     )
     ringOpacity.value = withDelay(delay + 300, withTiming(0, { duration: 400 }))
 
-    // 3. Show Icon
     checkScale.value = withDelay(
       delay + 250,
       withSpring(1, { damping: 12, stiffness: 150 }),
@@ -63,7 +61,6 @@ export function SuccessCheck({ size = 100, delay = 0 }: SuccessCheckProps) {
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
-      {/* Shockwave Ring */}
       <Animated.View
         style={[
           styles.ring,
@@ -72,17 +69,20 @@ export function SuccessCheck({ size = 100, delay = 0 }: SuccessCheckProps) {
         ]}
       />
 
-      {/* Main Circle */}
       <Animated.View style={[StyleSheet.absoluteFill, containerStyle]}>
         <LinearGradient
-          colors={[DARK.success, '#059669']} // Emerald Gradient
+          colors={GRADIENTS.electric}
           style={[
             styles.circle,
             { width: size, height: size, borderRadius: size / 2 },
           ]}
         >
           <Animated.View style={checkStyle}>
-            <Ionicons name='checkmark' size={size * 0.5} color='#FFF' />
+            <Ionicons
+              name='checkmark'
+              size={size * 0.5}
+              color={PALETTE.midnight.obsidian}
+            />
           </Animated.View>
         </LinearGradient>
       </Animated.View>
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   circle: {
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: DARK.success,
+    shadowColor: PALETTE.electric.cyan,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
@@ -107,6 +107,6 @@ const styles = StyleSheet.create({
   ring: {
     position: 'absolute',
     borderWidth: 2,
-    borderColor: DARK.success,
+    borderColor: PALETTE.electric.cyan,
   },
 })

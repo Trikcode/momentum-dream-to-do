@@ -1,4 +1,5 @@
 // app/(onboarding)/first-dream.tsx
+
 import React, { useState, useEffect, useRef } from 'react'
 import {
   View,
@@ -12,7 +13,6 @@ import {
   Dimensions,
   StatusBar,
   Alert,
-  Keyboard,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -34,7 +34,6 @@ import Animated, {
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 
-// Logic & Data
 import {
   DREAM_CATEGORIES,
   DreamCategory,
@@ -43,23 +42,20 @@ import { supabase } from '@/src/lib/supabase'
 import { useAuthStore } from '@/src/store/authStore'
 import { usePremiumStore } from '@/src/store/premiumStore'
 import { useDreamStore } from '@/src/store/dreamStore'
-import { DARK, FONTS, SPACING, RADIUS } from '@/src/constants/theme'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  GRADIENTS,
+  PALETTE,
+  SHADOWS,
+} from '@/src/constants/new-theme'
 
 const { width, height } = Dimensions.get('window')
 
-// ============================================================================
-// DYNAMIC BACKGROUND BLOB
-// ============================================================================
 const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   const scale = useSharedValue(1)
   const translateY = useSharedValue(0)
-
-  // React to color changes smoothly
-  const colorProgress = useSharedValue(0)
-
-  // We use key to force re-render if needed, or we could animate color.
-  // For simplicity in this specific component structure, passing color directly works
-  // because the parent re-renders, but adding a key to the Blob component in parent helps.
 
   useEffect(() => {
     scale.value = withDelay(
@@ -94,7 +90,7 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
 
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }, { translateY: translateY.value }],
-    backgroundColor: color, // Animate this if using Reanimated color interpolation
+    backgroundColor: color,
   }))
 
   return (
@@ -108,7 +104,6 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
           height: size,
           borderRadius: size / 2,
           opacity: 0.35,
-          filter: 'blur(60px)', // Web/New Expo
         },
         style,
       ]}
@@ -116,16 +111,11 @@ const BreathingBlob = ({ color, size, top, left, delay = 0 }: any) => {
   )
 }
 
-// ============================================================================
-// MAIN SCREEN
-// ============================================================================
-
 export default function FirstDreamScreen() {
   const insets = useSafeAreaInsets()
   const { categories } = useLocalSearchParams<{ categories: string }>()
   const { user } = useAuthStore()
 
-  // Store
   const { dreams, fetchDreams } = useDreamStore()
   const { isPremium, getDreamsLimit, setShowPaywall } = usePremiumStore()
 
@@ -133,12 +123,10 @@ export default function FirstDreamScreen() {
   const currentDreamsCount = dreams.filter((d) => d.status === 'active').length
   const canCreateMore = isPremium || currentDreamsCount < dreamsLimit
 
-  // Categories
   const selectedCategoryIds = categories ? categories.split(',') : []
   const filteredCategories = DREAM_CATEGORIES.filter((c) =>
     selectedCategoryIds.includes(c.id),
   )
-  // Fallback if no categories passed or found
   const activeCategories =
     filteredCategories.length > 0
       ? filteredCategories
@@ -160,8 +148,6 @@ export default function FirstDreamScreen() {
   const handleExampleSelect = (example: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     setDreamTitle(example)
-    // Optional: Dismiss keyboard if it was just a tap
-    // Keyboard.dismiss()
   }
 
   const handleCreateDream = async () => {
@@ -176,7 +162,6 @@ export default function FirstDreamScreen() {
     try {
       setIsLoading(true)
 
-      // Map local category IDs to DB slugs if needed
       const slugMapping: Record<string, string> = {
         vitality: 'fitness',
         health: 'fitness',
@@ -217,7 +202,6 @@ export default function FirstDreamScreen() {
 
   const canCreate = dreamTitle.trim().length >= 3
 
-  // Input Glow Animation
   const focusProgress = useSharedValue(0)
   useEffect(() => {
     focusProgress.value = withTiming(isFocused ? 1 : 0, { duration: 300 })
@@ -227,48 +211,41 @@ export default function FirstDreamScreen() {
     const borderColor = interpolateColor(
       focusProgress.value,
       [0, 1],
-      ['rgba(255,255,255,0.1)', selectedCategory.color],
+      ['rgba(255,255,255,0.1)', PALETTE.electric.cyan],
     )
-    const shadowOpacity = focusProgress.value * 0.2
+    const shadowOpacity = focusProgress.value * 0.3
 
     return {
       borderColor,
-      shadowColor: selectedCategory.color,
+      shadowColor: PALETTE.electric.cyan,
       shadowOpacity,
       shadowRadius: 15,
     }
   })
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
+    >
       <StatusBar barStyle='light-content' />
 
-      {/* BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
-        <View style={{ flex: 1, backgroundColor: DARK.bg.primary }} />
         <LinearGradient
-          colors={[DARK.bg.primary, '#151520', DARK.bg.primary]}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
         />
         <BreathingBlob
-          key={`blob-1-${selectedCategory.id}`} // Force re-render color
-          color={selectedCategory.color}
+          key={`blob-1-${selectedCategory.id}`}
+          color={PALETTE.electric.cyan}
           size={350}
           top={-50}
           left={-100}
         />
-        <BreathingBlob
-          key={`blob-2-${selectedCategory.id}`}
-          color={
-            selectedCategory.color === DARK.accent.rose
-              ? '#4F46E5'
-              : DARK.accent.rose
-          }
-          size={300}
-          top={height * 0.5}
-          left={width * 0.4}
-          delay={1000}
-        />
+
         {Platform.OS === 'ios' && (
           <BlurView
             intensity={60}
@@ -290,23 +267,29 @@ export default function FirstDreamScreen() {
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
         >
-          {/* HEADER */}
           <Animated.View entering={FadeInDown.delay(100)} style={styles.header}>
             <View style={styles.progressBar}>
               <View style={styles.progressTrack} />
-              <View style={[styles.progressFill, { width: '66%' }]} />
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: '66%',
+                    backgroundColor: PALETTE.electric.cyan,
+                  },
+                ]}
+              />
             </View>
 
             <Text style={styles.title}>
               Let's make it{'\n'}
-              <Text style={{ color: selectedCategory.color }}>real.</Text>
+              <Text style={{ color: PALETTE.electric.cyan }}>real.</Text>
             </Text>
             <Text style={styles.subtitle}>
               What is the one big thing you want to achieve in this area?
             </Text>
           </Animated.View>
 
-          {/* CATEGORY TABS (If multiple selected) */}
           {activeCategories.length > 1 && (
             <Animated.View
               entering={FadeInDown.delay(200)}
@@ -329,15 +312,15 @@ export default function FirstDreamScreen() {
                       style={[
                         styles.categoryChip,
                         isActive && {
-                          backgroundColor: cat.color,
-                          borderColor: cat.color,
+                          backgroundColor: PALETTE.electric.cyan,
+                          borderColor: PALETTE.electric.cyan,
                         },
                       ]}
                     >
                       <Text
                         style={[
                           styles.categoryText,
-                          isActive && { color: '#FFF' },
+                          isActive && { color: PALETTE.midnight.obsidian },
                         ]}
                       >
                         {cat.name}
@@ -349,7 +332,6 @@ export default function FirstDreamScreen() {
             </Animated.View>
           )}
 
-          {/* MANIFESTO CARD (Input) */}
           <Animated.View
             entering={FadeInUp.delay(300)}
             style={styles.inputSection}
@@ -368,13 +350,13 @@ export default function FirstDreamScreen() {
                   <View
                     style={[
                       styles.miniIcon,
-                      { backgroundColor: selectedCategory.color },
+                      { backgroundColor: PALETTE.electric.cyan },
                     ]}
                   >
                     <Ionicons
                       name={selectedCategory.icon as any}
                       size={14}
-                      color='#FFF'
+                      color={PALETTE.midnight.obsidian}
                     />
                   </View>
                   <Text style={styles.label}>I commit to...</Text>
@@ -384,7 +366,7 @@ export default function FirstDreamScreen() {
                   ref={inputRef}
                   style={styles.textInput}
                   placeholder='e.g. Write the first chapter of my book...'
-                  placeholderTextColor='rgba(255,255,255,0.3)'
+                  placeholderTextColor={PALETTE.slate[500]}
                   value={dreamTitle}
                   onChangeText={setDreamTitle}
                   multiline
@@ -392,6 +374,7 @@ export default function FirstDreamScreen() {
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   autoCapitalize='sentences'
+                  selectionColor={PALETTE.electric.cyan}
                 />
 
                 <View style={styles.charCountRow}>
@@ -401,14 +384,24 @@ export default function FirstDreamScreen() {
             </Animated.View>
           </Animated.View>
 
-          {/* SPARK INSPIRATION */}
           <Animated.View
             entering={FadeInUp.delay(400)}
             style={styles.suggestionsSection}
           >
             <View style={styles.sectionHeader}>
-              <Ionicons name='sparkles' size={12} color={DARK.accent.gold} />
-              <Text style={styles.sectionTitle}>Spark Inspiration</Text>
+              <Ionicons
+                name='sparkles'
+                size={12}
+                color={PALETTE.electric.emerald}
+              />
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: PALETTE.electric.emerald },
+                ]}
+              >
+                Spark Inspiration
+              </Text>
             </View>
 
             <View style={styles.suggestionsGrid}>
@@ -428,14 +421,19 @@ export default function FirstDreamScreen() {
             </View>
           </Animated.View>
 
-          {/* LIMIT WARNING */}
           {!canCreateMore && (
             <Pressable
               onPress={() => setShowPaywall(true)}
               style={styles.limitWarning}
             >
-              <Ionicons name='lock-closed' size={14} color={DARK.accent.gold} />
-              <Text style={styles.limitText}>
+              <Ionicons
+                name='lock-closed'
+                size={14}
+                color={PALETTE.status.warning}
+              />
+              <Text
+                style={[styles.limitText, { color: PALETTE.status.warning }]}
+              >
                 Free limit reached. Tap to unlock unlimited dreams.
               </Text>
             </Pressable>
@@ -443,7 +441,6 @@ export default function FirstDreamScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* FLOATING DOCK */}
       <Animated.View
         entering={FadeInUp.delay(600).springify()}
         style={[styles.floatingDockContainer, { bottom: insets.bottom + 10 }]}
@@ -463,8 +460,11 @@ export default function FirstDreamScreen() {
             <LinearGradient
               colors={
                 canCreate
-                  ? (DARK.gradients.primary as [string, string])
-                  : ['#333', '#444']
+                  ? GRADIENTS.electric
+                  : ([PALETTE.slate[700], PALETTE.slate[600]] as [
+                      string,
+                      string,
+                    ])
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -475,7 +475,11 @@ export default function FirstDreamScreen() {
             ) : (
               <>
                 <Text style={styles.buttonText}>Ignite Momentum</Text>
-                <Ionicons name='arrow-forward' size={18} color='#FFF' />
+                <Ionicons
+                  name='arrow-forward'
+                  size={18}
+                  color={PALETTE.midnight.obsidian}
+                />
               </>
             )}
           </Pressable>
@@ -485,20 +489,13 @@ export default function FirstDreamScreen() {
   )
 }
 
-// ============================================================================
-// STYLES
-// ============================================================================
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK.bg.primary,
   },
   scrollContent: {
     flexGrow: 1,
   },
-
-  // Header
   header: {
     paddingHorizontal: SPACING.lg,
     marginBottom: SPACING.lg,
@@ -516,13 +513,12 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: DARK.accent.rose,
     borderRadius: 2,
   },
   title: {
     fontSize: 34,
     fontFamily: FONTS.bold,
-    color: DARK.text.primary,
+    color: '#FFF',
     lineHeight: 42,
     marginBottom: SPACING.sm,
     letterSpacing: -1,
@@ -530,11 +526,9 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     fontFamily: FONTS.regular,
-    color: DARK.text.secondary,
+    color: PALETTE.slate[400],
     lineHeight: 24,
   },
-
-  // Categories
   categoryRow: {
     marginBottom: SPACING.xl,
   },
@@ -551,8 +545,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.medium,
     color: 'rgba(255,255,255,0.6)',
   },
-
-  // Glass Input
   inputSection: {
     paddingHorizontal: SPACING.lg,
     marginBottom: SPACING.xl,
@@ -601,10 +593,8 @@ const styles = StyleSheet.create({
   },
   charCount: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.3)',
+    color: PALETTE.slate[500],
   },
-
-  // Suggestions
   suggestionsSection: {
     paddingHorizontal: SPACING.lg,
   },
@@ -617,7 +607,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontFamily: FONTS.bold,
-    color: DARK.accent.gold,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -639,8 +628,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     fontFamily: FONTS.regular,
   },
-
-  // Limit
   limitWarning: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -649,18 +636,15 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xl,
     marginHorizontal: SPACING.lg,
     padding: SPACING.md,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: `${PALETTE.status.warning}15`,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: `${PALETTE.status.warning}40`,
   },
   limitText: {
-    color: DARK.accent.gold,
     fontSize: 13,
     fontFamily: FONTS.medium,
   },
-
-  // Floating Dock
   floatingDockContainer: {
     position: 'absolute',
     left: SPACING.lg,
@@ -692,14 +676,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     overflow: 'hidden',
-    ...DARK.glow.rose,
+    ...SHADOWS.glow(PALETTE.electric.cyan),
   },
   buttonDisabled: {
     opacity: 0.5,
     shadowOpacity: 0,
   },
   buttonText: {
-    color: '#FFF',
+    color: PALETTE.midnight.obsidian,
     fontSize: 16,
     fontFamily: FONTS.bold,
   },

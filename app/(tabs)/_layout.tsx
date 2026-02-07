@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react'
 import { Tabs, router } from 'expo-router'
 import { CustomTabBar } from '@/src/components/navigation/CustomTabBar'
-import { DARK } from '@/src/constants/theme'
+import { useTheme } from '@/src/context/ThemeContext'
 import { useAuthStore } from '@/src/store/authStore'
 
 export default function TabsLayout() {
+  const { colors } = useTheme()
   const { session, isLoading, hasOnboarded } = useAuthStore()
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export default function TabsLayout() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: DARK.bg.primary },
+        sceneStyle: { backgroundColor: colors.background },
       }}
     >
       <Tabs.Screen name='index' options={{ title: 'Today' }} />

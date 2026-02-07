@@ -1,4 +1,5 @@
 // src/components/home/AICoachFab.tsx
+
 import React, { useEffect } from 'react'
 import { Pressable, StyleSheet, View, Text } from 'react-native'
 import { router } from 'expo-router'
@@ -14,7 +15,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { DARK, SPACING } from '@/src/constants/theme'
+import { SPACING, PALETTE, GRADIENTS } from '@/src/constants/new-theme'
 
 export function AICoachFab() {
   const glowScale = useSharedValue(1)
@@ -23,7 +24,6 @@ export function AICoachFab() {
   const pulseRing = useSharedValue(0)
 
   useEffect(() => {
-    // Breathing glow
     glowScale.value = withRepeat(
       withSequence(
         withTiming(1.4, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
@@ -41,7 +41,6 @@ export function AICoachFab() {
       true,
     )
 
-    // Pulse ring animation
     pulseRing.value = withRepeat(
       withTiming(1, { duration: 3000, easing: Easing.out(Easing.ease) }),
       -1,
@@ -78,11 +77,21 @@ export function AICoachFab() {
 
   return (
     <View style={styles.container}>
-      {/* Pulse Ring */}
-      <Animated.View style={[styles.pulseRing, pulseStyle]} />
+      <Animated.View
+        style={[
+          styles.pulseRing,
+          { borderColor: PALETTE.electric.indigo },
+          pulseStyle,
+        ]}
+      />
 
-      {/* Glow */}
-      <Animated.View style={[styles.glow, glowStyle]} />
+      <Animated.View
+        style={[
+          styles.glow,
+          { backgroundColor: PALETTE.electric.indigo },
+          glowStyle,
+        ]}
+      />
 
       <Pressable
         onPress={handlePress}
@@ -91,15 +100,23 @@ export function AICoachFab() {
       >
         <Animated.View style={[styles.button, buttonStyle]}>
           <LinearGradient
-            colors={['#A855F7', '#7C3AED', '#6D28D9']}
+            colors={[
+              PALETTE.electric.indigo,
+              PALETTE.electric.indigoDark,
+              '#5b21b6',
+            ]}
             style={styles.gradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            {/* Custom AI Icon - Stylized "AI" text */}
             <View style={styles.iconContainer}>
               <Text style={styles.aiText}>AI</Text>
-              <View style={styles.sparkle} />
+              <View
+                style={[
+                  styles.sparkle,
+                  { backgroundColor: PALETTE.electric.cyan },
+                ]}
+              />
             </View>
           </LinearGradient>
         </Animated.View>
@@ -123,17 +140,15 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: '#A855F7',
   },
   glow: {
     position: 'absolute',
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#A855F7',
   },
   button: {
-    shadowColor: '#7C3AED',
+    shadowColor: PALETTE.electric.indigo,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
@@ -165,8 +180,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FCD34D',
-    shadowColor: '#FCD34D',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 4,

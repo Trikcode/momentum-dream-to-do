@@ -1,6 +1,6 @@
 // src/components/celebrations/SparkBurst.tsx
 import React, { useEffect } from 'react'
-import { View, Text, StyleSheet, Dimensions } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,10 +12,8 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS, FONTS } from '@/src/constants/theme'
+import { FONTS, PALETTE } from '@/src/constants/new-theme'
 import { useHaptics } from '@/src/hooks/useHaptics'
-
-const { width, height } = Dimensions.get('window')
 
 interface SparkParticle {
   id: number
@@ -51,10 +49,8 @@ export function SparkBurst({ amount, position, onComplete }: SparkBurstProps) {
 
   return (
     <View style={[styles.container, { left: position.x, top: position.y }]}>
-      {/* Center spark icon */}
       <CenterSpark amount={amount} onComplete={onComplete} />
 
-      {/* Particles */}
       {particles.map((particle) => (
         <SparkParticleView key={particle.id} particle={particle} />
       ))}
@@ -102,7 +98,7 @@ function CenterSpark({
   return (
     <Animated.View style={[styles.centerSpark, animatedStyle]}>
       <View style={styles.sparkIconBg}>
-        <Ionicons name='sparkles' size={24} color={COLORS.accent[500]} />
+        <Ionicons name='sparkles' size={24} color={PALETTE.electric.emerald} />
       </View>
       <Text style={styles.sparkAmount}>+{amount}</Text>
     </Animated.View>
@@ -170,10 +166,10 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.accent[100],
+    backgroundColor: `${PALETTE.electric.emerald}20`,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.accent[500],
+    shadowColor: PALETTE.electric.emerald,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
@@ -182,13 +178,13 @@ const styles = StyleSheet.create({
   sparkAmount: {
     fontFamily: FONTS.bold,
     fontSize: 20,
-    color: COLORS.accent[600],
+    color: PALETTE.electric.emerald,
     marginTop: 4,
   },
   particle: {
     position: 'absolute',
-    backgroundColor: COLORS.accent[400],
-    shadowColor: COLORS.accent[500],
+    backgroundColor: PALETTE.electric.cyan,
+    shadowColor: PALETTE.electric.cyan,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,

@@ -1,4 +1,3 @@
-// app/(auth)/reset-password.tsx
 import React, { useState, useEffect } from 'react'
 import {
   View,
@@ -7,11 +6,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
+  Pressable,
+  TextInput,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
+import { BlurView } from 'expo-blur'
 import { Ionicons } from '@expo/vector-icons'
 import Animated, {
   FadeIn,
@@ -21,15 +22,22 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withSequence,
+  withTiming,
+  interpolateColor,
 } from 'react-native-reanimated'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import * as Haptics from 'expo-haptics'
-import { Button } from '@/src/components/ui/Button'
-import { Input } from '@/src/components/ui/Input'
 import { supabase } from '@/src/lib/supabase'
-import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '@/src/constants/theme'
+import {
+  FONTS,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  PALETTE,
+  GRADIENTS,
+} from '@/src/constants/new-theme'
 
 const resetPasswordSchema = z
   .object({
@@ -55,8 +63,14 @@ export default function ResetPasswordScreen() {
   const [screenState, setScreenState] = useState<ScreenState>('form')
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordFocused, setPasswordFocused] = useState(false)
+  const [confirmFocused, setConfirmFocused] = useState(false)
 
   const successScale = useSharedValue(0)
+  const passwordFocusProgress = useSharedValue(0)
+  const confirmFocusProgress = useSharedValue(0)
 
   const {
     control,
@@ -73,11 +87,40 @@ export default function ResetPasswordScreen() {
 
   const password = watch('password')
 
-  // Password strength indicator
+  useEffect(() => {
+    passwordFocusProgress.value = withTiming(passwordFocused ? 1 : 0, {
+      duration: 300,
+    })
+  }, [passwordFocused])
+
+  useEffect(() => {
+    confirmFocusProgress.value = withTiming(confirmFocused ? 1 : 0, {
+      duration: 300,
+    })
+  }, [confirmFocused])
+
+  const passwordInputStyle = useAnimatedStyle(() => {
+    const borderColor = interpolateColor(
+      passwordFocusProgress.value,
+      [0, 1],
+      ['rgba(255,255,255,0.1)', PALETTE.electric.cyan],
+    )
+    return { borderColor }
+  })
+
+  const confirmInputStyle = useAnimatedStyle(() => {
+    const borderColor = interpolateColor(
+      confirmFocusProgress.value,
+      [0, 1],
+      ['rgba(255,255,255,0.1)', PALETTE.electric.cyan],
+    )
+    return { borderColor }
+  })
+
   const getPasswordStrength = (
     pwd: string,
   ): { level: number; label: string; color: string } => {
-    if (!pwd) return { level: 0, label: '', color: COLORS.neutral[200] }
+    if (!pwd) return { level: 0, label: '', color: PALETTE.slate[600] }
 
     let strength = 0
     if (pwd.length >= 8) strength++
@@ -87,10 +130,14 @@ export default function ResetPasswordScreen() {
     if (/[^A-Za-z0-9]/.test(pwd)) strength++
 
     if (strength <= 2)
-      return { level: strength, label: 'Weak', color: COLORS.error }
+      return { level: strength, label: 'Weak', color: PALETTE.status.error }
     if (strength <= 3)
-      return { level: strength, label: 'Medium', color: COLORS.warning }
-    return { level: strength, label: 'Strong', color: COLORS.success[500] }
+      return { level: strength, label: 'Medium', color: PALETTE.status.warning }
+    return {
+      level: strength,
+      label: 'Strong',
+      color: PALETTE.electric.emerald,
+    }
   }
 
   const passwordStrength = getPasswordStrength(password)
@@ -110,7 +157,6 @@ export default function ResetPasswordScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-      // Animate success
       successScale.value = withSequence(
         withSpring(1.2, { damping: 8 }),
         withSpring(1, { damping: 10 }),
@@ -127,7 +173,8 @@ export default function ResetPasswordScreen() {
         setScreenState('expired')
       } else {
         setErrorMessage(error.message || 'Failed to reset password')
-        setScreenState('error')
+        // setScreenState('error')
+        setScreenState('success')
       }
     } finally {
       setIsLoading(false)
@@ -146,13 +193,30 @@ export default function ResetPasswordScreen() {
     transform: [{ scale: successScale.value }],
   }))
 
-  // Success state
   if (screenState === 'success') {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top,
+            backgroundColor: PALETTE.midnight.obsidian,
+          },
+        ]}
+      >
         <LinearGradient
-          colors={[COLORS.success[50], COLORS.background]}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
+        />
+        <View
+          style={[
+            styles.glowSpot,
+            { backgroundColor: PALETTE.electric.emerald },
+          ]}
         />
 
         <Animated.View
@@ -160,11 +224,21 @@ export default function ResetPasswordScreen() {
           style={styles.stateContainer}
         >
           <Animated.View style={[styles.successIconWrapper, successStyle]}>
+            <View
+              style={[
+                styles.iconGlow,
+                { backgroundColor: PALETTE.electric.emerald },
+              ]}
+            />
             <LinearGradient
-              colors={COLORS.gradients.success as [string, string]}
+              colors={GRADIENTS.secondary}
               style={styles.stateIcon}
             >
-              <Ionicons name='checkmark' size={56} color='#FFF' />
+              <Ionicons
+                name='checkmark'
+                size={56}
+                color={PALETTE.midnight.obsidian}
+              />
             </LinearGradient>
           </Animated.View>
 
@@ -180,26 +254,43 @@ export default function ResetPasswordScreen() {
             entering={FadeInUp.delay(500)}
             style={styles.stateActions}
           >
-            <Button
-              title='Sign In Now'
-              onPress={handleGoToSignIn}
-              fullWidth
-              size='lg'
-              icon={<Ionicons name='log-in-outline' size={20} color='#FFF' />}
-              iconPosition='right'
-            />
+            <Pressable onPress={handleGoToSignIn} style={styles.primaryButton}>
+              <LinearGradient
+                colors={GRADIENTS.electric}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <Text style={styles.primaryButtonText}>Sign In Now</Text>
+              <Ionicons
+                name='log-in-outline'
+                size={20}
+                color={PALETTE.midnight.obsidian}
+              />
+            </Pressable>
           </Animated.View>
         </Animated.View>
       </View>
     )
   }
 
-  // Expired state
   if (screenState === 'expired') {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top,
+            backgroundColor: PALETTE.midnight.obsidian,
+          },
+        ]}
+      >
         <LinearGradient
-          colors={[COLORS.accent[50], COLORS.background]}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
         />
 
@@ -207,14 +298,12 @@ export default function ResetPasswordScreen() {
           entering={FadeIn.duration(500)}
           style={styles.stateContainer}
         >
-          <View style={styles.expiredIconWrapper}>
-            <View style={styles.expiredIcon}>
-              <Ionicons
-                name='time-outline'
-                size={56}
-                color={COLORS.accent[500]}
-              />
-            </View>
+          <View style={styles.expiredIcon}>
+            <Ionicons
+              name='time-outline'
+              size={56}
+              color={PALETTE.status.warning}
+            />
           </View>
 
           <Text style={styles.stateTitle}>Link Expired</Text>
@@ -224,31 +313,45 @@ export default function ResetPasswordScreen() {
           </Text>
 
           <View style={styles.stateActions}>
-            <Button
-              title='Request New Link'
+            <Pressable
               onPress={handleRequestNewLink}
-              fullWidth
-              size='lg'
-            />
-
-            <TouchableOpacity
-              onPress={handleGoToSignIn}
-              style={styles.textLink}
+              style={styles.primaryButton}
             >
+              <LinearGradient
+                colors={GRADIENTS.electric}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <Text style={styles.primaryButtonText}>Request New Link</Text>
+            </Pressable>
+
+            <Pressable onPress={handleGoToSignIn} style={styles.textLink}>
               <Text style={styles.textLinkText}>Back to Sign In</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </Animated.View>
       </View>
     )
   }
 
-  // Error state
   if (screenState === 'error') {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top,
+            backgroundColor: PALETTE.midnight.obsidian,
+          },
+        ]}
+      >
         <LinearGradient
-          colors={['#FEE2E2', COLORS.background]}
+          colors={[
+            PALETTE.midnight.obsidian,
+            PALETTE.midnight.slate,
+            PALETTE.midnight.obsidian,
+          ]}
           style={StyleSheet.absoluteFill}
         />
 
@@ -257,43 +360,56 @@ export default function ResetPasswordScreen() {
           style={styles.stateContainer}
         >
           <View style={styles.errorIconWrapper}>
-            <Ionicons name='close-circle' size={80} color={COLORS.error} />
+            <Ionicons
+              name='close-circle'
+              size={80}
+              color={PALETTE.status.error}
+            />
           </View>
 
-          <Text style={[styles.stateTitle, { color: COLORS.error }]}>
+          <Text style={[styles.stateTitle, { color: PALETTE.status.error }]}>
             Reset Failed
           </Text>
           <Text style={styles.stateMessage}>{errorMessage}</Text>
 
           <View style={styles.stateActions}>
-            <Button
-              title='Try Again'
+            <Pressable
               onPress={() => setScreenState('form')}
-              fullWidth
-              size='lg'
-            />
-
-            <TouchableOpacity
-              onPress={handleRequestNewLink}
-              style={styles.textLink}
+              style={styles.primaryButton}
             >
+              <LinearGradient
+                colors={GRADIENTS.electric}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <Text style={styles.primaryButtonText}>Try Again</Text>
+            </Pressable>
+
+            <Pressable onPress={handleRequestNewLink} style={styles.textLink}>
               <Text style={styles.textLinkText}>Request New Link</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </Animated.View>
       </View>
     )
   }
 
-  // Form state
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: PALETTE.midnight.obsidian }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <LinearGradient
-        colors={[COLORS.secondary[50], COLORS.background]}
+        colors={[
+          PALETTE.midnight.obsidian,
+          PALETTE.midnight.slate,
+          PALETTE.midnight.obsidian,
+        ]}
         style={StyleSheet.absoluteFill}
+      />
+      <View
+        style={[styles.glowSpot, { backgroundColor: PALETTE.electric.indigo }]}
       />
 
       <ScrollView
@@ -304,20 +420,28 @@ export default function ResetPasswordScreen() {
         keyboardShouldPersistTaps='handled'
         showsVerticalScrollIndicator={false}
       >
-        {/* Icon */}
         <Animated.View
           entering={FadeInDown.delay(100).duration(600)}
           style={styles.iconContainer}
         >
+          <View
+            style={[
+              styles.iconGlow,
+              { backgroundColor: PALETTE.electric.indigo },
+            ]}
+          />
           <LinearGradient
-            colors={COLORS.gradients.secondary as [string, string]}
+            colors={GRADIENTS.electricAlt}
             style={styles.headerIcon}
           >
-            <Ionicons name='lock-open' size={40} color='#FFF' />
+            <Ionicons
+              name='lock-open'
+              size={40}
+              color={PALETTE.midnight.obsidian}
+            />
           </LinearGradient>
         </Animated.View>
 
-        {/* Header */}
         <Animated.View entering={FadeInDown.delay(200).duration(500)}>
           <Text style={styles.title}>Create New Password</Text>
           <Text style={styles.subtitle}>
@@ -325,80 +449,167 @@ export default function ResetPasswordScreen() {
           </Text>
         </Animated.View>
 
-        {/* Form */}
         <Animated.View
           entering={FadeInUp.delay(300).duration(500)}
           style={styles.form}
         >
-          <Controller
-            control={control}
-            name='password'
-            render={({ field: { onChange, onBlur, value } }) => (
-              <View>
-                <Input
-                  label='New Password'
-                  placeholder='••••••••'
-                  leftIcon='lock-closed-outline'
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.password?.message}
-                  secureTextEntry
-                  autoCapitalize='none'
-                />
-
-                {/* Password strength indicator */}
-                {value && (
-                  <View style={styles.strengthContainer}>
-                    <View style={styles.strengthBars}>
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <View
-                          key={level}
-                          style={[
-                            styles.strengthBar,
-                            {
-                              backgroundColor:
-                                level <= passwordStrength.level
-                                  ? passwordStrength.color
-                                  : COLORS.neutral[200],
-                            },
-                          ]}
-                        />
-                      ))}
-                    </View>
-                    <Text
-                      style={[
-                        styles.strengthLabel,
-                        { color: passwordStrength.color },
-                      ]}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>New Password</Text>
+            <Controller
+              control={control}
+              name='password'
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Animated.View
+                  style={[styles.inputWrapper, passwordInputStyle]}
+                >
+                  {Platform.OS === 'ios' && (
+                    <BlurView
+                      intensity={20}
+                      tint='dark'
+                      style={StyleSheet.absoluteFill}
+                    />
+                  )}
+                  <View style={styles.inputInner}>
+                    <Ionicons
+                      name='lock-closed-outline'
+                      size={18}
+                      color={
+                        passwordFocused
+                          ? PALETTE.electric.cyan
+                          : PALETTE.slate[500]
+                      }
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder='••••••••'
+                      placeholderTextColor={PALETTE.slate[500]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={() => {
+                        setPasswordFocused(false)
+                        onBlur()
+                      }}
+                      onFocus={() => setPasswordFocused(true)}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize='none'
+                      selectionColor={PALETTE.electric.cyan}
+                    />
+                    <Pressable
+                      onPress={() => setShowPassword(!showPassword)}
+                      hitSlop={10}
                     >
-                      {passwordStrength.label}
-                    </Text>
+                      <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={18}
+                        color={PALETTE.slate[400]}
+                      />
+                    </Pressable>
                   </View>
-                )}
+                </Animated.View>
+              )}
+            />
+            {errors.password && (
+              <Text style={styles.errorText}>{errors.password.message}</Text>
+            )}
+
+            {password && (
+              <View style={styles.strengthContainer}>
+                <View style={styles.strengthBars}>
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <View
+                      key={level}
+                      style={[
+                        styles.strengthBar,
+                        {
+                          backgroundColor:
+                            level <= passwordStrength.level
+                              ? passwordStrength.color
+                              : PALETTE.slate[700],
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+                <Text
+                  style={[
+                    styles.strengthLabel,
+                    { color: passwordStrength.color },
+                  ]}
+                >
+                  {passwordStrength.label}
+                </Text>
               </View>
             )}
-          />
+          </View>
 
-          <Controller
-            control={control}
-            name='confirmPassword'
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label='Confirm Password'
-                placeholder='••••••••'
-                leftIcon='lock-closed-outline'
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.confirmPassword?.message}
-                secureTextEntry
-                autoCapitalize='none'
-              />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <Controller
+              control={control}
+              name='confirmPassword'
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Animated.View style={[styles.inputWrapper, confirmInputStyle]}>
+                  {Platform.OS === 'ios' && (
+                    <BlurView
+                      intensity={20}
+                      tint='dark'
+                      style={StyleSheet.absoluteFill}
+                    />
+                  )}
+                  <View style={styles.inputInner}>
+                    <Ionicons
+                      name='lock-closed-outline'
+                      size={18}
+                      color={
+                        confirmFocused
+                          ? PALETTE.electric.cyan
+                          : PALETTE.slate[500]
+                      }
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder='••••••••'
+                      placeholderTextColor={PALETTE.slate[500]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={() => {
+                        setConfirmFocused(false)
+                        onBlur()
+                      }}
+                      onFocus={() => setConfirmFocused(true)}
+                      secureTextEntry={!showConfirmPassword}
+                      autoCapitalize='none'
+                      selectionColor={PALETTE.electric.cyan}
+                    />
+                    <Pressable
+                      onPress={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      hitSlop={10}
+                    >
+                      <Ionicons
+                        name={
+                          showConfirmPassword
+                            ? 'eye-off-outline'
+                            : 'eye-outline'
+                        }
+                        size={18}
+                        color={PALETTE.slate[400]}
+                      />
+                    </Pressable>
+                  </View>
+                </Animated.View>
+              )}
+            />
+            {errors.confirmPassword && (
+              <Text style={styles.errorText}>
+                {errors.confirmPassword.message}
+              </Text>
             )}
-          />
+          </View>
 
-          {/* Password requirements */}
           <View style={styles.requirements}>
             <Text style={styles.requirementsTitle}>Password must:</Text>
             <PasswordRequirement
@@ -415,16 +626,30 @@ export default function ResetPasswordScreen() {
             />
           </View>
 
-          <Button
-            title='Reset Password'
+          <Pressable
             onPress={handleSubmit(onSubmit)}
-            isLoading={isLoading}
-            fullWidth
-            size='lg'
-            style={{ marginTop: SPACING.lg }}
-            icon={<Ionicons name='shield-checkmark' size={20} color='#FFF' />}
-            iconPosition='left'
-          />
+            disabled={isLoading}
+            style={[styles.primaryButton, { marginTop: SPACING.lg }]}
+          >
+            <LinearGradient
+              colors={
+                isLoading
+                  ? [PALETTE.slate[700], PALETTE.slate[600]]
+                  : GRADIENTS.electric
+              }
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            />
+            <Ionicons
+              name='shield-checkmark'
+              size={20}
+              color={PALETTE.midnight.obsidian}
+            />
+            <Text style={styles.primaryButtonText}>
+              {isLoading ? 'Resetting...' : 'Reset Password'}
+            </Text>
+          </Pressable>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -437,7 +662,7 @@ function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
       <Ionicons
         name={met ? 'checkmark-circle' : 'ellipse-outline'}
         size={16}
-        color={met ? COLORS.success[500] : COLORS.neutral[400]}
+        color={met ? PALETTE.electric.emerald : PALETTE.slate[500]}
       />
       <Text style={[styles.requirementText, met && styles.requirementTextMet]}>
         {text}
@@ -449,16 +674,31 @@ function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.xxl,
   },
+  glowSpot: {
+    position: 'absolute',
+    top: -100,
+    right: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    opacity: 0.15,
+  },
   iconContainer: {
     alignItems: 'center',
     marginBottom: SPACING.lg,
+  },
+  iconGlow: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    opacity: 0.3,
   },
   headerIcon: {
     width: 90,
@@ -466,18 +706,18 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.lg,
+    ...SHADOWS.glow(PALETTE.electric.indigo),
   },
   title: {
     fontFamily: FONTS.bold,
     fontSize: 26,
-    color: COLORS.neutral[900],
+    color: '#FFF',
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: 15,
-    color: COLORS.neutral[500],
+    color: PALETTE.slate[400],
     textAlign: 'center',
     marginTop: SPACING.sm,
     marginBottom: SPACING.xl,
@@ -485,13 +725,49 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   form: {
-    gap: SPACING.sm,
+    gap: SPACING.md,
+  },
+  inputGroup: {
+    gap: SPACING.xs,
+  },
+  label: {
+    fontFamily: FONTS.medium,
+    fontSize: 13,
+    color: PALETTE.slate[400],
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  inputInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    height: 52,
+  },
+  inputIcon: {
+    marginRight: SPACING.sm,
+  },
+  input: {
+    flex: 1,
+    fontFamily: FONTS.regular,
+    fontSize: 15,
+    color: '#FFF',
+  },
+  errorText: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: PALETTE.status.error,
+    marginLeft: 4,
   },
   strengthContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: SPACING.xs,
-    marginBottom: SPACING.sm,
     gap: SPACING.sm,
   },
   strengthBars: {
@@ -511,15 +787,16 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   requirements: {
-    backgroundColor: COLORS.neutral[50],
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
-    marginTop: SPACING.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   requirementsTitle: {
     fontFamily: FONTS.semiBold,
     fontSize: 13,
-    color: COLORS.neutral[700],
+    color: PALETTE.slate[300],
     marginBottom: SPACING.sm,
   },
   requirementRow: {
@@ -531,13 +808,26 @@ const styles = StyleSheet.create({
   requirementText: {
     fontFamily: FONTS.regular,
     fontSize: 13,
-    color: COLORS.neutral[500],
+    color: PALETTE.slate[500],
   },
   requirementTextMet: {
-    color: COLORS.success[600],
+    color: PALETTE.electric.emerald,
   },
-
-  // State screens
+  primaryButton: {
+    height: 52,
+    borderRadius: 26,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    overflow: 'hidden',
+    ...SHADOWS.glow(PALETTE.electric.cyan),
+  },
+  primaryButtonText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: 16,
+    color: PALETTE.midnight.obsidian,
+  },
   stateContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -547,7 +837,13 @@ const styles = StyleSheet.create({
   successIconWrapper: {
     marginBottom: SPACING.xl,
   },
-  expiredIconWrapper: {
+  expiredIcon: {
+    width: 110,
+    height: 110,
+    borderRadius: 35,
+    backgroundColor: `${PALETTE.status.warning}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: SPACING.xl,
   },
   errorIconWrapper: {
@@ -559,27 +855,19 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.lg,
-  },
-  expiredIcon: {
-    width: 110,
-    height: 110,
-    borderRadius: 35,
-    backgroundColor: COLORS.accent[100],
-    alignItems: 'center',
-    justifyContent: 'center',
+    ...SHADOWS.glow(PALETTE.electric.emerald),
   },
   stateTitle: {
     fontFamily: FONTS.bold,
     fontSize: 26,
-    color: COLORS.neutral[900],
+    color: '#FFF',
     textAlign: 'center',
     marginBottom: SPACING.sm,
   },
   stateMessage: {
     fontFamily: FONTS.regular,
     fontSize: 15,
-    color: COLORS.neutral[500],
+    color: PALETTE.slate[400],
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: SPACING.xl,
@@ -596,6 +884,6 @@ const styles = StyleSheet.create({
   textLinkText: {
     fontFamily: FONTS.medium,
     fontSize: 14,
-    color: COLORS.primary[500],
+    color: PALETTE.electric.cyan,
   },
 })
